@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <vector>
+#include <unordered_map>
 
 #include "backend/common/types.h"
 #include "backend/common/logger.h"
