@@ -63,6 +63,9 @@ private:
     update,
     insert,
     fdelete,  //delete is keyword, so use fdelete, aka, fake_delete, instead. 
+    seperate,
+    split,
+    remove, 
     unknown 
   };
 
