@@ -13,6 +13,8 @@
 
 #define TREE_DEGREE 2 
 #define ROOT_PID 1
+#define FIRST_INIT_LEAF_OFF 1
+#define SECOND_INIT_LEAF_OFF 1 
 
 #include <utility> 
 #include <mutex>
@@ -86,6 +88,23 @@ private:
       return slot_use;
     }
 
+    inline bool IfDeltaUpdate() const {
+      return (type == insert) || (type == fdelete) || (type == seperate) ||
+              (type == split) || (type == remove); 
+    }
+
+    inline bool IfLeafDelta() const {
+      return (type == insert) || (type == fdelete);
+    }
+
+    inline bool IfInnerDelta() const {
+      return (type == split) || (type == seperate);
+    }
+
+    inline bool IfSeperateKeyDelta() const {
+      return (type == seperate);
+    }
+
     inline void Initialize(const NodeType t) {
       type = t;
       slot_use = 0; 
@@ -131,9 +150,16 @@ private:
   class DeltaNode : public BWNode {
    public:
     int chain_len;
+   
+    // logical pointer to next delta node 
+    oid_t next_delta;
+    
+    inline void SetNextDelta(oid_t pid) {
+      next_delta = pid;
+    }
 
     inline void Initialize(NodeType t) {
-      BWNode::Initalize(t);
+      BWNode::Initialize(t);
       chain_len = 0;
     }
 
@@ -144,12 +170,16 @@ private:
     inline void IncrementChainLen(int base) {
       chain_len = base + 1;
     }
+
+    inline int GetChainLen() {
+      return chain_len;
+    }
   };
 
   class DeleteDelta : public DeltaNode {
    public:
     std::vector<KeyType> key;
-
+   
     inline void Initialize(NodeType t, KeyType k) {
         DeltaNode::Initialize(t);
         key.push_back(k);
@@ -185,12 +215,12 @@ private:
     }
 
     inline bool IfFull() const {
-      return (BWNode::slot_use == inner_slot_max); 
+      return (key_slot.size() == inner_slot_max); 
     }
 
     // TODO:: what's this function used for?
     inline bool IfFew() const {
-      return (BWNode::slot_use <= inner_slot_min);
+      return (key_slot.size() <= inner_slot_min);
     }
 
     // if root, no underflow problem.
@@ -198,7 +228,7 @@ private:
       if (BWNode::IfRootNode()) {
         return false;
       }
-      return (BWNode::slot_use < inner_slot_min);
+      return (key_slot.size() < inner_slot_min);
     }
 
     inline bool InsertKey(const KeyType& key, int offset) {
@@ -248,12 +278,12 @@ private:
     }
 
     inline bool IfFull() const {
-      return (BWNode::slot_use == leaf_slot_max); 
+      return (key_slot.size() == leaf_slot_max); 
     }
 
     // TODO:: what's this function used for?
     inline bool IfFew() const {
-      return (BWNode::slot_use <= leaf_slot_min);
+      return (key_slot.size() <= leaf_slot_min);
     }
 
     // if first two leaf, no underflow problem
@@ -262,7 +292,7 @@ private:
         return false; 
       }
 
-      return (BWNode::slot_use < leaf_slot_min);
+      return (key_slot.size() < leaf_slot_min);
     }
 
     inline bool InsertKey(const KeyType& key, int offset) {
@@ -352,7 +382,7 @@ public:
   bool InsertEntry(const KeyType& key, const ValueType& value, const KeyComparator& comparator); 
 
 private:
-  void InsertEntryUtil(BWNode *node_ptr, const KeyType& key, const ValueType& value, const KeyComparator& comparator);
+  void InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator);
 
 public:
   /* Constructors and Deconstructors. */
@@ -363,20 +393,48 @@ public:
 };
 
 template <typename KeyType, typename ValueType, class KeyComparator>
-void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(__attribute__((unused)) BWNode *node_ptr,  __attribute__((unused)) const KeyType& key, __attribute__((unused)) const ValueType& value, __attribute__((unused)) const KeyComparator& comparator) {
+void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator) {
+  BWNode *node_ptr = pid_table[node_pid];
   if (node_ptr->IfInnerNode()) {
     BWInnerNode *inner_ptr = static_cast<BWInnerNode *>(node_ptr);
+    // if is root node and if root node is null, then this is first key
+    // should be inserted into key node.
+    // TODO: not thread safe. 
+    if (node_ptr->IfRootNode() && node_ptr->GetSlotUsage() == 0) {
+      assert(inner_ptr->InsertKey(key, 0));
+      return InsertEntryUtil(inner_ptr->pid_slot[SECOND_INIT_LEAF_OFF], key, value, comparator);   
+    } 
     auto const& key_slot = inner_ptr->key_slot;
     for (int i = 0; i < key_slot.size(); i++) {
       if (comparator(key, key_slot[i])) {
         oid_t next_pid = inner_ptr->pid_slot[i]; 
-        return InsertEntryUtil(pid_table[next_pid], key, value, comparator); 
+        return InsertEntryUtil(next_pid, key, value, comparator); 
       } 
     }
     
     oid_t next_pid = inner_ptr->pid_slot[key_slot.size()];
-    return InsertEntryUtil(pid_table[next_pid], key, value, comparator); 
-  } else {
+    return InsertEntryUtil(next_pid, key, value, comparator); 
+  } else if (node_ptr->IfLeafDelta()) {
+    /*
+     * Find the delta chain of leaf node
+     * 1. Apply current operation.
+     * 2. If fail, retry (say 5 times), then return false.
+     * 3. If evetually succeed, check if need 
+     *  a. conlidate
+     *  b. split
+     * 4. Conlidation should be applied before split
+     * 5. to be continue... 
+     */
+     DeltaNode *delta_ptr = static_cast<DeltaNode *>(node_ptr);
+
+     // Step 1: apply current operation, at most five times.
+     InsertDelta *insert_delta = new InsertDelta();
+     insert_delta->Initialize(insert, key);
+     insert_delta->SetNextDelta(node_pid);
+     insert_delta->IncrementChainLen(delta_ptr->GetChainLen());
+     // insert_delta->IncrementSlotUsage(delta_ptr->GetSlotUsage());
+
+  } else if (node_ptr->IfLeafNode()) {
     BWLeafNode *leaf_ptr = static_cast<BWLeafNode *>(node_ptr);
     auto const& key_slot = leaf_ptr->key_slot;
     for (int i = 0; i < key_slot.size(); i++) {
@@ -387,14 +445,17 @@ void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(__attribute__((u
     }
     leaf_ptr->InsertKey(key, key_slot.size() - 1);
     leaf_ptr->InsertValue(value, key_slot.size() - 1); 
+  } else {
+    // TODO: handle inner delta
+    // TODO: handle remove
+    return false;
   } 
 }
 
 
 template <typename KeyType, typename ValueType, class KeyComparator>
-bool BWTree<KeyType, ValueType, KeyComparator>::InsertEntry( __attribute__((unused)) const KeyType& key, __attribute__((unused)) const ValueType& value, __attribute__((unused)) const KeyComparator& comparator) {
-  BWNode *root_ptr = pid_table[ROOT_PID]; 
-  InsertEntryUtil(root_ptr, key, value, comparator); 
+bool BWTree<KeyType, ValueType, KeyComparator>::InsertEntry(const KeyType& key, const ValueType& value, const KeyComparator& comparator) {
+  InsertEntryUtil(ROOT_PID, key, value, comparator); 
   return false;
 }
 
