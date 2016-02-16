@@ -14,7 +14,7 @@
 #define TREE_DEGREE 2 
 #define ROOT_PID 1
 
-
+#include <utility> 
 #include <mutex>
 #include <vector>
 #include <unordered_map>
@@ -49,11 +49,9 @@ private:
   inline oid_t AllocPID() {
     oid_t ret = 0;
 
-    mtx.lock();
     next_pid++;
     ret = next_pid; 
-    mtx.unlock();
-
+    
     return ret;
   } 
 
@@ -62,6 +60,9 @@ private:
     root,
     leaf,
     inner,
+    update,
+    insert,
+    fdelete,  //delete is keyword, so use fdelete, aka, fake_delete, instead. 
     unknown 
   };
 
@@ -74,9 +75,11 @@ private:
     // Assume the number is n, then number of PID should be n + 1.
     // Of course, TREE_DEGREE <= n <= 2 * TREE_DEGREE.
     // And, TREE_DEGREE + 1 <= n <= 2 * TREE_DEGREE + 1
-    unsigned short slot_use;
+    
+    // This varibale is also used in Delta nodes. 
+    int slot_use;
 
-    inline unsigned short GetSlotUse() {
+    inline int GetSlotUse() {
       return slot_use;
     }
 
@@ -96,10 +99,70 @@ private:
     inline bool IfRootNode() const {
       return (type == root);
     }
+    
+    inline bool IfInsertDelta() const {
+      return (type == insert);
+    }
+
+    inline bool IfDeleteDelta() const {
+      return (type == fdelete);
+    } 
 
     inline void IncrementSlot() {
       slot_use++;
+    }
+    
+    inline void IncrementSlot(int base) {
+      slot_use = base + 1;
+    }
+   
+    inline void SetSlotUsage(int s) {
+      slot_use = s;
     } 
+
+    inline int GetSlotUsage() {
+      return slot_use;
+    } 
+  };
+
+  class DeltaNode : public BWNode {
+   public:
+    int chain_len;
+
+    inline void Initialize(NodeType t) {
+      BWNode::Initalize(t);
+      chain_len = 0;
+    }
+
+    inline void IncrementChainLen() {
+      chain_len++;
+    }
+    
+    inline void IncrementChainLen(int base) {
+      chain_len = base + 1;
+    }
+  };
+
+  class DeleteDelta : public DeltaNode {
+   public:
+    std::vector<KeyType> key;
+
+    inline void Initialize(NodeType t, KeyType k) {
+        DeltaNode::Initialize(t);
+        key.push_back(k);
+    }
+  };
+
+  class InsertDelta : public DeltaNode {
+   public:
+     std::vector<KeyType> key;
+      
+     // length of chain increases bt one 
+     inline void Initialize(NodeType t, KeyType k) {
+        DeltaNode::Initialize(t);
+        key.push_back(k);
+     }
+
   };
 
   class BWInnerNode : public BWNode {
@@ -127,8 +190,11 @@ private:
       return (BWNode::slot_use <= inner_slot_min);
     }
 
-    // TODO:: how to merge node?
+    // if root, no underflow problem.
     inline bool IfUnderflow() const {
+      if (BWNode::IfRootNode()) {
+        return false;
+      }
       return (BWNode::slot_use < inner_slot_min);
     }
 
@@ -161,6 +227,8 @@ private:
     oid_t prev_leaf;
 
     oid_t next_leaf;
+
+    bool if_original;
     
     inline void Initialize(const NodeType t) {
       BWNode::Initialize(t);
@@ -169,6 +237,11 @@ private:
 
       prev_leaf = 0;
       next_leaf = 0; 
+    }
+    
+    inline void Initialize(const NodeType t, const bool flag) {
+      Initialize(t);
+      if_original = flag; 
     }
 
     inline bool IfFull() const {
@@ -180,8 +253,12 @@ private:
       return (BWNode::slot_use <= leaf_slot_min);
     }
 
-    // TODO:: how to merge node?
+    // if first two leaf, no underflow problem
     inline bool IfUnderflow() const {
+      if (if_original == true) {
+        return false; 
+      }
+
       return (BWNode::slot_use < leaf_slot_min);
     }
 
@@ -205,7 +282,10 @@ private:
   };
 
 private:
-  // mapping table 
+  // mapping table
+  // Not thread safe. When two threads write two different KeyValue pair,
+  // behaviour is not defined.
+  // Arrary would be better. 
   std::unordered_map<oid_t, BWNode *> pid_table; 
 
   // Next pid
@@ -229,6 +309,15 @@ private:
     return 0;
   }
 
+  inline oid_t AddPageToPIDTable(BWNode *node_ptr) {
+     mtx.lock();
+     oid_t cur_pid = AllocPID();
+     pid_table[cur_pid] = node_ptr;
+     // pid_table.insert(std::make_pair<oid_t, BWNode *>(cur_pid, node_ptr));  
+     mtx.unlock(); 
+     return cur_pid;
+  }
+
 public: 
   void BWTreeInitialize() {
     next_pid = 0;
@@ -237,10 +326,23 @@ public:
     // Init root node
     BWInnerNode *root_ptr = new BWInnerNode(); 
     root_ptr->Initialize(root); 
-    oid_t root_pid = AllocPID();
-    assert(root_pid == ROOT_PID);
     
-    pid_table[root_pid] = static_cast<BWNode *>(root_ptr); 
+    assert(AddPageToPIDTable(static_cast<BWNode *>(root_ptr)) == ROOT_PID);
+    
+    // add two leaf node
+    BWLeafNode *left_ptr = new BWLeafNode();
+    left_ptr->Initialize(leaf, true); 
+    
+    BWLeafNode *right_ptr = new BWLeafNode();
+    right_ptr->Initialize(leaf, true);
+
+    oid_t left_pid = AddPageToPIDTable(static_cast<BWNode *>(left_ptr));
+    oid_t right_pid = AddPageToPIDTable(static_cast<BWNode *>(right_ptr));
+    
+    right_ptr->prev_leaf = left_pid;
+    left_ptr->next_leaf = right_pid;
+    root_ptr->pid_slot[0] = left_pid;
+    root_ptr->pid_slot[1] = right_pid;   
   }
 
 public:
