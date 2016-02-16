@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "backend/index/bwtree.h"
+#include "backend/index/index_key.h"
+#include "backend/storage/tuple.h"
 
 namespace peloton {
 namespace index {
-
+  
 
 }  // End index namespace
 }  // End peloton namespace

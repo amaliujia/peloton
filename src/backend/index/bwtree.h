@@ -76,9 +76,17 @@ private:
     // And, TREE_DEGREE + 1 <= n <= 2 * TREE_DEGREE + 1
     unsigned short slot_use;
 
+    inline unsigned short GetSlotUse() {
+      return slot_use;
+    }
+
     inline void Initialize(const NodeType t) {
       type = t;
       slot_use = 0; 
+    }
+
+    inline bool IfInnerNode() const {
+      return (type == inner) || (type == root);
     }
 
     inline bool IfLeafNode() const {
@@ -87,6 +95,10 @@ private:
 
     inline bool IfRootNode() const {
       return (type == root);
+    }
+
+    inline void IncrementSlot() {
+      slot_use++;
     } 
   };
 
@@ -102,8 +114,8 @@ private:
       BWNode::Initialize(t);
      
       // resize to prealloc vector space, try to avoid push_back. 
-      key_slot.resize(inner_slot_max);
-      pid_slot.resize(inner_slot_max + 1);
+      key_slot.reserve(inner_slot_max);
+      pid_slot.reserve(inner_slot_max + 1);
     }
 
     inline bool IfFull() const {
@@ -118,7 +130,26 @@ private:
     // TODO:: how to merge node?
     inline bool IfUnderflow() const {
       return (BWNode::slot_use < inner_slot_min);
+    }
+
+    inline bool InsertKey(const KeyType& key, int offset) {
+      if (IfFull()) {
+        return false;
+      }
+
+      key_slot.insert(key_slot.begin() + offset, key);
+      return true;
+    }
+
+    inline bool InsertPID(const oid_t& pid, int offset) {
+      if (IfFull()) {
+        return false; 
+      }
+      
+      pid_slot(pid_slot.begin() + offset, pid);
+      return true; 
     } 
+
   };
 
   class BWLeafNode : public BWNode {
@@ -132,9 +163,9 @@ private:
     oid_t next_leaf;
     
     inline void Initialize(const NodeType t) {
-      BWNode::Intialize(t);
-      key_slot.resize(leaf_slot_max);
-      value_slot.resize(leaf_slot_max);
+      BWNode::Initialize(t);
+      key_slot.reserve(leaf_slot_max);
+      value_slot.reserve(leaf_slot_max);
 
       prev_leaf = 0;
       next_leaf = 0; 
@@ -153,6 +184,24 @@ private:
     inline bool IfUnderflow() const {
       return (BWNode::slot_use < leaf_slot_min);
     }
+
+    inline bool InsertKey(const KeyType& key, int offset) {
+      if (IfFull()) {
+        return false;
+      }
+
+      key_slot.insert(key_slot.begin() + offset, key);
+      return true;
+    }
+
+    inline bool InsertValue(const ValueType& value, int offset) {
+      if (IfFull()) {
+        return false;
+      }
+      
+      value_slot.insert(value_slot.begin() + offset, value);
+      return true;
+    }
   };
 
 private:
@@ -167,20 +216,21 @@ private:
   oid_t next_pid;
 
 private:
-  inline bool AtomicCompareAndSwapBool(BWNode *target,
+  inline bool AtomicCompareAndSwapBool(oid_t *target,
       oid_t old_v, oid_t new_v) {
     return __sync_bool_compare_and_swap(target, old_v, new_v);
   }
   
-  inline oid_t AtomicCompareAndSwapVal(BWNode *target,
+  inline oid_t AtomicCompareAndSwapVal(oid_t *target,
       oid_t old_v, oid_t new_v) {
     if( __sync_bool_compare_and_swap(target, old_v, new_v)) {
       return old_v;
     }
     return 0;
   }
-  
-  void BWTreeIntialize() {
+
+public: 
+  void BWTreeInitialize() {
     next_pid = 0;
     assert(pid_table.size() == 0);
     
@@ -191,16 +241,57 @@ private:
     assert(root_pid == ROOT_PID);
     
     pid_table[root_pid] = static_cast<BWNode *>(root_ptr); 
- 
   }
+
+public:
+  bool InsertEntry(const KeyType& key, const ValueType& value, const KeyComparator& comparator); 
+
+private:
+  void InsertEntryUtil(BWNode *node_ptr, const KeyType& key, const ValueType& value, const KeyComparator& comparator);
 
 public:
   /* Constructors and Deconstructors. */
   BWTree() {
-    BWTreeIntialize(); 
+    BWTreeInitialize(); 
   }
 
 };
+
+template <typename KeyType, typename ValueType, class KeyComparator>
+void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(__attribute__((unused)) BWNode *node_ptr,  __attribute__((unused)) const KeyType& key, __attribute__((unused)) const ValueType& value, __attribute__((unused)) const KeyComparator& comparator) {
+  if (node_ptr->IfInnerNode()) {
+    BWInnerNode *inner_ptr = static_cast<BWInnerNode *>(node_ptr);
+    auto const& key_slot = inner_ptr->key_slot;
+    for (int i = 0; i < key_slot.size(); i++) {
+      if (comparator(key, key_slot[i])) {
+        oid_t next_pid = inner_ptr->pid_slot[i]; 
+        return InsertEntryUtil(pid_table[next_pid], key, value, comparator); 
+      } 
+    }
+    
+    oid_t next_pid = inner_ptr->pid_slot[key_slot.size()];
+    return InsertEntryUtil(pid_table[next_pid], key, value, comparator); 
+  } else {
+    BWLeafNode *leaf_ptr = static_cast<BWLeafNode *>(node_ptr);
+    auto const& key_slot = leaf_ptr->key_slot;
+    for (int i = 0; i < key_slot.size(); i++) {
+      if(comparator(key, key_slot[i])) {
+        leaf_ptr->InsertKey(key, i);
+        leaf_ptr->InsertValue(value, i); 
+      }
+    }
+    leaf_ptr->InsertKey(key, key_slot.size() - 1);
+    leaf_ptr->InsertValue(value, key_slot.size() - 1); 
+  } 
+}
+
+
+template <typename KeyType, typename ValueType, class KeyComparator>
+bool BWTree<KeyType, ValueType, KeyComparator>::InsertEntry( __attribute__((unused)) const KeyType& key, __attribute__((unused)) const ValueType& value, __attribute__((unused)) const KeyComparator& comparator) {
+  BWNode *root_ptr = pid_table[ROOT_PID]; 
+  InsertEntryUtil(root_ptr, key, value, comparator); 
+  return false;
+}
 
 }  // End index namespace
 }  // End peloton namespace

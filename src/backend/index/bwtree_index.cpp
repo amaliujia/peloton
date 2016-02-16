@@ -24,18 +24,18 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     : Index(metadata),
       equals(metadata),
       comparator(metadata) {
-  // Add your implementation here
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex() {
-  // Add your implementation here
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(
-    __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
-  // Add your implementation here
+  __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
+  KeyType index_key;
+  index_key.SetFromKey(key);
+  container.InsertEntry(index_key, location, comparator); 
   return false;
 }
 
