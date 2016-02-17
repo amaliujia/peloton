@@ -15,6 +15,8 @@
 #define ROOT_PID 1
 #define FIRST_INIT_LEAF_OFF 1
 #define SECOND_INIT_LEAF_OFF 1 
+#define RETRY_LIMIT 5
+#define CONSOLIDATION_THRESHOLD 50
 
 #include <utility> 
 #include <mutex>
@@ -23,7 +25,7 @@
 #include <iostream>
 
 #include "backend/common/types.h"
-
+#include "backend/common/logger.h"
 
 namespace peloton {
 namespace index {
@@ -82,11 +84,7 @@ private:
     // And, TREE_DEGREE + 1 <= n <= 2 * TREE_DEGREE + 1
     
     // This varibale is also used in Delta nodes. 
-    int slot_use;
-
-    inline int GetSlotUse() {
-      return slot_use;
-    }
+    // int slot_use;
 
     inline bool IfDeltaUpdate() const {
       return (type == insert) || (type == fdelete) || (type == seperate) ||
@@ -107,7 +105,6 @@ private:
 
     inline void Initialize(const NodeType t) {
       type = t;
-      slot_use = 0; 
     }
 
     inline bool IfInnerNode() const {
@@ -130,56 +127,41 @@ private:
       return (type == fdelete);
     } 
 
-    inline void IncrementSlot() {
-      slot_use++;
+    inline virtual int GetSlotUsage() {
+      return 0;
     }
-    
-    inline void IncrementSlot(int base) {
-      slot_use = base + 1;
-    }
-   
-    inline void SetSlotUsage(int s) {
-      slot_use = s;
-    } 
 
-    inline int GetSlotUsage() {
-      return slot_use;
+    inline virtual int GetChainLen() {
+      return 0;
     } 
   };
 
   class DeltaNode : public BWNode {
    public:
     int chain_len;
-   
+    int slot_num; 
     // logical pointer to next delta node 
     oid_t next_delta;
-    
-    inline void SetNextDelta(oid_t pid) {
-      next_delta = pid;
-    }
 
     inline void Initialize(NodeType t) {
       BWNode::Initialize(t);
       chain_len = 0;
-    }
-
-    inline void IncrementChainLen() {
-      chain_len++;
+      slot_num = 0;;
     }
     
-    inline void IncrementChainLen(int base) {
-      chain_len = base + 1;
+    inline int GetSlotUsage() {
+      return slot_num;
     }
 
     inline int GetChainLen() {
-      return chain_len;
+       return chain_len;
     }
   };
 
   class DeleteDelta : public DeltaNode {
    public:
     std::vector<KeyType> key;
-   
+    
     inline void Initialize(NodeType t, KeyType k) {
         DeltaNode::Initialize(t);
         key.push_back(k);
@@ -189,13 +171,14 @@ private:
   class InsertDelta : public DeltaNode {
    public:
      std::vector<KeyType> key;
-      
+     std::vector<ValueType> value;
+  
      // length of chain increases bt one 
-     inline void Initialize(NodeType t, KeyType k) {
-        DeltaNode::Initialize(t);
-        key.push_back(k);
+     inline void Initialize(NodeType t, KeyType k, ValueType v) {
+       DeltaNode::Initialize(t);
+       key.push_back(k);
+       value.push_back(v);
      }
-
   };
 
   class BWInnerNode : public BWNode {
@@ -231,6 +214,14 @@ private:
       return (key_slot.size() < inner_slot_min);
     }
 
+    inline int GetSlotUsage() {
+      return key_slot.size();
+    }
+    
+    inline int GetChainLen() {
+      return 0; 
+    }
+
     inline bool InsertKey(const KeyType& key, int offset) {
       if (IfFull()) {
         return false;
@@ -248,7 +239,6 @@ private:
       pid_slot(pid_slot.begin() + offset, pid);
       return true; 
     } 
-
   };
 
   class BWLeafNode : public BWNode {
@@ -291,10 +281,18 @@ private:
       if (if_original == true) {
         return false; 
       }
-
+      
       return (key_slot.size() < leaf_slot_min);
     }
+    
+    inline int GetSlotUsage() {
+      return key_slot.size();
+    }
 
+    inline int GetChainLen() {
+      return 0;
+    }
+    
     inline bool InsertKey(const KeyType& key, int offset) {
       if (IfFull()) {
         return false;
@@ -329,20 +327,20 @@ private:
   oid_t next_pid;
 
 private:
-  inline bool AtomicCompareAndSwapBool(oid_t *target,
-      oid_t old_v, oid_t new_v) {
+  inline bool AtomicCompareAndSwapBool(BWNode **target,
+      BWNode *old_v, BWNode *new_v) {
     return __sync_bool_compare_and_swap(target, old_v, new_v);
   }
   
-  inline oid_t AtomicCompareAndSwapVal(oid_t *target,
-      oid_t old_v, oid_t new_v) {
+  inline oid_t AtomicCompareAndSwapVal(BWNode **target,
+      BWNode *old_v, BWNode *new_v) {
     if( __sync_bool_compare_and_swap(target, old_v, new_v)) {
       return old_v;
     }
     return 0;
   }
 
-  inline oid_t AddPageToPIDTable(BWNode *node_ptr) {
+  oid_t AddPageToPIDTable(BWNode *node_ptr) {
      mtx.lock();
      oid_t cur_pid = AllocPID();
      pid_table[cur_pid] = node_ptr;
@@ -350,6 +348,8 @@ private:
      mtx.unlock(); 
      return cur_pid;
   }
+
+  bool InsertDeltaUpdate(oid_t node_pid, BWNode *node_ptr, const KeyType& key, const ValueType& value); 
 
 public: 
   void BWTreeInitialize() {
@@ -382,19 +382,53 @@ public:
   bool InsertEntry(const KeyType& key, const ValueType& value, const KeyComparator& comparator); 
 
 private:
-  void InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator);
+  bool InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator);
 
 public:
   /* Constructors and Deconstructors. */
   BWTree() {
     BWTreeInitialize(); 
   }
-
 };
 
 template <typename KeyType, typename ValueType, class KeyComparator>
-void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator) {
+bool BWTree<KeyType, ValueType, KeyComparator>::InsertDeltaUpdate(oid_t node_pid, BWNode *node_ptr, const KeyType& key, const ValueType& value) {
+  /*
+   * Find the delta chain of leaf node
+   * 1. Apply current operation.
+   * 2. If fail, abort, return false.
+   * 3. If evetually succeed, check if need 
+   *  a. conlidate
+   *  b. split
+   * 4. Conlidation should be applied before split
+   * 5. to be continue... 
+   */
+  // Step 1: apply current operation, at most five times.
+  InsertDelta *insert_delta = new InsertDelta();
+  insert_delta->Initialize(insert, key, value);
+  insert_delta->next_delta = node_pid;
+  insert_delta->chain_len = node_ptr->GetChainLen() + 1;
+  insert_delta->slot_num = node_ptr->GetSlotUsage() + 1;
+
+  bool success = AtomicCompareAndSwapBool(&pid_table[node_pid], node_ptr, insert_delta); 
+  if (!success) {
+   return false;
+  }
+
+  // TODO: Step 2: check if need  
+  //if (insert_delta->chain_len >= CONSOLIDATION_THRESHOLD) {
+  // LOG_DEBUG("Start to consolidation");
+  //}
+
+  // TODO: Step 3: check if need split 
+
+  return true;
+} 
+
+template <typename KeyType, typename ValueType, class KeyComparator>
+bool BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(oid_t node_pid, const KeyType& key, const ValueType& value, const KeyComparator& comparator) {
   BWNode *node_ptr = pid_table[node_pid];
+  
   if (node_ptr->IfInnerNode()) {
     BWInnerNode *inner_ptr = static_cast<BWInnerNode *>(node_ptr);
     // if is root node and if root node is null, then this is first key
@@ -415,36 +449,9 @@ void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(oid_t node_pid, 
     oid_t next_pid = inner_ptr->pid_slot[key_slot.size()];
     return InsertEntryUtil(next_pid, key, value, comparator); 
   } else if (node_ptr->IfLeafDelta()) {
-    /*
-     * Find the delta chain of leaf node
-     * 1. Apply current operation.
-     * 2. If fail, retry (say 5 times), then return false.
-     * 3. If evetually succeed, check if need 
-     *  a. conlidate
-     *  b. split
-     * 4. Conlidation should be applied before split
-     * 5. to be continue... 
-     */
-     DeltaNode *delta_ptr = static_cast<DeltaNode *>(node_ptr);
-
-     // Step 1: apply current operation, at most five times.
-     InsertDelta *insert_delta = new InsertDelta();
-     insert_delta->Initialize(insert, key);
-     insert_delta->SetNextDelta(node_pid);
-     insert_delta->IncrementChainLen(delta_ptr->GetChainLen());
-     // insert_delta->IncrementSlotUsage(delta_ptr->GetSlotUsage());
-
+    return InsertDeltaUpdate(node_pid, node_ptr, key, value); 
   } else if (node_ptr->IfLeafNode()) {
-    BWLeafNode *leaf_ptr = static_cast<BWLeafNode *>(node_ptr);
-    auto const& key_slot = leaf_ptr->key_slot;
-    for (int i = 0; i < key_slot.size(); i++) {
-      if(comparator(key, key_slot[i])) {
-        leaf_ptr->InsertKey(key, i);
-        leaf_ptr->InsertValue(value, i); 
-      }
-    }
-    leaf_ptr->InsertKey(key, key_slot.size() - 1);
-    leaf_ptr->InsertValue(value, key_slot.size() - 1); 
+    return InsertDeltaUpdate(node_pid, node_ptr, key, value); 
   } else {
     // TODO: handle inner delta
     // TODO: handle remove
@@ -455,8 +462,7 @@ void BWTree<KeyType, ValueType, KeyComparator>::InsertEntryUtil(oid_t node_pid, 
 
 template <typename KeyType, typename ValueType, class KeyComparator>
 bool BWTree<KeyType, ValueType, KeyComparator>::InsertEntry(const KeyType& key, const ValueType& value, const KeyComparator& comparator) {
-  InsertEntryUtil(ROOT_PID, key, value, comparator); 
-  return false;
+  return InsertEntryUtil(ROOT_PID, key, value, comparator); 
 }
 
 }  // End index namespace
