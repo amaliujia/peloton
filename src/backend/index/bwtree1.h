@@ -16,6 +16,9 @@
 namespace peloton {
 namespace index {
 
+
+#define EPOCH 10 // unit : ms
+
 // Look up the stx btree interface for background.
 // peloton/third_party/stx/btree.h
   template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -83,42 +86,99 @@ class BWTree {
 
   class GarbageCollector {
     typedef size_t EpochId;
+    typedef std::chrono::high_resolution_clock Clock;
+    typedef std::chrono::milliseconds milliseconds;
   public:
 
     std::forward_list<EpochBlock> epochList;
-    EpochBlock * head;
-    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-      std::chrono::system_clock::now().time_since_epoch()
-    );
+//    EpochBlock * head;
+
+    Clock::time_point base_time;
 
     GarbageCollector(){
-      head = new EpochBlock();
+      EpochBlock * head = new EpochBlock(1); // assign 1 as initial value, 0 as invalid value.
+      epochList.emplace_front(&head);
+      base_time = Clock::now();
 
     }
+
     ~GarbageCollector(){
       // delete all the epochBlock
       for (auto iter = epochList.begin(); iter != epochList.end(); ++iter){
-        delete(*iter);
+        // is that right?
+        delete(iter);
       }
+      epochList.clear();
       head = NULL;
     }
 
 
 
-    EpochId Register();
-    void Deregister(EpochId id);
-    void SubmitGarbage(BWNode *node);
-    void start();
+    EpochId Register(){
+      Clock::time_point curt_time = Clock::now();
+      milliseconds ms = std::chrono::duration_cast<milliseconds>(curt_time - base_time);
+      // For simplicity, always register in the "head".
+      EpochBlock head = epochList.front();
+      // ATOMIC()
+      EpochId epochId = head.epochId_;
+      head.Register();
+      // UNATOMIC()
+    };
+
+
+    void Deregister(EpochId id, BWNode * garbage){
+      auto iter = epochList.begin();
+      for (;iter != epochList.end(); ++iter){
+        if (iter->get_epochId() == id)
+          break;
+      }
+      // Shouldn't happen: can't find that epochBlock.
+      assert(iter!= epochList.end());
+
+      iter->Deregister();
+
+    }
+
+    void SubmitGarbage(BWNode *node){
+
+    }
+
+    void Start();
 
     void AddEpoch(){
 
+
     }
     void RemoveEpoch();
+
     void ThrowGarbage();
+
 
     class EpochBlock {
 
-      EpochId epochId;
+      public:
+
+      const EpochId epochId_;
+
+      std::forward_list< BWNode *> garbageList;
+      std::atomic<int>  thread_cnt_ = ATOMIC_VAR_INIT(0);
+
+      EpochBlock(EpochId epochId): epochId_(epochId) {};
+
+      void Register(){
+        std::atomic_fetch_add(&thread_cnt_, 1);
+      };
+
+      void Deregister(){
+        std::atomic_fetch_sub(&thread_cnt_, 1);
+      }
+
+      void collectGarbage(BWNode *){
+        // along the lists, add all these into the garbageList
+      }
+
+
+
     };
   };
 
