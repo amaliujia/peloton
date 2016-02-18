@@ -74,7 +74,7 @@ class BWTree {
 
   };
   class GarbageCollector {
-    typedef EpochId size_t;
+    typedef size_t EpochId;
   public:
     EpochId Register();
     void Deregister(EpochId id);
