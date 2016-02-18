@@ -12,76 +12,162 @@
 
 #pragma once
 
+#include <cassert>
+#include <atomic>
+#include <limits>
+
+#include <boost/lockfree/stack.hpp>
+
 namespace peloton {
-namespace index {
+  namespace index {
+    typedef size_t SizeType;
+    typedef size_t PID;
+    // TODO have one PIDTable globally or one for each index?
+    class PIDTable {
+      /*
+       * class storing the mapping table between a PID and its corresponding address
+       * the mapping table is organized as a two-level array, like a virtual memory table.
+       * the first level table is statically allocated, second level tables are allocated as needed
+       * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
+       * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
+       */
+      typedef std::atomic_uint_fast32_t CounterType;
+      typedef BWNode * Address;
+      static constexpr unsigned int first_level_bits = 14;
+      static constexpr unsigned int second_level_bits = 10;
+      static constexpr PID first_level_mask = 0xFFFC00;
+      static constexpr PID second_level_mask = 0x3FF;
+      static constexpr unsigned int first_level_slots = 2<<first_level_bits;
+      static constexpr unsigned int second_level_slots = 2<<second_level_bits;
+      static PIDTable global_table_;
+    public:
+      static constexpr PID PID_NULL = std::numeric_limits<PID>::max();
+      inline PIDTable get_table() { return global_table_; }
+      inline Address get(PID pid) const {
+        // wait the first pid to insert the second_level_table
+        while(first_level_table_[(pid&first_level_mask)>>second_level_bits]==nullptr) ;
+        return first_level_table_
+                [(pid&first_level_mask)>>second_level_bits]
+                [pid&second_level_mask];
+      }
+      inline PID allocate_PID() {
+        PID result;
+        if(freePIDs_.pop(result))
+          return result;
+        return allocate_new_PID();
+      }
+      inline void free_PID(PID pid) {
+        bool push_result = freePIDs_.push(pid);
+        assert(push_result);
+      }
+      bool bool_compare_and_swap(PID pid, Address original, Address to) {
+        int row = (pid&first_level_mask)>>second_level_bits;
+        int col = pid&second_level_mask;
+        return __sync_bool_compare_and_swap(
+                &first_level_table_[row][col], original, to);
+      }
 
-// Look up the stx btree interface for background.
-// peloton/third_party/stx/btree.h
-  template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-class BWTree {
-  typedef size_t size_type;
-  typedef size_t PID;
-  KeyComparator comparator;
-  KeyEqualityChecker
-  enum NodeType {
+    private:
+      volatile Address *first_level_table_[first_level_slots] = {nullptr};
+      CounterType counter_;
+      boost::stack<PID> freePIDs_;
+      PIDTable():counter(0) {}
+      PIDTable(const PIDTable &) = delete;
+      PIDTable(PIDTable &&) = delete;
+      PIDTable &operator=(const PIDTable &) = delete;
+      PIDTable &operator=(PIDTable &&) = delete;
 
-  };
-  static constexpr int max_chain_len = 8;
-  static constexpr int max_node_size = 20;
-  static constexpr int min_node_size = max_node_size<<1;
-  class BWNode {
-    size_type slot_usage;
-    size_type chain_length;
-  };
-  class BWNormalNode: public BWNode {
-    KeyType low_key, high_key;
-    PID left, right;
-  };
-  class BWInnerNode: public BWNormalNode {
-    KeyType keys[max_node_size+max_chain_len];
-    PID children[max_node_size+max_chain_len+1];
-  };
-  class BWLeafNode: public BWNormalNode {
-    KeyType keys[max_node_size+max_chain_len];
-    ValueType values[max_node_size+max_chain_len];
-  };
-          // Add your declarations here
-  class BWDeltaNode: public BWNode {
-    BWNode *next;
-  };
-  class BWInsertNode: public BWDeltaNode {
-    KeyType key;
-    ValueType value;
-  };
-  class BWDeleteNode: public BWDeltaNode {
-    KeyType key;
-  };
-  class BWSplitNode: public BWDeltaNode {
-    KeyType key;
-    PID right;
-  };
-  class BWSplitEntryNode: public BWDeltaNode {
-    KeyType low_key, high_key;
-    PID to;
-  };
-  class BWRemoveNode: public BWDeltaNode {
+      inline bool is_first_PID(PID pid) {
+        return (pid&second_level_mask)==0;
+      }
+      inline PID allocate_new_PID() {
+        PID pid = counter++;
+        if(is_first_PID(pid)) {
+          Address *table = malloc(sizeof(Address)*second_level_slots);
+          first_level_table_[(pid&first_level_mask)>>second_level_bits] = table;
+        }
+        return pid;
+      }
+    };
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
+    class BWTree {
+      KeyComparator comparator;
+      KeyEqualityChecker
+      enum NodeType {
 
-  };
-  class BWMergeNode: public BWDeltaNode {
-    BWNode *right;
-  };
-  class MergeEntryNode: public BWDeltaNode {
+      };
+      static constexpr int max_chain_len = 8;
+      static constexpr int max_node_size = 20;
+      static constexpr int min_node_size = max_node_size<<1;
 
-  };
-  class GarbageCollector {
-    typedef size_t EpochId;
-  public:
-    EpochId Register();
-    void Deregister(EpochId id);
-    void SubmitGarbage(BWNode *node);
-    void start();
-  };
-};
+      class BWNode {
+        size_type slot_usage;
+        size_type chain_length;
+      };
 
-}  // End index namespace
+      class BWNormalNode: public BWNode {
+        KeyType low_key, high_key;
+        PID left, right;
+      };
+
+      class BWInnerNode: public BWNormalNode {
+        KeyType keys[max_node_size+max_chain_len];
+        PID children[max_node_size+max_chain_len+1];
+      };
+
+      class BWLeafNode: public BWNormalNode {
+        KeyType keys[max_node_size+max_chain_len];
+        ValueType values[max_node_size+max_chain_len];
+      };
+
+      // Add your declarations here
+      class BWDeltaNode: public BWNode {
+        BWNode *next;
+      };
+
+      class BWInsertNode: public BWDeltaNode {
+        KeyType key;
+        ValueType value;
+      };
+
+      class BWDeleteNode: public BWDeltaNode {
+        KeyType key;
+      };
+
+      class BWSplitNode: public BWDeltaNode {
+        KeyType key;
+        PID right;
+      };
+
+      class BWSplitEntryNode: public BWDeltaNode {
+        KeyType low_key, high_key;
+        PID to;
+      };
+
+      class BWRemoveNode: public BWDeltaNode {
+
+      };
+
+      class BWMergeNode: public BWDeltaNode {
+        BWNode *right;
+      };
+
+      class MergeEntryNode: public BWDeltaNode {
+
+      };
+
+      class GarbageCollector {
+        typedef size_t EpochId;
+      public:
+        EpochId Register();
+
+        void Deregister(EpochId id);
+
+        void SubmitGarbage(BWNode *node);
+
+        void start();
+      };
+    };
+
+  }  // End index namespace
 }  // End peloton namespace
