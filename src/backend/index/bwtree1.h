@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <chrono>
 namespace peloton {
 namespace index {
 
@@ -73,14 +74,54 @@ class BWTree {
   class MergeEntryNode: public BWDeltaNode {
 
   };
+
+
+
+
+// chrono library in c++ 11
+// http://en.cppreference.com/w/cpp/chrono
+
   class GarbageCollector {
     typedef size_t EpochId;
   public:
+
+    std::forward_list<EpochBlock> epochList;
+    EpochBlock * head;
+    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+      std::chrono::system_clock::now().time_since_epoch()
+    );
+
+    GarbageCollector(){
+      head = new EpochBlock();
+
+    }
+    ~GarbageCollector(){
+      // delete all the epochBlock
+      for (auto iter = epochList.begin(); iter != epochList.end(); ++iter){
+        delete(*iter);
+      }
+      head = NULL;
+    }
+
+
+
     EpochId Register();
     void Deregister(EpochId id);
     void SubmitGarbage(BWNode *node);
     void start();
+
+    void AddEpoch(){
+
+    }
+    void RemoveEpoch();
+    void ThrowGarbage();
+
+    class EpochBlock {
+
+      EpochId epochId;
+    };
   };
+
 };
 
 }  // End index namespace
