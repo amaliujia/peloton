@@ -115,8 +115,6 @@ class BWTree {
 
 
     EpochId Register(){
-      Clock::time_point curt_time = Clock::now();
-      milliseconds ms = std::chrono::duration_cast<milliseconds>(curt_time - base_time);
       // For simplicity, always register in the "head".
       EpochBlock head = epochList.front();
       // ATOMIC()
@@ -126,7 +124,7 @@ class BWTree {
     };
 
 
-    void Deregister(EpochId id, BWNode * garbage){
+    void Deregister(EpochId epochId, BWNode * garbage){
       auto iter = epochList.begin();
       for (;iter != epochList.end(); ++iter){
         if (iter->get_epochId() == id)
@@ -139,42 +137,89 @@ class BWTree {
 
     }
 
-    void SubmitGarbage(BWNode *node){
-
+    void SubmitGarbage(EpochId epochId, BWNode *garbage){
+      auto iter = epochList.begin();
+      for (;iter != epochList.end(); ++iter){
+        if (iter->get_epochId() == id)
+          break;
+      }
+      assert(iter!= epochList.end());
+      iter->CollectGarbage(garbage);
     }
 
     void Start();
 
+    // periodically add epoch block
     void AddEpoch(){
+      Clock::time_point curt_time = Clock::now();
+      milliseconds duration_ms = std::chrono::duration_cast<milliseconds>(curt_time - base_time);
+      EpochId expected_id = (EpochId)(duration_ms.count() / EPOCH);
 
+
+      // ATOMIC()
+      EpochBlock head = epochList.front();
+      if (head.epochId_ != expected_id ){
+        if (!head.everUsed){
+          EpochBlock * new_head = new EpochBlock(expected_id);
+          
+        }
+      }
+      // UNATOMIC()
 
     }
+
     void RemoveEpoch();
 
-    void ThrowGarbage();
+    void ThrowGarbage(){
 
+    };
+
+/*------------------------------------------------------------------
+ *                    Begin of class EpochBLock
+ *-----------------------------------------------------------------*/
 
     class EpochBlock {
 
       public:
 
       const EpochId epochId_;
+      std::atomic<bool> everUsed = ATOMIC_VAR_INIT(false);
 
       std::forward_list< BWNode *> garbageList;
       std::atomic<int>  thread_cnt_ = ATOMIC_VAR_INIT(0);
 
       EpochBlock(EpochId epochId): epochId_(epochId) {};
 
+
+      // combine the deconstructor and throwGarbage?
+      // The deamon thread can just change the pointer, and deconstruct this epochblock
+      ~EpochBlock(){
+        ThrowGarbage();
+      }
+
       void Register(){
         std::atomic_fetch_add(&thread_cnt_, 1);
+
+        // if this operation fails, then everUsed must be true.
+        std::atomic_compare_exchange_strong(&everUsed, false, true);
       };
 
       void Deregister(){
         std::atomic_fetch_sub(&thread_cnt_, 1);
       }
 
-      void collectGarbage(BWNode *){
+      void CollectGarbage(BWNode * garbage){
         // along the lists, add all these into the garbageList
+      }
+
+      // A deamon thread periodically lu the list
+      // once it finds a outdated epoch block, throw it  away.
+      // Note: the deamon should call ~EpochBlock
+      void ThrowGarbage(){
+        for (auto iter = garbageList.begin(); iter != garbageList.end(); ++iter){
+          delete(iter);
+        }
+        garbageList.clear();
       }
 
 
