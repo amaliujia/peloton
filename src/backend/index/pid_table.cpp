@@ -3,3 +3,9 @@
 //
 
 #include "pid_table.h"
+
+namespace peloton {
+  namespace index {
+    PIDTable PIDTable::global_table_;
+  }  // End index namespace
+}  // End peloton namespace
