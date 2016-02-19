@@ -45,29 +45,52 @@ enum NodeType {
 };
 
 class BWNode {
-  public:
-    size_type slot_usage;
-    size_type chain_length;
-
+protected:
+    const size_type slot_usage;
+    const size_type chain_length;
+    const bool if_leaf;
+public:
     virtual NodeType GetType() = 0;
 
+    inline bool IfLeafNode() {
+        return  if_leaf;
+    }
+
+    inline bool IfInnerNode() {
+        return !if_leaf;
+    }
+
+    inline bool IfChainTooLong() {
+
+    }
+
+    inline bool IfOverflow() {
+
+    }
+
+    inline bool IfUnderflow() {
+
+    }
 };
 
 template<typename KeyType>
 class BWNormalNode : public BWNode {
-  public:
-    KeyType low_key, high_key;
-    PID left, right;
+protected:
+    const KeyType low_key, high_key;
+    const PID left, right;
 
+public:
+    // Constructor
     virtual NodeType GetType() = 0;
 };
 
 template<typename KeyType>
 class BWInnerNode : public BWNormalNode<KeyType>{
-  public:
-    KeyType keys[max_node_size + max_chain_len];
-    PID children[max_node_size + max_chain_len + 1];
+protected:
+    const std::vector<KeyType> keys;
+    const std::vector<PID> children;
 
+public:
     NodeType GetType() {
       return NInner;
     }
@@ -75,33 +98,37 @@ class BWInnerNode : public BWNormalNode<KeyType>{
 
 template<typename KeyType, typename ValueType>
 class BWLeafNode : public BWNormalNode<KeyType> {
-  public:
-    KeyType keys[max_node_size + max_chain_len];
-    ValueType values[max_node_size + max_chain_len];
+protected:
+    const std::vector<KeyType> keys;
+    const std::vector<ValueType> values;
 
+public:
     NodeType GetType() {
       return NLeaf;
     }
-
-    void ScanKey(__attribute__((unused)) const KeyType& key, __attribute__((unused)) std::vector<ValueType>& ret) {
-
-    }
+//
+//    void ScanKey(__attribute__((unused)) const KeyType& key, __attribute__((unused)) std::vector<ValueType>& ret) {
+//
+//    }
 };
 
 // template<typename KeyType>
 // Add your declarations here
 class BWDeltaNode : public BWNode {
-  public:
-    BWNode *next;
+protected:
+    const BWNode *next;
+
+public:
     virtual NodeType GetType() = 0;
 };
 
 template<typename KeyType, typename ValueType>
 class BWInsertNode : public BWDeltaNode {
-  public:
-    KeyType key;
-    ValueType value;
+protected:
+    const KeyType key;
+    const ValueType value;
 
+public:
     NodeType GetType() {
       return NInsert;
     }
@@ -109,9 +136,10 @@ class BWInsertNode : public BWDeltaNode {
 
 template<typename KeyType>
 class BWDeleteNode : public BWDeltaNode {
-  public:
-    KeyType key;
+protected:
+    const KeyType key;
 
+public:
     NodeType GetType() {
       return NDelete;
     }
@@ -119,10 +147,11 @@ class BWDeleteNode : public BWDeltaNode {
 
 template<typename KeyType>
 class BWSplitNode : public BWDeltaNode {
-  public:
-    KeyType key;
-    PID right;
+protected:
+    const KeyType key;
+    const PID right;
 
+public:
     NodeType GetType() {
       return NSplit;
     }
@@ -130,14 +159,19 @@ class BWSplitNode : public BWDeltaNode {
     KeyType& GetSplitKey() const {
         return key;
     }
+
+    KeyType& GetKey() const {
+        return key;
+    }
 };
 
 template<typename KeyType>
 class BWSplitEntryNode : public BWDeltaNode {
-  public:
-    KeyType low_key, high_key;
-    PID to;
+protected:
+    const KeyType low_key, high_key;
+    const PID to;
 
+public:
     NodeType GetType() {
       return NSplitEntry;
     }
@@ -145,7 +179,7 @@ class BWSplitEntryNode : public BWDeltaNode {
 
 template<typename KeyType>
 class BWRemoveNode : public BWDeltaNode {
-
+public:
   NodeType GetType() {
     return NRemove;
   }
@@ -153,9 +187,10 @@ class BWRemoveNode : public BWDeltaNode {
 
 template<typename KeyType>
 class BWMergeNode : public BWDeltaNode {
-  public:
-    BWNode *right;
+protected:
+    const BWNode *right;
 
+public:
     NodeType GetType() {
       return NMerge;
     }
@@ -163,6 +198,7 @@ class BWMergeNode : public BWDeltaNode {
 
 template<typename KeyType>
 class MergeEntryNode : public BWDeltaNode {
+public:
   NodeType GetType() {
     return NMergeEntry;
   }
@@ -177,26 +213,26 @@ class BWTree {
   KeyEqualityChecker keyEqualityChecker;
 
 private:
-    bool IfLeafNode(  __attribute__((unused)) NodeType type){
-      return false;
+//    bool IfLeafNode(  __attribute__((unused)) NodeType type){
+//      return false;
+//    }
+
+    void InsertSplitEntry(  __attribute__((unused)) const std::vector<PID>& parent,  int level, __attribute__((unused)) const KeyType& low_key) {
+
     }
 
-    void InsertSplitEntry(  __attribute__((unused)) PID parent,   __attribute__((unused)) const KeyType& low_key) {
-
-    }
-
-    bool IfChainFul(  __attribute__((unused)) int len) {
-      return false;
-    }
+//    bool IfChainFul(  __attribute__((unused)) int len) {
+//      return false;
+//    }
 
     bool Consolidate( __attribute__((unused)) PID cur,  __attribute__((unused)) BWNode *node_ptr) {
       //TODO: if fail to consolidate, need free memory.
       return false;
     }
 
-    bool IfOverflow(__attribute__((unused)) int size) {
-      return false;
-    }
+//    bool IfOverflow(__attribute__((unused)) int size) {
+//      return false;
+//    }
 
     bool Split(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) KeyType& split_key) {
       //TODO: if fail to split, need free memory.
@@ -216,37 +252,37 @@ private:
         // TODO: should read ptr from pid table.
         BWNode *node_ptr = NULL;
 
-        if (IfLeafNode(node_ptr->GetType())) {
+        if (node_ptr->IfLeafNode()) {
+            SPLIT:
             while (true) {
                 // TODO: always get node_ptr of PID cur from pid table here;
                 node_ptr = NULL;
                 // If current is split node
                 if (node_ptr->GetType() == NSplit) {
                     BWSplitNode<KeyType> *split_ptr = static_cast<BWSplitNode<KeyType> *>(node_ptr);
-                    InsertSplitEntry(path[path.size() - 1], split_ptr->key);
+                    InsertSplitEntry(path, path.size() - 1, split_ptr->GetKey());
                 }
 
                 // If delta chain is too long
-                if (IfChainFul(0)) {
-                    bool ret = Consolidate(cur, node_ptr);
-
-                    if(ret == false) {
-                        // No matter if succeed, continue;
-                    }
+                if (node_ptr->IfChainTooLong()) {
+                    Consolidate(cur, node_ptr);
                     continue;
                 }
 
                 bool if_split = false;
                 // TODO: should get size from node_ptr
-                while (IfOverflow(0)) {
+                while (node_ptr->IfOverflow()) {
                     KeyType split_key;
                     bool ret = Split(cur, node_ptr, split_key);
                     if_split = (ret == true || if_split == true) ? true : false;
                     if (ret == false) {
-                        continue;
+                        // node_ptr = NULL; // TODO: get node_ptr of cur.
+                        // We want to continue to the outer loop/
+                        goto SPLIT;
+                        // continue ;
                     } else {
                         // TODO: should keep spliting
-                        InsertSplitEntry(path[path.size() - 1], split_key);
+                        InsertSplitEntry(path, path.size() - 1, split_key);
                         // TODO: update node_ptr to the current split level.
                         node_ptr = NULL;
                     }
