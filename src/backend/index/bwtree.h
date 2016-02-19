@@ -228,7 +228,6 @@ private:
 
                 // If delta chain is too long
                 if (IfChainFul(0)) {
-                    BWNode *new_ptr = NULL;
                     bool ret = Consolidate(cur, node_ptr);
 
                     if(ret == false) {
@@ -277,7 +276,7 @@ private:
         }
     }
 
-    void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType>& ret) {
+    void ScanKeyUtil(__attribute__((unused)) PID cur, __attribute__((unused)) KeyType key, __attribute__((unused)) std::vector<ValueType>& ret) {
         //TODO: get node_ptr of cur.
         BWNode *node_ptr = NULL;
 
@@ -295,24 +294,24 @@ private:
                     }
                 } else if(node_ptr->GetType() == NInsert) {
                     BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
-                    if (insert_ptr->key == key && if_delete == 0) {
+                    if (keyEqualityChecker(insert_ptr->key, key) == true && if_delete == 0) {
                         ret.push_back(insert_ptr->value);
                         if (!Duplicate) {
                             break;
                         }
-                    } else if (insert_ptr->key == key && if_delete > 0) {
+                    } else if (keyEqualityChecker(insert_ptr->key, key) == true && if_delete > 0) {
                         if_delete--;
                     }
 
                     node_ptr = insert_ptr->next;
                 } else if(node_ptr->GetType() == NDelete) {
                     BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
-                    if (delete_ptr->key != key ) {
+                    if (keyEqualityChecker(delete_ptr->key, key) == false) {
                         if_delete++;
                         if (!Duplicate) {
                             break;
                         }
-                    } else if (delete_ptr->key == key) {
+                    } else if (keyEqualityChecker(delete_ptr->key, key) == true) {
                         if_delete++;
                     }
 
