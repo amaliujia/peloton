@@ -20,8 +20,7 @@
 #include "backend/common/platform.h"
 #include "backend/common/types.h"
 #include "backend/index/index.h"
-
-#include "backend/index/bwtree.h"
+#include "bwtree.h"
 
 namespace peloton {
 namespace index {
@@ -35,7 +34,7 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 class BWTreeIndex : public Index {
   friend class IndexFactory;
 
-  typedef BWTree<KeyType, ValueType, KeyComparator> MapType;
+  typedef BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, false> MapType;
 
  public:
   BWTreeIndex(IndexMetadata *metadata);

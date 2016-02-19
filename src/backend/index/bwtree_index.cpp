@@ -22,8 +22,10 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     IndexMetadata *metadata)
     : Index(metadata),
+      container(metadata),
       equals(metadata),
       comparator(metadata) {
+
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -33,9 +35,10 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(
   __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
-  KeyType index_key;
-  index_key.SetFromKey(key);
-  container.InsertEntry(index_key, location, comparator); 
+//  KeyType index_key;
+//  index_key.SetFromKey(key);
+
+//  container.InsertEntry(index_key, location, comparator);
   return false;
 }
 

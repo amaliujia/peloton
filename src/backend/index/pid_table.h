@@ -10,14 +10,14 @@
 
 #include <boost/lockfree/stack.hpp>
 
-#include "bwtree1.h"
+#include "bwtree.h"
 
 namespace peloton {
   namespace index {
-    typedef size_t PID;
 
     // TODO have one PIDTable globally or one for each index?
     class PIDTable {
+      typedef size_t PID;
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -25,8 +25,9 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
+
       typedef std::atomic_uint_fast32_t CounterType;
-      typedef BWNode *Address;
+      typedef BWNode* Address;
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
       static constexpr PID first_level_mask = 0xFFFC00;
@@ -37,7 +38,7 @@ namespace peloton {
     public:
       static constexpr PID PID_NULL = std::numeric_limits<PID>::max();
 
-      inline PIDTable get_table() { return global_table_; }
+      inline PIDTable& get_table() { return global_table_; }
 
       inline Address get(PID pid) const {
         return first_level_table_
@@ -53,8 +54,9 @@ namespace peloton {
       }
 
       inline void free_PID(PID pid) {
-        bool push_result = freePIDs_.push(pid);
-        assert(push_result);
+//        bool push_result = freePIDs_.push(pid);
+        freePIDs_.push(pid);
+//        assert(push_result);
       }
 
       bool bool_compare_and_swap(PID pid, Address original, Address to) {
@@ -67,10 +69,10 @@ namespace peloton {
     private:
       volatile Address *first_level_table_[first_level_slots] = {nullptr};
       CounterType counter_;
-      boost::stack <PID> freePIDs_;
+      boost::lockfree::stack <PID> freePIDs_;
 
-      PIDTable(): counter(0) {
-        first_level_table_[0] = malloc(sizeof(Address)*second_level_slots);
+      PIDTable(): counter_(0) {
+        first_level_table_[0] = (Address* )malloc(sizeof(Address)*second_level_slots);
       }
 
       PIDTable(const PIDTable &) = delete;
@@ -86,9 +88,9 @@ namespace peloton {
       }
 
       inline PID allocate_new_PID() {
-        PID pid = counter++;
+        PID pid = counter_++;
         if(is_first_PID(pid)) {
-          Address *table = malloc(sizeof(Address)*second_level_slots);
+          Address *table = (Address* )malloc(sizeof(Address)*second_level_slots);
           first_level_table_[((pid&first_level_mask)>>second_level_bits)+1] = table;
         }
         return pid;

@@ -8,7 +8,7 @@
 #include <chrono>
 #include <forward_list>
 #include <backend/expression/expressions.h>
-#include "bwtree.h"
+#include "bwtree2.h"
 
 namespace peloton {
   namespace index {

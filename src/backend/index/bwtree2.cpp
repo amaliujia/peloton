@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// !!!
-#include "backend/index/bwtree1.h"
+#include "bwtree2.h"
 #include "backend/index/index_key.h"
 #include "backend/storage/tuple.h"
 
 namespace peloton {
 namespace index {
-  PIDTable PIDTable::global_table_;
+  
+
 }  // End index namespace
 }  // End peloton namespace
