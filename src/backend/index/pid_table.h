@@ -70,7 +70,7 @@ namespace peloton {
       boost::stack <PID> freePIDs_;
 
       PIDTable(): counter(0) {
-        global_table_[0] = malloc(sizeof(Address)*second_level_slots);
+        first_level_table_[0] = malloc(sizeof(Address)*second_level_slots);
       }
 
       PIDTable(const PIDTable &) = delete;
