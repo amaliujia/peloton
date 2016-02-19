@@ -1,5 +1,5 @@
 
-```java
+```c++
 insert(KeyType key, ValueType value, keyComparator comp, vector<PID>path, PID now){
     if (leaf node){
         while (1){
