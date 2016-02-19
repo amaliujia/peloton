@@ -28,18 +28,17 @@ namespace peloton {
     typedef size_t EpochId;
     typedef std::chrono::high_resolution_clock Clock;
     typedef std::chrono::milliseconds milliseconds;
-    typedef BWTree::BWNode BWNode;
 
   private:
 
-    std::forward_list<EpochBlock> epoch_list_;
+    std::forward_list<EpochBlock *> epoch_list_;
     Clock::time_point base_time_;
 
   public:
 
     GarbageCollector(){
       EpochBlock * head = new EpochBlock(1); // assign 1 as initial value, 0 as invalid value.
-      epoch_list_.emplace_front(&head);
+      epoch_list_.push_front(head);
       base_time_ = Clock::now();
 
     }
@@ -57,35 +56,33 @@ namespace peloton {
 
     EpochId Register(){
       // For simplicity, always register in the "head".
-      EpochBlock head = epoch_list_.front();
-      // ATOMIC()
-      EpochId epochId = head.epochId_;
-      head.Register();
-      // UNATOMIC()
+      EpochBlock  *head = epoch_list_.front();
+      EpochId epochId = head->epochId_;
+      head->Register();
     };
 
 
     void Deregister(EpochId epochId, BWNode * garbage){
       auto iter = epoch_list_.begin();
       for (;iter != epoch_list_.end(); ++iter){
-        if (iter->epochId_ == epochId)
+        if ((*iter)->epochId_ == epochId)
           break;
       }
       // Shouldn't happen: can't find that epochBlock.
       assert(iter!= epoch_list_.end());
 
-      iter->Deregister();
+      (*iter)->Deregister();
 
     }
 
     void SubmitGarbage(EpochId epochId, BWNode *garbage){
       auto iter = epoch_list_.begin();
       for (;iter != epoch_list_.end(); ++iter){
-        if (iter->epochId_ == epochId)
+        if ((*iter)->epochId_ == epochId)
           break;
       }
       assert(iter!= epoch_list_.end());
-      iter->CollectGarbage(garbage);
+      (*iter)->CollectGarbage(garbage);
     }
 
     void Start();
@@ -104,7 +101,7 @@ namespace peloton {
       if (head.epochId_ != expected_id ){
 //        if (head.everUsed){
           EpochBlock * new_head = new EpochBlock(expected_id);
-          epoch_list_.emplace_front(&new_head);
+          epoch_list_.push_front(*new_head);
 
           // remove outdated epochBlock in the epochList
           // until meet a certain epochBlock is not empty.
@@ -147,7 +144,6 @@ namespace peloton {
 
       EpochBlock(EpochId epochId): epochId_(epochId) {};
 
-
       // combine the deconstructor and throwGarbage?
       // The deamon thread can just change the pointer, and deconstruct this epochblock
       ~EpochBlock(){
@@ -158,14 +154,14 @@ namespace peloton {
         std::atomic_fetch_add(&thread_cnt_, 1);
 
         // if this operation fails, then everUsed must be true.
-        std::atomic_compare_exchange_strong(&everUsed, false, true);
+//        std::atomic_compare_exchange_strong(&everUsed, false, true);
       };
 
       void Deregister(){
         std::atomic_fetch_sub(&thread_cnt_, 1);
       }
 
-      void CollectGarbage(BWTree::BWNode * garbage){
+      void CollectGarbage(BWNode * garbage){
         // along the lists, add all these into the garbageList
       }
 
