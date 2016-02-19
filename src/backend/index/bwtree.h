@@ -176,41 +176,42 @@ class BWTree {
   KeyComparator comparator;
   KeyEqualityChecker keyEqualityChecker;
 
-  private:
-  bool IfLeafNode(  __attribute__((unused)) NodeType type){
-    return false;
-  }
+private:
+    bool IfLeafNode(  __attribute__((unused)) NodeType type){
+      return false;
+    }
 
-  void InsertSplitEntry(  __attribute__((unused)) PID parent,   __attribute__((unused)) const KeyType& low_key) {
+    void InsertSplitEntry(  __attribute__((unused)) PID parent,   __attribute__((unused)) const KeyType& low_key) {
 
-  }
+    }
 
-  bool IfChainFul(  __attribute__((unused)) int len) {
-    return false;
-  }
+    bool IfChainFul(  __attribute__((unused)) int len) {
+      return false;
+    }
 
-  bool Consolidate( __attribute__((unused)) PID cur,  __attribute__((unused)) BWNode *node_ptr) {
-    //TODO: if fail to consolidate, need free memory.
-    return false;
-  }
+    bool Consolidate( __attribute__((unused)) PID cur,  __attribute__((unused)) BWNode *node_ptr) {
+      //TODO: if fail to consolidate, need free memory.
+      return false;
+    }
 
-  bool IfOverflow(__attribute__((unused)) int size) {
-    return false;
-  }
+    bool IfOverflow(__attribute__((unused)) int size) {
+      return false;
+    }
 
-  bool Split(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) KeyType& split_key) {
-    //TODO: if fail to split, need free memory.
-    return false;
-  }
+    bool Split(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) KeyType& split_key) {
+      //TODO: if fail to split, need free memory.
+      return false;
+    }
 
-  bool DupExist(__attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) const KeyType& key) {
-    return false;
-  }
+    bool DupExist(__attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) const KeyType& key) {
+      return false;
+    }
 
-  bool DeltaInsert(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) const KeyType& key) {
-    return false;
-  }
+    bool DeltaInsert(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr, __attribute__((unused)) const KeyType& key) {
+      return false;
+    }
 
+private:
     bool InsertEntryUtil(KeyType key, ValueType value, std::vector<PID>& path, PID cur) {
         // TODO: should read ptr from pid table.
         BWNode *node_ptr = NULL;
@@ -329,7 +330,6 @@ class BWTree {
             // PID next_pid = node_ptr->GetNextPID(key);
             ScanKeyUtil(next_pid, key, ret);
         }
-
     }
 
 public :
