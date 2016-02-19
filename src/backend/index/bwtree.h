@@ -46,7 +46,70 @@ public:
   // TODO:: Where to pass this flag into bwtree?
   // static const bool allow_dupulicate = false;
 
-private:
+  class BWNode {
+   public:
+    // Level in the bw-tree, leaf node when level == 0
+    NodeType type;
+
+    // The number of slot in use.
+    // Assume the number is n, then number of PID should be n + 1.
+    // Of course, TREE_DEGREE <= n <= 2 * TREE_DEGREE.
+    // And, TREE_DEGREE + 1 <= n <= 2 * TREE_DEGREE + 1
+
+    // This varibale is also used in Delta nodes.
+    // int slot_use;
+
+    inline bool IfDeltaUpdate() const {
+      return (type == insert) || (type == fdelete) || (type == seperate) ||
+              (type == split) || (type == remove);
+    }
+
+    inline bool IfLeafDelta() const {
+      return (type == insert) || (type == fdelete);
+    }
+
+    inline bool IfInnerDelta() const {
+      return (type == split) || (type == seperate);
+    }
+
+    inline bool IfSeperateKeyDelta() const {
+      return (type == seperate);
+    }
+
+    inline void Initialize(const NodeType t) {
+      type = t;
+    }
+
+    inline bool IfInnerNode() const {
+      return (type == inner) || (type == root);
+    }
+
+    inline bool IfLeafNode() const {
+      return (type == leaf);
+    }
+
+    inline bool IfRootNode() const {
+      return (type == root);
+    }
+
+    inline bool IfInsertDelta() const {
+      return (type == insert);
+    }
+
+    inline bool IfDeleteDelta() const {
+      return (type == fdelete);
+    }
+
+    inline virtual int GetSlotUsage() {
+      return 0;
+    }
+
+    inline virtual int GetChainLen() {
+      return 0;
+    }
+  };
+
+  private:
   std::mutex mtx;
 
 private:
@@ -71,69 +134,6 @@ private:
     split,
     remove, 
     unknown 
-  };
-
-  class BWNode {
-   public:
-    // Level in the bw-tree, leaf node when level == 0
-    NodeType type;
-    
-    // The number of slot in use.
-    // Assume the number is n, then number of PID should be n + 1.
-    // Of course, TREE_DEGREE <= n <= 2 * TREE_DEGREE.
-    // And, TREE_DEGREE + 1 <= n <= 2 * TREE_DEGREE + 1
-    
-    // This varibale is also used in Delta nodes. 
-    // int slot_use;
-
-    inline bool IfDeltaUpdate() const {
-      return (type == insert) || (type == fdelete) || (type == seperate) ||
-              (type == split) || (type == remove); 
-    }
-
-    inline bool IfLeafDelta() const {
-      return (type == insert) || (type == fdelete);
-    }
-
-    inline bool IfInnerDelta() const {
-      return (type == split) || (type == seperate);
-    }
-
-    inline bool IfSeperateKeyDelta() const {
-      return (type == seperate);
-    }
-
-    inline void Initialize(const NodeType t) {
-      type = t;
-    }
-
-    inline bool IfInnerNode() const {
-      return (type == inner) || (type == root);
-    }
-
-    inline bool IfLeafNode() const {
-      return (type == leaf); 
-    }
-
-    inline bool IfRootNode() const {
-      return (type == root);
-    }
-    
-    inline bool IfInsertDelta() const {
-      return (type == insert);
-    }
-
-    inline bool IfDeleteDelta() const {
-      return (type == fdelete);
-    } 
-
-    inline virtual int GetSlotUsage() {
-      return 0;
-    }
-
-    inline virtual int GetChainLen() {
-      return 0;
-    } 
   };
 
   class DeltaNode : public BWNode {
