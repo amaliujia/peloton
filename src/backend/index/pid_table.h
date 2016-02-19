@@ -14,10 +14,7 @@
 
 namespace peloton {
   namespace index {
-
-    // TODO have one PIDTable globally or one for each index?
     class PIDTable {
-      typedef size_t PID;
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -25,8 +22,8 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
-
-      typedef std::atomic_uint_fast32_t CounterType;
+      typedef std::uint_fast32_t PID;
+      typedef std::atomic<PID> CounterType;
       typedef BWNode *Address;
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
