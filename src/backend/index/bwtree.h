@@ -44,6 +44,122 @@ enum NodeType {
 	NMergeEntry
 };
 
+        class BWNode {
+        public:
+            size_type slot_usage;
+            size_type chain_length;
+
+            virtual NodeType GetType() = 0;
+
+        };
+
+        template<typename KeyType>
+        class BWNormalNode : public BWNode {
+        public:
+            KeyType low_key, high_key;
+            PID left, right;
+
+            virtual NodeType GetType() = 0;
+        };
+
+        template<typename KeyType>
+        class BWInnerNode : public BWNormalNode<KeyType>{
+        public:
+            KeyType keys[max_node_size + max_chain_len];
+            PID children[max_node_size + max_chain_len + 1];
+
+            NodeType GetType() {
+                return NInner;
+            }
+        };
+
+        template<typename KeyType, typename ValueType>
+        class BWLeafNode : public BWNormalNode<KeyType> {
+        public:
+            KeyType keys[max_node_size + max_chain_len];
+            ValueType values[max_node_size + max_chain_len];
+
+            NodeType GetType() {
+                return NLeaf;
+            }
+        };
+
+// template<typename KeyType>
+// Add your declarations here
+        class BWDeltaNode : public BWNode {
+        public:
+            BWNode *next;
+            virtual NodeType GetType() = 0;
+        };
+
+        template<typename KeyType, typename ValueType>
+        class BWInsertNode : public BWDeltaNode {
+        public:
+            KeyType key;
+            ValueType value;
+
+            NodeType GetType() {
+                return NInsert;
+            }
+        };
+
+        template<typename KeyType>
+        class BWDeleteNode : public BWDeltaNode {
+        public:
+            KeyType key;
+
+            NodeType GetType() {
+                return NDelete;
+            }
+        };
+
+        template<typename KeyType>
+        class BWSplitNode : public BWDeltaNode {
+        public:
+            KeyType key;
+            PID right;
+
+            NodeType GetType() {
+                return NSplit;
+            }
+        };
+
+        template<typename KeyType>
+        class BWSplitEntryNode : public BWDeltaNode {
+        public:
+            KeyType low_key, high_key;
+            PID to;
+
+            NodeType GetType() {
+                return NSplitEntry;
+            }
+        };
+
+        template<typename KeyType>
+        class BWRemoveNode : public BWDeltaNode {
+
+            NodeType GetType() {
+                return NRemove;
+            }
+        };
+
+        template<typename KeyType>
+        class BWMergeNode : public BWDeltaNode {
+        public:
+            BWNode *right;
+
+            NodeType GetType() {
+                return NMerge;
+            }
+        };
+
+        template<typename KeyType>
+        class MergeEntryNode : public BWDeltaNode {
+            NodeType GetType() {
+                return NMergeEntry;
+            }
+        };
+
 // Look up the stx btree interface for background.
 // peloton/third_party/stx/btree.h
 template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, bool Duplicate>
@@ -164,123 +280,6 @@ public :
 	}
 
 };
-
-class BWNode {
-public:
-    size_type slot_usage;
-    size_type chain_length;
-
-    virtual NodeType GetType() = 0;
-
-};
-
-template<typename KeyType>
-class BWNormalNode : public BWNode {
-public:
-	KeyType low_key, high_key;
-	PID left, right;
-
-	virtual NodeType GetType() = 0;
-};
-
-template<typename KeyType>
-class BWInnerNode : public BWNormalNode<KeyType>{
-public:
-    KeyType keys[max_node_size + max_chain_len];
-    PID children[max_node_size + max_chain_len + 1];
-
-	NodeType GetType() {
-		return NInner;
-	}
-};
-
-template<typename KeyType, typename ValueType>
-class BWLeafNode : public BWNormalNode<KeyType> {
-public:
-    KeyType keys[max_node_size + max_chain_len];
-    ValueType values[max_node_size + max_chain_len];
-
-	NodeType GetType() {
-		return NLeaf;
-	}
-};
-
-// template<typename KeyType>
-// Add your declarations here
-class BWDeltaNode : public BWNode {
-public:
-    BWNode *next;
-	virtual NodeType GetType() = 0;
-};
-
-template<typename KeyType, typename ValueType>
-class BWInsertNode : public BWDeltaNode {
-public:
-    KeyType key;
-    ValueType value;
-
-	NodeType GetType() {
-		return NInsert;
-	}
-};
-
-template<typename KeyType>
-class BWDeleteNode : public BWDeltaNode {
-public:
-    KeyType key;
-
-	NodeType GetType() {
-		return NDelete;
-	}
-};
-
-template<typename KeyType>
-class BWSplitNode : public BWDeltaNode {
-public:
-    KeyType key;
-    PID right;
-
-	NodeType GetType() {
-		return NSplit;
-	}
-};
-
-template<typename KeyType>
-class BWSplitEntryNode : public BWDeltaNode {
-public:
-    KeyType low_key, high_key;
-    PID to;
-
-	NodeType GetType() {
-		return NSplitEntry;
-	}
-};
-
-template<typename KeyType>
-class BWRemoveNode : public BWDeltaNode {
-
-	NodeType GetType() {
-		return NRemove;
-	}
-};
-
-template<typename KeyType>
-class BWMergeNode : public BWDeltaNode {
-public:
-    BWNode *right;
-
-	NodeType GetType() {
-		return NMerge;
-	}
-};
-
-template<typename KeyType>
-class MergeEntryNode : public BWDeltaNode {
-	NodeType GetType() {
-		return NMergeEntry;
-	}
-};
-
 
 }  // End index namespace
 }  // End peloton namespace
