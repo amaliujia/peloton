@@ -81,6 +81,10 @@ class BWTree {
 
 
 
+
+/*------------------------------------------------------------------
+ *                    Begin of class Garbage Collector
+ *-----------------------------------------------------------------*/
 // chrono library in c++ 11
 // http://en.cppreference.com/w/cpp/chrono
 
@@ -150,6 +154,8 @@ class BWTree {
     void Start();
 
     // periodically add epoch block
+    // no need to concurrent?
+    // b.c. only one thread do this.
     void AddEpoch(){
       Clock::time_point curt_time = Clock::now();
       milliseconds duration_ms = std::chrono::duration_cast<milliseconds>(curt_time - base_time);
@@ -159,16 +165,43 @@ class BWTree {
       // ATOMIC()
       EpochBlock head = epochList.front();
       if (head.epochId_ != expected_id ){
-        if (!head.everUsed){
+//        if (head.everUsed){
           EpochBlock * new_head = new EpochBlock(expected_id);
-          
-        }
+          epochList.emplace_front(&new_head);
+
+          while (true){
+           break;
+
+          }
+          auto iter = epochList.begin();
+          auto prev = iter;
+          ++iter;
+          for (; iter != epochList.end() && iter->thread_cnt_ == 0; ++iter, ++prev){
+            // do remove outdated epochBlock
+            RemoveEpoch(*iter);
+            epochList.erase_after(prev);
+            epochList.remove(iter);
+          }
+
+          if (iter != epochList.end()){ // do remove outdated epochList
+
+          }
+
+
+//        } else {
+          // how to judge if the old head has something now?
+          //?????????????
+
+
+//        }
       }
       // UNATOMIC()
 
     }
 
-    void RemoveEpoch();
+    void RemoveEpoch(EpochBlock * block_to_remove){
+
+    };
 
     void ThrowGarbage(){
 
