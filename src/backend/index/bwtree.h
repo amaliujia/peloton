@@ -162,6 +162,10 @@ namespace peloton {
               return NInsert;
             }
 
+            KeyType GetKey() const {
+              return key;
+            }
+
         protected:
             const KeyType key;
             const ValueType value;
@@ -178,6 +182,9 @@ namespace peloton {
             BWDeleteNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k) :
                     BWDeltaNode(slot_usage, chain_length, next), key(k) { }
 
+            KeyType GetKey() const {
+              return key;
+            }
         protected:
             const KeyType key;
         };
@@ -192,6 +199,7 @@ namespace peloton {
             KeyType &GetSplitKey() const {
               return key;
             }
+
             PID GetRightPID() const {
               return right;
             }
@@ -369,27 +377,27 @@ namespace peloton {
                   }
                   else if (node_ptr->GetType() == NInsert) {
                     BWInsertNode <KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
-                    if (keyEqualityChecker(insert_ptr->key, key) == true && if_delete == 0) {
-                      ret.push_back(insert_ptr->value);
+                    if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && if_delete == 0) {
+                      ret.push_back(insert_ptr->GetKey());
                       if (!Duplicate) {
                         break;
                       }
                     }
-                    else if (keyEqualityChecker(insert_ptr->key, key) == true && if_delete > 0) {
+                    else if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && if_delete > 0) {
                       if_delete--;
                     }
 
-                    node_ptr = insert_ptr->next;
+                    node_ptr = insert_ptr->;
                   }
                   else if (node_ptr->GetType() == NDelete) {
                     BWDeleteNode <KeyType> *delete_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
-                    if (keyEqualityChecker(delete_ptr->key, key) == false) {
+                    if (keyEqualityChecker(delete_ptr->GetKey(), key) == false) {
                       if_delete++;
                       if (!Duplicate) {
                         break;
                       }
                     }
-                    else if (keyEqualityChecker(delete_ptr->key, key) == true) {
+                    else if (keyEqualityChecker(delete_ptr->GetKey(), key) == true) {
                       if_delete++;
                     }
 
