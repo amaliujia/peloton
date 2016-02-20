@@ -146,9 +146,10 @@ namespace peloton {
         return NInner;
       }
 
-      std::vector<KeyType>& GetKeys() const {
+      std::vector<KeyType> GetKeys() const {
         return keys;
       }
+
     };
 
     template<typename KeyType, typename ValueType>
@@ -603,9 +604,30 @@ namespace peloton {
           delete (insert_node_ptr);
       }
 
+      // TODO: handle MergeEntryNode
+      PID GetNextPID(PID cur, KeyType key) {
+        BWNode *cur_ptr = PIDTable::get_table().get(cur);
 
-      PID GetNextPID(__attribute__((unused)) PID cur) {
+        while (cur_ptr->GetType() != NInner) {
+          if (cur_ptr->GetType() == NSplitEntry) {
+              BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
 
+              if (!comparator(key, split_entry_ptr->GetLowKey()) && comparator(key, split_entry_ptr->GetHightKey())) {
+                return split_entry_ptr->GetNextPID();
+              }
+          } else if (cur_ptr->GetType() == NMergeEntry) {
+
+          } else {
+
+          }
+
+          cur_ptr = cur_ptr->GetNext();
+        }
+
+        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
+        // TODO: implement scan_key;
+
+        return ROOT_PID;
       }
 
       private:
@@ -660,7 +682,7 @@ namespace peloton {
 
             return true;
           } else {
-            PID next_pid = GetNextPID(path.back());
+            PID next_pid = GetNextPID(path.back(), key);
             path.push_back(cur);
           }
         }
@@ -681,7 +703,7 @@ namespace peloton {
               BWSplitNode <KeyType> *split_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
               KeyType split_key = split_ptr->GetSplitKey();
               if (comparator(key, split_key) == true) { // == true means key < split_key
-                node_ptr = split_key->next;
+                node_ptr = split_ptr->GetNext();
               }
             }
             else if (node_ptr->GetType() == NInsert) {
@@ -696,7 +718,7 @@ namespace peloton {
                 if_delete--;
               }
 
-              node_ptr = insert_ptr->;
+              node_ptr = insert_ptr->GetNext();
             }
             else if (node_ptr->GetType() == NDelete) {
               BWDeleteNode <KeyType> *delete_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
@@ -710,11 +732,11 @@ namespace peloton {
                 if_delete++;
               }
 
-              node_ptr = delete_ptr->next;
+              node_ptr = delete_ptr->GetNext();
             }
             else if (node_ptr->GetType() == NLeaf) {
               BWLeafNode <KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
-              leaf_ptr->ScanKey(key, ret);
+              // leaf_ptr->ScanKey(key, ret);
               break;
             }
             else { // TODO: handle other cases here.
@@ -723,8 +745,7 @@ namespace peloton {
           }
         }
         else {
-          PID next_pid = 0;
-          // PID next_pid = node_ptr->GetNextPID(key);
+          PID next_pid = GetNextPID(cur, key);
           ScanKeyUtil(next_pid, key, ret);
         }
       }
