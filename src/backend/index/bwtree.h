@@ -129,8 +129,7 @@ namespace peloton {
                  std::vector<KeyType> &ks, const std::vector<ValueType> &vs) :
         BWNormalNode(s, c, i, low, high, l, r), keys(ks), values(vs) { }
 
-      // ToDo:
-      std::vector<KeyType> GetKeys() { return keys; }
+      const std::vector<KeyType> &GetKeys() { return keys; }
 
       protected:
       const std::vector<KeyType> keys;
@@ -173,7 +172,7 @@ namespace peloton {
         return NInsert;
       }
 
-      KeyType GetKey() const {
+      KeyType &GetKey() const {
         return key;
       }
 
@@ -306,16 +305,17 @@ namespace peloton {
         return false;
       }
 
-      bool DupExist(BWNode *node_ptr, const KeyType &key) {
+      bool DupExist(BWNode *node_ptr, const KeyType &key, PID *exact_pid) {
         // assume node_ptr is the header of leaf node
         std::unordered_map<KeyType, int> map;
         int delta = 0;
         KeyEqualityChecker equality_checker;
+        KeyComparator key_comparator;
         do {
           NodeType node_type = node_ptr->GetType();
           if (node_type == NLeaf) {
-            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(node_ptr);
-            std::vector<KeyType> keys = leaf_node_ptr->GetKeys();
+            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
+            const std::vector<KeyType> keys = leaf_node_ptr->GetKeys();
             for (auto iter = keys.begin(); iter != keys.end(); ++iter) {
               if (equality_checker(*iter, key) && (++delta) > 0) {
                 return true;
@@ -324,18 +324,24 @@ namespace peloton {
             return false;
           }
           else if (node_type == NInsert) {
-            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
+            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
             if (equality_checker(insert_node_ptr->GetKey(), key) && (++delta > 0)) {
               return true;
             }
           } else if (node_type == NDelete) {
-            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
+            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
             if (equality_checker(delete_node_ptr->GetKey(), key)) {
               --delta;
             }
-            //TODO: complete this
-          } else if (node_type == NSplitEntry) {
-
+          } else if (node_type == NSplit) {
+            BWSplitNode *split_node_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
+            if (key_comparator(key, split_node_ptr->GetSplitKey())) {
+              PID right_pid = (static_cast<BWSplitNode *>(node_ptr))->GetRightPID();
+              *exact_pid = right_pid;
+              node_ptr = PIDTable::get_table().get(right_pid);
+              delta = 0;
+              continue;
+            }
 
 //          } else if (node_type == NMergeEntry){
 
@@ -346,10 +352,20 @@ namespace peloton {
 
 
       bool DeltaInsert(PID cur, BWNode *node_ptr, const KeyType &key, const ValueType &value) {
-        PIDTable pidTable = PIDTable::get_table();
+        PIDTable pid_table = PIDTable::get_table();
+        /*    KeyComparator key_comparator;
+              while (node_ptr->GetType() == NSplit) {
+              BWSplitNode *split_node_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
+              if (!key_comparator(key, split_node_ptr->GetSplitKey())) {
+                break;
+              } else {
+                PID right_pid = (static_cast<BWSplitNode *>(node_ptr))->GetRightPID();
+                node_ptr = PIDTable::get_table().get(right_pid);
+              }
+            }*/
         BWInsertNode *insert_node_ptr = new BWInsertNode<KeyType, ValueType>(
           node_ptr->GetSlotUsage() + 1, node_ptr->GetChainLength() + 1, node_ptr, key, value);
-        if (pidTable.bool_compare_and_swap(cur, node_ptr, insert_node_ptr))
+        if (pid_table.bool_compare_and_swap(cur, node_ptr, insert_node_ptr))
           return true;
         else
           delete (insert_node_ptr);
@@ -395,13 +411,24 @@ namespace peloton {
             continue;
           }
 
+          // TODO: IfLeafNode should be updated as "If the base node is leafNode"
+          // consider a
           if (node_ptr->IfLeafNode()) {
-            if (!Duplicate && DupExist(node_ptr, key)) {
+            PID exact_pid = 0;
+            if (!Duplicate && DupExist(node_ptr, key, &exact_pid)) {
               return false;
             }
-
-            if (!DeltaInsert(cur, node_ptr, key, value)) {
+            if (exact_pid == 0) {
+              if (!DeltaInsert(cur, node_ptr, key, value)) {
+                continue;
+              }
+            } else {
+              cur = exact_pid;
               continue;
+//              node_ptr = PIDTable::get_table().get(exact_pid);
+//              if (!DeltaInsert(exact_pid, node_ptr, key, value)) {
+//                continue;
+//              }
             }
 
             return true;
