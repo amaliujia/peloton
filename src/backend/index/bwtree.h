@@ -17,8 +17,12 @@
 #include "backend/common/types.h"
 #include "backend/index/index.h"
 #include "backend/index/pid_table.h"
-#include <chrono>
 #include <backend/common/value.h>
+
+#include <vector>
+#include <map>
+#include <set>
+#include <chrono>
 
 namespace peloton {
     namespace index {
@@ -142,7 +146,9 @@ namespace peloton {
         return NInner;
       }
 
-
+      std::vector<KeyType>& GetKeys() const {
+        return keys;
+      }
     };
 
     template<typename KeyType, typename ValueType>
@@ -286,6 +292,18 @@ namespace peloton {
         return NSplitEntry;
       }
 
+      KeyType GetLowKey() {
+        return low_key;
+      }
+
+      KeyType GetHightKey() {
+        return high_key;
+      }
+
+      PID GetNextPID() {
+        return to;
+      }
+
       protected:
       const KeyType low_key, high_key;
       const PID to;
@@ -385,8 +403,43 @@ namespace peloton {
         return cur_ptr->GetLeft();
       }
 
-      bool SplitInnerNode() {
+      /*
+       *  In inner levels, the delta nodes should be SplitEntryNode, MergeEntryNode, SplitNode.
+       *  For now, only handle SplitEntryNode and SplitNode.
+       *  TODO: Handle MergeEntryNode.
+       */
+      void SplitInnerNodeUlti(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
+                              std::vector<KeyType>& keys,
+                              std::vector<PID>& pids ) {
+//        std::set<KeyType> keys;
+//
+//        BWNode *cur_ptr = node_ptr;
+//        while (cur_ptr->GetType() != NInner) {
+//          if (cur_ptr->GetType() == NSplitEntry) {
+//            BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
+//
+//            if (keys.find(split_entry_ptr->GetLowKey()) == keys.end()) {
+//              keys.insert(split_entry_ptr->GetLowKey());
+//            }
+//
+//            if (keys.find(split_entry_ptr->GetHightKey()) == keys.end()) {
+//              keys.insert(split_entry_ptr->GetHightKey());
+//            }
+//          } else {
+//           // TODO: handle others
+//          }
+//
+//          cur_ptr = cur_ptr->GetNext();
+//        }
+//
+//        // come to inner node
+//        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
+//        auto inner_keys = inner_ptr->GetKeys();
 
+      }
+
+      bool SplitInnerNode() {
+        return false;
       }
 
       void SplitLeafNodeUtil(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
@@ -401,11 +454,13 @@ namespace peloton {
         while (cur_ptr->GetType() != NLeaf) {
           if (cur_ptr->GetType() == NInsert) {
             BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(cur_ptr);
+
             op_stack.push_back(OInsert);
             key_stack.push_back(insert_ptr->GetKey());
             value_stack.push_back(insert_ptr->GetValue());
           } else if(cur_ptr->GetType() == NDelete) {
             BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(cur_ptr);
+
             op_stack.push_back(ODelete);
             key_stack.push_back(delete_ptr->GetKey());
           } else {
@@ -467,7 +522,7 @@ namespace peloton {
         right_ptr = new BWLeafNode(keys.size(), 0, true, keys[0], keys[keys.size() - 1], cur, old_right, keys ,values);
         bool ret = pidTable.bool_compare_and_swap(right_pid, 0, right_ptr);
         if (ret == false ) {
-          // Write the correct destructor.
+          // TODO: need virtual destructors.
           delete right_ptr;
           pidTable.free_PID(right_pid);
           return false;
