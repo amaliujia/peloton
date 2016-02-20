@@ -303,6 +303,10 @@ namespace peloton {
               return false;
             }
 
+            PID GetNextPID(__attribute__((unused)) PID cur) {
+
+            }
+
         private:
             bool InsertEntryUtil(KeyType key, ValueType value, std::vector<PID> &path, PID cur) {
 
@@ -349,11 +353,9 @@ namespace peloton {
 
                   return true;
                 } else {
-                  PID next_pid = 0;
-                  // PID next_pid = node_ptr->GetNextPID(key);
+                  PID next_pid = GetNextPID(path.back());
                   path.push_back(cur);
                 }
-
               }
             }
 
