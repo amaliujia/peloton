@@ -18,6 +18,7 @@
 #include "backend/index/index.h"
 #include "backend/index/pid_table.h"
 #include <chrono>
+#include <backend/common/value.h>
 
 namespace peloton {
     namespace index {
@@ -210,6 +211,10 @@ namespace peloton {
         return key;
       }
 
+      ValueType GetValue() const {
+        return value;
+      }
+
       protected:
       const KeyType key;
       const ValueType value;
@@ -325,26 +330,22 @@ namespace peloton {
         OUnknown
     };
 
-        template<typename KeyType, typename ValueType>
     class Operation {
     public:
-        virtual OpType GetOpType() const = 0;
-        virtual KeyType GetKey() const = 0;
-        virtual ValueType GetValue() const = 0;
+        virtual OpType GetOpType() = 0;
+
     };
 
-        template<typename KeyType, typename ValueType>
-    class InsertOperation {
+    class InsertOperation : public Operation {
     public:
-        OpType GetOpType() const {
+        OpType GetOpType(){
           return OInsert;
         }
     };
 
-        template<typename KeyType, typename ValueType>
-    class DeleteOperation {
+    class DeleteOperation : public Operation {
     public:
-        OpType GetOpType() const {
+        OpType GetOpType() {
           return ODelete;
         }
     };
@@ -387,9 +388,32 @@ namespace peloton {
       void SplitLeafNodeUtil(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
                              std::vector<KeyType>& keys,
                              std::vector<ValueType>& values) {
-        std::vector<Operation> op_stack;
+        std::vector<OpType > op_stack;
+        std::vector<KeyType> key_stack;
+        std::vector<ValueType> value_stack;
 
         BWNode *cur_ptr = node_ptr;
+        // What kind of Delta?
+        while (cur_ptr->GetType() != NLeaf) {
+          if (cur_ptr->GetType() == NInsert) {
+            BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(cur_ptr);
+            op_stack.push_back(OInsert);
+            key_stack.push_back(insert_ptr->GetKey());
+            value_stack.push_back(insert_ptr->GetValue());
+          } else if(cur_ptr->GetType() == NDelete) {
+            BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(cur_ptr);
+            op_stack.push_back(ODelete);
+            key_stack.push_back(delete_ptr->GetKey());
+          } else {
+            //TODO: how about next?
+            continue;
+          }
+
+          cur_ptr = cur_ptr->GetNext();
+        }
+
+        std::map<KeyType, ValueType> key_value_map;
+        BWLeafNode<KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(cur_ptr);
 
       }
 
