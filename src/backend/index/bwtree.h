@@ -20,10 +20,11 @@
 #include <chrono>
 
 namespace peloton {
-  namespace index {
+    namespace index {
 
 
 #define EPOCH 10 // unit : ms
+#define NULL_PID 0
 #define ROOT_PID 1 // root pid should be 1
 
     typedef size_t size_type;
@@ -42,12 +43,19 @@ namespace peloton {
       NInner,
       NLeaf,
       NSplitEntry,
-      NMergeEntry
+      NMergeEntry,
+      Unknown
     };
 
     class BWNode {
       public:
       virtual NodeType GetType() = 0;
+
+      virtual BWNode *GetNext() = 0;
+
+      virtual PID GetLeft() const = 0;
+
+      virtual PID GetRight() const = 0;
 
       inline bool IfLeafNode() {
         return if_leaf_;
@@ -94,7 +102,19 @@ namespace peloton {
       public:
       virtual NodeType GetType() = 0;
 
-      protected:
+      BWNode *GetNext() {
+        return NULL;
+      };
+
+        PID GetLeft() const {
+          return left;
+        }
+
+        PID GetRight() const {
+          return right;
+        }
+
+    protected:
       BWNormalNode(size_type s, size_type c, bool i, KeyType low, KeyType high, PID l, PID r) : BWNode(s, c, i),
                                                                                                 low_key_(low),
                                                                                                 high_key_(high),
@@ -120,6 +140,8 @@ namespace peloton {
       NodeType GetType() {
         return NInner;
       }
+
+
     };
 
     template<typename KeyType, typename ValueType>
@@ -152,9 +174,20 @@ namespace peloton {
       public:
       virtual NodeType GetType() = 0;
 
-      BWNode *GetNext() { return next; }
 
-      protected:
+        BWNode *GetNext() {
+          return next;
+        }
+
+        PID GetLeft() const {
+          return NULL_PID;
+        }
+
+        virtual PID GetRight() {
+          return NULL_PID;
+        }
+
+    protected:
 
       BWDeltaNode(size_type slot_usage, size_type chain_length, BWNode *n) : BWNode(slot_usage, chain_length, false) { }
 
@@ -216,13 +249,21 @@ namespace peloton {
         return right;
       }
 
-      BWSplitNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k, PID r) :
-        BWDeltaNode(slot_usage, chain_length, next), key(k), right(r) { }
+      BWSplitNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k, PID r, PID o) :
+        BWDeltaNode(slot_usage, chain_length, next), key(k), right(r), old(o) { }
 
       protected:
       const KeyType key;
+      // From Andy's slide, split node must have three child.
+      // 1. old left.
+      // 2. old right.
+      // 3. new
+
+      // new one
       const PID right;
 
+        // old right
+      const PID old;
     };
 
     template<typename KeyType>
@@ -278,6 +319,36 @@ namespace peloton {
       }
     };
 
+    enum OpType{
+        OInsert,
+        ODelete,
+        OUnknown
+    };
+
+        template<typename KeyType, typename ValueType>
+    class Operation {
+    public:
+        virtual OpType GetOpType() const = 0;
+        virtual KeyType GetKey() const = 0;
+        virtual ValueType GetValue() const = 0;
+    };
+
+        template<typename KeyType, typename ValueType>
+    class InsertOperation {
+    public:
+        OpType GetOpType() const {
+          return OInsert;
+        }
+    };
+
+        template<typename KeyType, typename ValueType>
+    class DeleteOperation {
+    public:
+        OpType GetOpType() const {
+          return ODelete;
+        }
+    };
+
 // Look up the stx btree interface for background.
 // peloton/third_party/stx/btree.h
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, bool Duplicate>
@@ -300,9 +371,74 @@ namespace peloton {
         return false;
       }
 
-      bool Split(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr,
-                 __attribute__((unused)) KeyType &split_key, __attribute__((unused)) PID &right_pid) {
-        //TODO: if fail to split, need free memory.
+      PID GetRightPID(BWNode *node_ptr) {
+        BWNode *cur_ptr = node_ptr;
+        while (cur_ptr->GetType() != NLeaf || cur_ptr->GetType() != NInner) {
+          cur_ptr = cur_ptr->GetNext();
+        }
+
+        return cur_ptr->GetLeft();
+      }
+
+      bool SplitInnerNode() {
+
+      }
+
+      void SplitLeafNodeUtil(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
+                             std::vector<KeyType>& keys,
+                             std::vector<ValueType>& values) {
+        std::vector<Operation> op_stack;
+
+        BWNode *cur_ptr = node_ptr;
+
+      }
+
+      bool SplitLeafNode(PID cur, BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
+        std::vector<KeyType> keys;
+        std::vector<ValueType> values;
+        PID old_right = NULL_PID;
+
+        SplitLeafNodeUtil(node_ptr, split_key, old_right, keys, values);
+        assert(keys.size() >= 1);
+
+        // Step 1: Create new right page;
+        PIDTable pidTable = PIDTable::get_table();
+        right_pid = pidTable.allocate_PID();
+
+        BWNode *right_ptr = NULL;
+        right_ptr = new BWLeafNode(keys.size(), 0, true, keys[0], keys[keys.size() - 1], cur, old_right, keys ,values);
+        bool ret = pidTable.bool_compare_and_swap(right_pid, 0, right_ptr);
+        if (ret == false ) {
+          // Write the correct destructor.
+          delete right_ptr;
+          pidTable.free_PID(right_pid);
+          return false;
+        }
+
+        // Step 2: Create split node
+        BWNode *split_ptr = NULL;
+        split_ptr = new BWSplitNode(node_ptr->GetSlotUsage(), node_ptr->GetChainLength() + 1,
+                                    node_ptr, split_key, right_pid, old_right);
+
+        // Step 3: install split node
+        ret = pidTable.bool_compare_and_swap(cur, node_ptr, split_ptr);
+        if (ret == false) {
+          delete right_ptr;
+          delete split_ptr;
+          pidTable.free_PID(right_pid);
+
+          return false;
+        }
+
+        return true;
+      }
+
+      bool Split(PID cur, BWNode *node_ptr, KeyType &split_key, PID &right_pid, NodeType right_type) {
+        if (right_type == NLeaf) {
+          return SplitLeafNode(cur, node_ptr, split_key, right_pid);
+        } else {
+          return SplitInnerNode();
+        }
         return false;
       }
 
@@ -385,7 +521,13 @@ namespace peloton {
           if (node_ptr->IfOverflow()) {
             KeyType split_key;
             PID right_pid;
-            bool ret = Split(cur, node_ptr, split_key, right_pid);
+            NodeType right_type = Unknown;
+            if (node_ptr->IfLeafNode()) {
+              right_type = NLeaf;
+            } else {
+              right_type = NInner;
+            }
+            bool ret = Split(cur, node_ptr, split_key, right_pid, right_type;
             if (ret == true) {
               // TODO: should keep spliting
               InsertSplitEntry(path, split_key, right_pid);

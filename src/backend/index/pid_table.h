@@ -10,7 +10,7 @@
 
 #include <boost/lockfree/stack.hpp>
 
-#include "bwtree.h"
+#include "backend/index/bwtree.h"
 
 namespace peloton {
   namespace index {
