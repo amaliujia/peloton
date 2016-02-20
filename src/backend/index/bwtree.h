@@ -152,8 +152,12 @@ namespace peloton {
                  std::vector<KeyType> &ks, const std::vector<ValueType> &vs) :
         BWNormalNode(s, c, i, low, high, l, r), keys(ks), values(vs) { }
 
-      // ToDo:
+      // TODO: add iterator
       std::vector<KeyType> GetKeys() { return keys; }
+
+      std::vector<ValueType> GetValues() {
+        return values;
+      }
 
       protected:
       const std::vector<KeyType> keys;
@@ -415,6 +419,36 @@ namespace peloton {
         std::map<KeyType, ValueType> key_value_map;
         BWLeafNode<KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(cur_ptr);
 
+        std::vector<KeyType> leaf_keys = leaf_ptr->GetKeys();
+        std::vector<ValueType> leaf_values = leaf_ptr->GetValues();
+
+        for (size_t i = 0; i < leaf_keys.size(); i++) {
+          key_value_map[leaf_keys[i]] = leaf_values[i];
+        }
+
+        while (op_stack.size() > 0) {
+          OpType op = op_stack.back();
+          op_stack.pop_back();
+
+          if (op == OInsert) {
+            key_value_map[key_stack.back()] = value_stack.back();
+            key_stack.pop_back();
+            value_stack.pop_back();
+          } else if (op == ODelete) {
+            key_value_map.erase(key_value_map.find(key_stack.back()));
+            key_stack.pop_back();
+          } else {
+            // TODO:: how about other type
+          }
+        }
+
+        std::map<KeyType, ValueType>::iterator iter = key_value_map.begin();
+        for (iter; iter != key_value_map.end(); iter++) {
+          keys.push_back(iter->first);
+          values.push_back(iter->second);
+        }
+
+        split_key = keys[keys.size() / 2];
       }
 
       bool SplitLeafNode(PID cur, BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
@@ -463,7 +497,6 @@ namespace peloton {
         } else {
           return SplitInnerNode();
         }
-        return false;
       }
 
       bool DupExist(BWNode *node_ptr, const KeyType &key) {
