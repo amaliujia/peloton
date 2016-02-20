@@ -16,6 +16,7 @@
 #include "backend/common/platform.h"
 #include "backend/common/types.h"
 #include "backend/index/index.h"
+#include "backend/index/pid_table.h"
 #include <chrono>
 
 namespace peloton {
@@ -67,6 +68,10 @@ namespace peloton {
       inline bool IfUnderflow() {
         return slot_usage_ < min_node_size;
       }
+
+      size_type GetSlotUsage() { return slot_usage_; }
+
+      size_type GetChainLength() { return chain_length_; }
 
       virtual ~BWNOde() { };
 
@@ -309,7 +314,7 @@ namespace peloton {
         do {
           NodeType node_type = node_ptr->GetType();
           if (node_type == NLeaf) {
-            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(node_ptr);
+            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
             std::vector<KeyType> keys = leaf_node_ptr->GetKeys();
             for (auto iter = keys.begin(); iter != keys.end(); ++iter) {
               if (((*iter) == key) && (++delta) > 0) {
@@ -319,17 +324,17 @@ namespace peloton {
             return false;
           }
           else if (node_type == NInsert) {
-            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
+            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
             if ((insert_node_ptr->GetKey() == key) && (++delta > 0)) {
               return true;
             }
           } else if (node_type == NDelete) {
-            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
-            if ((delete_node_ptr->GetKey() == key) ) {
+            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
+            if ((delete_node_ptr->GetKey() == key)) {
               --delta;
             }
             //TODO: complete this
-          } else if (node_type == NSplitEntry){
+          } else if (node_type == NSplitEntry) {
 
 
 //          } else if (node_type == NMergeEntry){
@@ -339,10 +344,17 @@ namespace peloton {
         } while (true);
       }
 
-      bool DeltaInsert(__attribute__((unused)) PID cur, __attribute__((unused)) BWNode *node_ptr,
-                       __attribute__((unused)) const KeyType &key) {
-        return false;
+
+      bool DeltaInsert(PID cur, BWNode *node_ptr, const KeyType &key, const ValueType &value) {
+        PIDTable pidTable = PIDTable::get_table();
+        BWInsertNode *insert_node_ptr = new BWInsertNode<KeyType, ValueType>(
+          node_ptr->GetSlotUsage() + 1, node_ptr->GetChainLength() + 1, node_ptr, key, value);
+        if (pidTable.bool_compare_and_swap(cur, node_ptr, insert_node_ptr))
+          return true;
+        else
+          delete(insert_node_ptr);
       }
+
 
       PID GetNextPID(__attribute__((unused)) PID cur) {
 
@@ -357,7 +369,7 @@ namespace peloton {
           node_ptr = NULL;
           // If current is split node
           if (node_ptr->GetType() == NSplit) {
-            BWSplitNode <KeyType> *split_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
+            BWSplitNode<KeyType> *split_ptr = static_cast<BWSplitNode<KeyType> *>(node_ptr);
             InsertSplitEntry(path, split_ptr->GetSplitKey(), split_ptr->GetRightPID());
             //continue;
           }
@@ -388,7 +400,7 @@ namespace peloton {
               return false;
             }
 
-            if (!DeltaInsert(cur, node_ptr, key)) {
+            if (!DeltaInsert(cur, node_ptr, key, value)) {
               continue;
             }
 

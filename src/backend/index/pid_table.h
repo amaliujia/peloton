@@ -37,7 +37,7 @@ namespace peloton {
       // NULL for PID
       static constexpr PID PID_NULL = std::numeric_limits<PID>::max();
 
-      inline PIDTable& get_table() { return global_table_; }
+      static inline PIDTable& get_table() { return global_table_; }
 
       // get the address corresponding to the pid
       inline Address get(PID pid) const {
