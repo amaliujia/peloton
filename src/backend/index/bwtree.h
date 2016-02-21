@@ -383,10 +383,69 @@ namespace peloton {
 
       private:
       // TODO: Keep check top.
-      void InsertSplitEntry(__attribute__((unused)) const std::vector<PID> &parent,
-                            __attribute__((unused)) const KeyType &low_key,
-                            __attribute__((unused)) const PID &right_pid) {
+      void InsertSplitEntry(const std::vector<PID> &path, const KeyType &low_key, const PID& right_pid) {
+        if (path.size() > 1) { // In this case, this is a normal second step split
+          KeyType high_key;
+          PIDTable pid_table = PIDTable::get_table();
+          while (true) {
+            // Step 1: check if split finish.
+            BWNode *parent_ptr = pid_table.get(path[path.size() - 2]);
+            BWNode *cur_ptr = parent_ptr;
 
+            while (cur_ptr->GetType() != NInner) {
+              if (cur_ptr->GetType() == NSplitEntry) {
+                BWSplitEntryNode <KeyType> *split_ptr = static_cast<BWSplitEntryNode <KeyType> *>(cur_ptr);
+                if (split_ptr->GetLowKey() == low_key) {
+                  return;
+                }
+              } else {
+                // TODO: then what?
+              }
+
+              cur_ptr = cur_ptr->GetNext();
+            }
+
+            // Step 2: find high key
+            std::vector<KeyType> keys = static_cast<BWInnerNode<KeyType> *>(cur_ptr)->GetKeys();
+            size_t i;
+            for (i = 0; i < keys.size(); i++) {
+              if (comparator(low_key, keys[i])) {
+                high_key = keys[i];
+                break;
+              }
+            }
+
+            if (i == keys.size()) {
+              // TODO: high_key should equal to infinite.
+            }
+
+
+            // Step 3: try to finish second step.
+            size_type slot_usage = parent_ptr->GetSlotUsage();
+            size_type chain_len = parent_ptr->GetChainLength();
+
+            BWNode *split_entry_ptr = new BWSplitEntryNode(slot_usage + 1,
+                                                           chain_len + 1, parent_ptr, low_key, high_key, right_pid);
+
+            PID split_entry_pid = pid_table.allocate_PID();
+            bool ret = pid_table.bool_compare_and_swap(split_entry_pid, 0, split_entry_ptr);
+            if (ret == false){
+              delete split_entry_ptr;
+              pid_table.free_PID(split_entry_pid);
+              continue;
+            }
+
+            ret = pid_table.bool_compare_and_swap(path[path.size() - 2], parent_ptr, split_entry_ptr);
+            if (ret == false) {
+              delete split_entry_ptr;
+              pid_table.free_PID(split_entry_pid);
+              continue;
+            }
+            return;
+          }
+        } else { // TODO: alloc new root.
+
+        }
       }
 
 
@@ -661,9 +720,9 @@ namespace peloton {
             } else {
               right_type = NInner;
             }
-            bool ret = Split(cur, node_ptr, split_key, right_pid, right_type;
+            bool ret = Split(cur, node_ptr, split_key, right_pid, right_type);
             if (ret == true) {
-              // TODO: should keep spliting
+              // note: only do two step.
               InsertSplitEntry(path, split_key, right_pid);
             }
             // retry
