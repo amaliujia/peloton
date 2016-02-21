@@ -152,7 +152,7 @@ namespace peloton {
 
     };
 
-    template<typename KeyType, typename ValueType>
+    template<typename KeyType, typename ValueType, class KeyComparator>
     class BWLeafNode : public BWNormalNode<KeyType> {
       public:
       BWLeafNode(size_type s, size_type c, bool i, KeyType low, KeyType high, PID l, PID r,
@@ -174,10 +174,10 @@ namespace peloton {
       NodeType GetType() {
         return NLeaf;
       }
-//
-//    void ScanKey(__attribute__((unused)) const KeyType& key, __attribute__((unused)) std::vector<ValueType>& ret) {
-//
-//    }
+
+      void ScanKey(const KeyType& key, const KeyComparator& comparator, std::vector<ValueType>& ret) {
+
+      }
     };
 
 // template<typename KeyType>
@@ -748,13 +748,12 @@ namespace peloton {
         }
       }
 
-      void ScanKeyUtil(__attribute__((unused)) PID cur, __attribute__((unused)) KeyType key,
-                       __attribute__((unused)) std::vector<ValueType> &ret) {
-        //TODO: get node_ptr of cur.
-        BWNode *node_ptr = NULL;
+      void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
+        PIDTable pidTable = PIDTable::get_table();
+        BWNode *node_ptr = pidTable.get(cur);
 
-        if (node_ptr->) {
-          unsigned short if_delete = 0;
+        if (node_ptr->GetType() == NLeaf) {
+          unsigned short delete_count = 0;
 
           while (true) {
             // TODO: assume no renmoe node delta and merge node delta.
@@ -764,18 +763,20 @@ namespace peloton {
               KeyType split_key = split_ptr->GetSplitKey();
               if (comparator(key, split_key) == true) { // == true means key < split_key
                 node_ptr = split_ptr->GetNext();
+              } else {
+                node_ptr = pidTable.get(split_key->GetRightPID());
               }
             }
             else if (node_ptr->GetType() == NInsert) {
               BWInsertNode <KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
-              if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && if_delete == 0) {
+              if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && delete_count == 0) {
                 ret.push_back(insert_ptr->GetKey());
                 if (!Duplicate) {
                   break;
                 }
               }
-              else if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && if_delete > 0) {
-                if_delete--;
+              else if (keyEqualityChecker(insert_ptr->GetKey(), key) == true && delete_count > 0) {
+                delete_count--;
               }
 
               node_ptr = insert_ptr->GetNext();
@@ -783,20 +784,21 @@ namespace peloton {
             else if (node_ptr->GetType() == NDelete) {
               BWDeleteNode <KeyType> *delete_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
               if (keyEqualityChecker(delete_ptr->GetKey(), key) == false) {
-                if_delete++;
+                delete_count++;
                 if (!Duplicate) {
                   break;
                 }
               }
               else if (keyEqualityChecker(delete_ptr->GetKey(), key) == true) {
-                if_delete++;
+                delete_count++;
               }
 
               node_ptr = delete_ptr->GetNext();
             }
             else if (node_ptr->GetType() == NLeaf) {
               BWLeafNode <KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
-              // leaf_ptr->ScanKey(key, ret);
+              // TOOD: assume no scan key here.
+              leaf_ptr->ScanKey(key, comparator, ret);
               break;
             }
             else { // TODO: handle other cases here.
