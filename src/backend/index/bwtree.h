@@ -386,7 +386,23 @@ namespace peloton {
       KeyEqualityChecker keyEqualityChecker;
 
       private:
-      // TODO: Keep check top.
+        int BinaryGreaterThan(std::vector<KeyType> &arr, KeyType target, KeyComparator comp) {
+          int i = 0, j = (int)arr.size() - 1;
+
+          while (i <= j) {
+            int mid = (i + j) / 2;
+            if (comp(target, arr[mid])) {
+              j -= 1;
+            } else {
+              i += 1;
+            }
+          }
+
+          return i;
+        }
+
+      private:
+
       void InsertSplitEntry(const std::vector<PID> &path, const KeyType &low_key, const PID& right_pid) {
         PIDTable pid_table = PIDTable::get_table();
         if (path.size() > 1) { // In this case, this is a normal second step split
@@ -449,7 +465,7 @@ namespace peloton {
             }
             return;
           }
-        } else { // TODO: need talk about root.
+        } else { // TODO: need think about root case.
 
         }
       }
@@ -472,6 +488,9 @@ namespace peloton {
       /*
        *  In inner levels, the delta nodes should be SplitEntryNode, MergeEntryNode, SplitNode.
        *  For now, only handle SplitEntryNode and SplitNode.
+       *
+       *  This function has handle duplicate keys
+       *
        *  TODO: Handle MergeEntryNode.
        */
       void SplitInnerNodeUlti(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
@@ -496,16 +515,27 @@ namespace peloton {
 
         // come to inner node
         BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
-        std::vector<KeyType> entry_keys(inner_ptr->GetKeys());
-        std::vector<PID> entry_pids(inner_ptr->GetPIDs());
+        keys = inner_ptr->GetKeys();
+        pids = inner_ptr->GetPIDs();
+        right_pid = inner_ptr->GetRight();
 
-        // TODO: how to handle duplicate keys
+        while (!key_stack.empty()) {
+          KeyType k = key_stack.back();
+          PID p = pid_stack.back();
+          key_stack.pop_back();
+          pid_stack.pop_back();
+
+          int pos = BinaryGreaterThan(keys, k, comparator);
+          keys.insert(keys.begin() + pos, k);
+          pids.insert(pids.begin() + pos + 1, k);
+        }
+
+        assert(keys.size() > 0);
+
+        split_key = keys[keys.size() / 2];
       }
 
-      bool SplitInnerNode() {
-        return false;
-      }
-
+      // TODO: handle duplicate keys
       void SplitLeafNodeUtil(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
                              std::vector<KeyType>& keys,
                              std::vector<ValueType>& values) {
@@ -537,6 +567,8 @@ namespace peloton {
 
         std::map<KeyType, ValueType> key_value_map;
         BWLeafNode<KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(cur_ptr);
+
+        right_pid = leaf_ptr->GetRight();
 
         std::vector<KeyType> leaf_keys = leaf_ptr->GetKeys();
         std::vector<ValueType> leaf_values = leaf_ptr->GetValues();
@@ -570,6 +602,46 @@ namespace peloton {
         split_key = keys[keys.size() / 2];
       }
 
+        // Duplicate keys handled
+        bool SplitInnerNode(PID cur, BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
+          std::vector<KeyType> keys;
+          std::vector<PID> pids;
+          PID old_right = NULL_PID;
+
+          SplitLeafNodeUtil(node_ptr, split_key, old_right, keys, pids);
+
+          // Step 1: Create new right page;
+          PIDTable pidTable = PIDTable::get_table();
+          right_pid = pidTable.allocate_PID();
+
+          BWNode *right_ptr = NULL;
+          right_ptr = new BWInnerNode(keys.size(), 0, true, keys[0], keys[keys.size() - 1], cur, old_right, keys, pids);
+          bool ret = pidTable.bool_compare_and_swap(right_pid, 0, right_ptr);
+          if (ret == false) {
+            // TODO: need virtual destructors.
+            delete right_ptr;
+            pidTable.free_PID(right_pid);
+            return false;
+          }
+
+          // Step 2: Create split node
+          BWNode *split_ptr = NULL;
+          split_ptr = new BWSplitNode(node_ptr->GetSlotUsage() - keys.size(), node_ptr->GetChainLength() + 1,
+                                      node_ptr, split_key, right_pid, old_right);
+
+          // Step 3: install split node
+          ret = pidTable.bool_compare_and_swap(cur, node_ptr, split_ptr);
+          if (ret == false) {
+            delete right_ptr;
+            delete split_ptr;
+            pidTable.free_PID(right_pid);
+
+            return false;
+          }
+
+          return true;
+        }
+
       bool SplitLeafNode(PID cur, BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
         std::vector<KeyType> keys;
         std::vector<ValueType> values;
@@ -594,7 +666,7 @@ namespace peloton {
 
         // Step 2: Create split node
         BWNode *split_ptr = NULL;
-        split_ptr = new BWSplitNode(node_ptr->GetSlotUsage(), node_ptr->GetChainLength() + 1,
+        split_ptr = new BWSplitNode(node_ptr->GetSlotUsage() - keys.size(), node_ptr->GetChainLength() + 1,
                                     node_ptr, split_key, right_pid, old_right);
 
         // Step 3: install split node
@@ -614,7 +686,7 @@ namespace peloton {
         if (right_type == NLeaf) {
           return SplitLeafNode(cur, node_ptr, split_key, right_pid);
         } else {
-          return SplitInnerNode();
+          return SplitInnerNode(cur, node_ptr, split_key, right_pid);
         }
       }
 
