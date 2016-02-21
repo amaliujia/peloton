@@ -384,9 +384,10 @@ namespace peloton {
       private:
       // TODO: Keep check top.
       void InsertSplitEntry(const std::vector<PID> &path, const KeyType &low_key, const PID& right_pid) {
+        PIDTable pid_table = PIDTable::get_table();
         if (path.size() > 1) { // In this case, this is a normal second step split
           KeyType high_key;
-          PIDTable pid_table = PIDTable::get_table();
+
           while (true) {
             // Step 1: check if split finish.
             BWNode *parent_ptr = pid_table.get(path[path.size() - 2]);
@@ -443,7 +444,7 @@ namespace peloton {
             }
             return;
           }
-        } else { // TODO: alloc new root.
+        } else { // TODO: need talk about root.
 
         }
       }
