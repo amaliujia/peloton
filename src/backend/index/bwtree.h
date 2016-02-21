@@ -150,6 +150,10 @@ namespace peloton {
         return keys;
       }
 
+      std::vector<PID> GetPIDs() const {
+        return children;
+      }
+
     };
 
     template<typename KeyType, typename ValueType, class KeyComparator>
@@ -386,7 +390,7 @@ namespace peloton {
       void InsertSplitEntry(const std::vector<PID> &path, const KeyType &low_key, const PID& right_pid) {
         PIDTable pid_table = PIDTable::get_table();
         if (path.size() > 1) { // In this case, this is a normal second step split
-          KeyType high_key;
+          // KeyType high_key;
 
           while (true) {
             // Step 1: check if split finish.
@@ -406,27 +410,28 @@ namespace peloton {
               cur_ptr = cur_ptr->GetNext();
             }
 
-            // Step 2: find high key
-            std::vector<KeyType> keys = static_cast<BWInnerNode<KeyType> *>(cur_ptr)->GetKeys();
-            size_t i;
-            for (i = 0; i < keys.size(); i++) {
-              if (comparator(low_key, keys[i])) {
-                high_key = keys[i];
-                break;
-              }
-            }
-
-            if (i == keys.size()) {
-              // TODO: high_key should equal to infinite.
-            }
+//            // Step 2: find high key
+//            std::vector<KeyType> keys = static_cast<BWInnerNode<KeyType> *>(cur_ptr)->GetKeys();
+//            size_t i;
+//            for (i = 0; i < keys.size(); i++) {
+//              if (comparator(low_key, keys[i])) {
+//                high_key = keys[i];
+//                break;
+//              }
+//            }
+//
+//            if (i == keys.size()) {
+//              // TODO: high_key should equal to infinite.
+//            }
 
 
             // Step 3: try to finish second step.
             size_type slot_usage = parent_ptr->GetSlotUsage();
             size_type chain_len = parent_ptr->GetChainLength();
 
+            // When only one key, low_key should be equal to high_key.
             BWNode *split_entry_ptr = new BWSplitEntryNode(slot_usage + 1,
-                                                           chain_len + 1, parent_ptr, low_key, high_key, right_pid);
+                                                           chain_len + 1, parent_ptr, low_key, low_key, right_pid);
 
             PID split_entry_pid = pid_table.allocate_PID();
             bool ret = pid_table.bool_compare_and_swap(split_entry_pid, 0, split_entry_ptr);
@@ -472,31 +477,29 @@ namespace peloton {
       void SplitInnerNodeUlti(BWNode *node_ptr, KeyType& split_key, PID& right_pid,
                               std::vector<KeyType>& keys,
                               std::vector<PID>& pids ) {
-//        std::set<KeyType> keys;
-//
-//        BWNode *cur_ptr = node_ptr;
-//        while (cur_ptr->GetType() != NInner) {
-//          if (cur_ptr->GetType() == NSplitEntry) {
-//            BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
-//
-//            if (keys.find(split_entry_ptr->GetLowKey()) == keys.end()) {
-//              keys.insert(split_entry_ptr->GetLowKey());
-//            }
-//
-//            if (keys.find(split_entry_ptr->GetHightKey()) == keys.end()) {
-//              keys.insert(split_entry_ptr->GetHightKey());
-//            }
-//          } else {
-//           // TODO: handle others
-//          }
-//
-//          cur_ptr = cur_ptr->GetNext();
-//        }
-//
-//        // come to inner node
-//        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
-//        auto inner_keys = inner_ptr->GetKeys();
+        std::vector<KeyType> key_stack;
+        std::vector<PID> pid_stack;
 
+        BWNode *cur_ptr = node_ptr;
+        while (cur_ptr->GetType() != NInner) {
+          if (cur_ptr->GetType() == NSplitEntry) {
+            BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
+
+            key_stack.push_back(split_entry_ptr->GetLowKey());
+            pid_stack.push_back(split_entry_ptr->GetNextPID());
+          } else {
+           // TODO: handle MergeEntryNode and Split Node, if any
+          }
+
+          cur_ptr = cur_ptr->GetNext();
+        }
+
+        // come to inner node
+        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
+        std::vector<KeyType> entry_keys(inner_ptr->GetKeys());
+        std::vector<PID> entry_pids(inner_ptr->GetPIDs());
+
+        // TODO: how to handle duplicate keys
       }
 
       bool SplitInnerNode() {
