@@ -65,7 +65,8 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 std::vector<ItemPointer>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys() {
   std::vector<ItemPointer> result;
-  // Add your implementation here
+  container.ScanAllKeys(result);
+
   return result;
 }
 
