@@ -17,7 +17,7 @@
 #include "backend/common/types.h"
 #include "backend/index/index.h"
 #include "backend/index/pid_table.h"
-#include <backend/common/value.h>
+#include "backend/common/value.h"
 
 #include <vector>
 #include <map>
@@ -26,18 +26,12 @@
 
 namespace peloton {
   namespace index {
-
-
-#define EPOCH 10 // unit : ms
-#define NULL_PID 0
-#define ROOT_PID 1 // root pid should be 1
-
     typedef size_t size_type;
     typedef size_t PID;
     constexpr int max_chain_len = 8;
     constexpr int max_node_size = 20;
     constexpr int min_node_size = max_node_size<<1;
-
+    PID root;
     enum NodeType {
       NInsert,
       NDelete,
@@ -54,37 +48,37 @@ namespace peloton {
 
     class BWNode {
     public:
-      virtual NodeType GetType() = 0;
+      inline virtual NodeType GetType() const = 0;
 
-      virtual BWNode *GetNext() = 0;
+      inline virtual const BWNode *GetNext() const = 0;
 
-      virtual PID GetLeft() const = 0;
+      inline virtual PID GetLeft() const = 0;
 
-      virtual PID GetRight() const = 0;
+      inline virtual PID GetRight() const = 0;
 
-      inline bool IfLeafNode() {
+      inline bool IfLeafNode() const {
         return if_leaf_;
       }
 
-      inline bool IfInnerNode() {
+      inline bool IfInnerNode() const {
         return !if_leaf_;
       }
 
-      inline bool IfChainTooLong() {
+      inline bool IfChainTooLong() const {
         return chain_length_>max_chain_len;
       }
 
-      inline bool IfOverflow() {
+      inline bool IfOverflow() const {
         return slot_usage_>max_node_size;
       }
 
-      inline bool IfUnderflow() {
+      inline bool IfUnderflow() const {
         return slot_usage_<min_node_size;
       }
 
-      size_type GetSlotUsage() { return slot_usage_; }
+      inline size_type GetSlotUsage() const { return slot_usage_; }
 
-      size_type GetChainLength() { return chain_length_; }
+      inline size_type GetChainLength() const { return chain_length_; }
 
       virtual ~BWNOde() { };
 
@@ -105,57 +99,61 @@ namespace peloton {
     template<typename KeyType>
     class BWNormalNode: public BWNode {
     public:
-      virtual NodeType GetType() = 0;
+      virtual NodeType GetType() const = 0;
 
-      BWNode *GetNext() {
+      // TODO ???
+      inline const BWNode *GetNext() const {
         return NULL;
       };
 
-      PID GetLeft() const {
+      inline PID GetLeft() const {
         return left_;
       }
 
-      PID GetRight() const {
+      inline PID GetRight() const {
         return right_;
       }
 
     protected:
-      BWNormalNode(const size_type &slot_usage, const size_type &chain_length, bool if_leaf, const KeyType &low, const KeyType &high, const PID &left,
+      BWNormalNode(const size_type &slot_usage, const size_type &chain_length, bool if_leaf, const PID &left,
                    const PID &right): BWNode(slot_usage, chain_length, if_leaf),
-                               low_key_(low),
-                               high_key_(high),
                                left_(left),
                                right_(right) { }
 
-      const KeyType low_key_, high_key_;
       const PID left_, right_;
 
     };
 
     template<typename KeyType>
     class BWInnerNode: public BWNormalNode<KeyType> {
-    protected:
-      const std::vector<KeyType> keys_;
-      const std::vector<PID> children_;
-
     public:
       // keys and children should not be used anymore
       BWInnerNode(std::vector<KeyType> &keys, std::vector<PID> &children, const PID &left, const PID &right):
-              BWNormalNode(keys.size(), 0, false, keys.front(), keys.back(), left, right), keys_(std::move(keys)), children_(std::move(children)) {
+              BWNormalNode(keys.size(), 0, false, left, right), keys_(std::move(keys)), children_(std::move(children)) {
+
+      }
+      BWInnerNode(const std::vector<KeyType> &keys, const std::vector<PID> &children, const PID &left, const PID &right):
+              BWNormalNode(keys.size(), 0, false, left, right), keys_(keys), children_(children) {
 
       }
 
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NInner;
       }
 
-      std::vector<KeyType> GetKeys() const {
+      inline const std::vector<KeyType> &GetKeys() const {
         return keys_;
       }
 
-      std::vector<PID> GetPIDs() const {
+      inline const std::vector<PID> &GetChildren() const {
         return children_;
       }
+      inline const std::vector<PID> &GetPIDs() const {
+        return GetChildren();
+      }
+    protected:
+      const std::vector<KeyType> keys_;
+      const std::vector<PID> children_;
 
     };
 
@@ -164,167 +162,146 @@ namespace peloton {
     public:
       // keys and values should not be used anymore
       BWLeafNode(std::vector<KeyType> &keys, std::vector<ValueType> &values, const PID &left, const PID &right):
-              BWNormalNode(keys.size(), 0, true, keys.front(), keys.back(), left, right), keys_(std::move(keys)), values_(std::move(values)) {
-      }
+              BWNormalNode(keys.size(), 0, true, left, right), keys_(std::move(keys)), values_(std::move(values)) { }
+      BWLeafNode(const std::vector<KeyType> &keys, const std::vector<ValueType> &values, const PID &left, const PID &right):
+              BWNormalNode(keys.size(), 0, true, left, right), keys_(keys), values_(values) { }
 
       // TODO: add iterator
-      std::vector<KeyType> GetKeys() { return keys_; }
+      inline const std::vector<KeyType> &GetKeys() const { return keys_; }
 
-      std::vector<ValueType> GetValues() {
-        return values_;
-      }
-
-    protected:
-      const std::vector<KeyType> keys_;
-      const std::vector<ValueType> values_;
-
-    public:
-      NodeType GetType() {
+      inline const std::vector<ValueType> &GetValues() const { return values_; }
+      inline NodeType GetType() const {
         return NLeaf;
       }
 
-      void ScanKey(const KeyType &key, const KeyComparator &comparator, std::vector<ValueType> &ret) {
+      void ScanKey(const KeyType &key, const KeyComparator &comparator, std::vector<ValueType> &ret) const {
 
       }
+    protected:
+      const std::vector<KeyType> keys_;
+      const std::vector<ValueType> values_;
     };
 
-// template<typename KeyType>
-// Add your declarations here
     class BWDeltaNode: public BWNode {
     public:
-      virtual NodeType GetType() = 0;
+      inline virtual NodeType GetType() const = 0;
 
-
-      BWNode *GetNext() {
-        return next;
-      }
-
-      PID GetLeft() const {
-        return NULL_PID;
-      }
-
-      virtual PID GetRight() {
-        return NULL_PID;
+      inline const BWNode *GetNext() const {
+        return next_;
       }
 
     protected:
 
-      BWDeltaNode(size_type slot_usage, size_type chain_length, BWNode *n): BWNode(slot_usage, chain_length, false) { }
-
-      // omit const
-      BWNode *next;
-
+      BWDeltaNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next): BWNode(slot_usage, chain_length, false), next_(next) { }
+      const BWNode *next_;
     };
 
     template<typename KeyType, typename ValueType,>
     class BWInsertNode: public BWDeltaNode {
     public:
-      BWInsertNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k, ValueType v):
-              BWDeltaNode(slot_usage, chain_length, next), key(k), value(v) { }
+      BWInsertNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &key, const ValueType &value):
+              BWDeltaNode(slot_usage, chain_length, next), key_(key), value_(value) { }
 
-      NodeType GetType() {
+      inline NodeType GetType() {
         return NInsert;
       }
 
-      KeyType GetKey() const {
-        return key;
-      }
-
-      ValueType GetValue() const {
-        return value;
+      inline const KeyType &GetKey() const {
+        return key_;
       }
 
     protected:
-      const KeyType key;
-      const ValueType value;
-
+      const KeyType key_;
+      const ValueType value_;
     };
 
     template<typename KeyType>
     class BWDeleteNode: public BWDeltaNode {
     public:
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NDelete;
       }
 
-      BWDeleteNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k):
-              BWDeltaNode(slot_usage, chain_length, next), key(k) { }
+      BWDeleteNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &key):
+              BWDeltaNode(slot_usage, chain_length, next), key_(key) { }
 
-      KeyType GetKey() const {
-        return key;
+      inline const KeyType &GetKey() const {
+        return key_;
       }
 
     protected:
-      const KeyType key;
+      const KeyType key_;
     };
 
     template<typename KeyType>
     class BWSplitNode: public BWDeltaNode {
     public:
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NSplit;
       }
 
-      KeyType &GetSplitKey() const {
-        return key;
+      inline const KeyType &GetSplitKey() const {
+        return key_;
       }
 
-      PID GetRightPID() const {
-        return right;
+      inline PID GetSplitChild() const { return GetRightPID(); }
+
+      inline PID GetRightPID() const {
+        return right_;
       }
 
-      BWSplitNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType k, PID r, PID o):
-              BWDeltaNode(slot_usage, chain_length, next), key(k), right(r), old(o) { }
+      BWSplitNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &key, PID right, PID old):
+              BWDeltaNode(slot_usage, chain_length, next), key_(key), right_(right), old_(old) { }
 
     protected:
-      const KeyType key;
+      const KeyType key_;
       // From Andy's slide, split node must have three child.
       // 1. old left.
       // 2. old right.
       // 3. new
 
       // new one
-      const PID right;
+      const PID right_;
 
       // old right
-      const PID old;
+      const PID old_;
     };
 
     template<typename KeyType>
     class BWSplitEntryNode: public BWDeltaNode {
     public:
-      BWSplitEntryNode(size_type slot_usage, size_type chain_length, BWNode *next, KeyType low, KeyType high,
-                       PID t):
-              BWDeltaNode(slot_usage, chain_length, next), low_key(low), high_key(high), to(t) { }
+      BWSplitEntryNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &low, const KeyType &high,
+                       PID to):
+              BWDeltaNode(slot_usage, chain_length, next), low_key_(low), high_key_(high), to_(to) { }
 
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NSplitEntry;
       }
 
-      KeyType GetLowKey() {
-        return low_key;
+      inline const KeyType &GetLowKey() const {
+        return low_key_;
       }
 
-      KeyType GetHightKey() {
-        return high_key;
+      inline const KeyType &GetHightKey() const {
+        return high_key_;
       }
 
-      PID GetNextPID() {
-        return to;
+      inline PID GetNextPID() const {
+        return to_;
       }
 
     protected:
-      const KeyType low_key, high_key;
-      const PID to;
+      const KeyType low_key_, high_key_;
+      const PID to_;
     };
 
     template<typename KeyType>
     class BWRemoveNode: public BWDeltaNode {
     public:
-      BWRemoveNode(size_type slot_usage, size_type chain_length, BWNode *next):
+      BWRemoveNode(size_type slot_usage, size_type chain_length, const BWNode *next):
               BWDeltaNode(slot_usage, chain_length, next) { }
 
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NRemove;
       }
     };
@@ -332,15 +309,15 @@ namespace peloton {
     template<typename KeyType>
     class BWMergeNode: public BWDeltaNode {
     public:
-      BWMergeNode(size_type slot_usage, size_type chain_length, BWNode *next, BWNode *r):
-              BWDeltaNode(slot_usage, chain_length, next), right(r) { }
+      BWMergeNode(size_type slot_usage, size_type chain_length, const BWNode *next, const BWNode *right):
+              BWDeltaNode(slot_usage, chain_length, next), right_(right) { }
 
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NMerge;
       }
 
     protected:
-      const BWNode *right;
+      const BWNode *right_;
     };
 
     // TODO
@@ -350,7 +327,7 @@ namespace peloton {
       MergeEntryNode(size_type slot_usage, size_type chain_length, BWNode *next):
               BWDeltaNode(slot_usage, chain_length, next) { }
 
-      NodeType GetType() {
+      inline NodeType GetType() const {
         return NMergeEntry;
       }
     };
@@ -363,7 +340,7 @@ namespace peloton {
 
     class Operation {
     public:
-      virtual OpType GetOpType() = 0;
+      virtual OpType GetOpType() const = 0;
 
     };
 
@@ -381,13 +358,10 @@ namespace peloton {
       }
     };
 
-// Look up the stx btree interface for background.
-// peloton/third_party/stx/btree.h
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, bool Duplicate>
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     class BWTree {
-
-      KeyComparator comparator;
-      KeyEqualityChecker keyEqualityChecker;
+      static KeyComparator comparator_;
+      static KeyEqualityChecker key_equality_checker_;
 
     private:
       int BinaryGreaterThan(std::vector<KeyType> &arr, KeyType target, KeyComparator comp) {
@@ -479,21 +453,21 @@ namespace peloton {
 
       bool Consolidate(PID cur, BWNode *node_ptr);
 
-      BWInnerNode *ConstructConsolidatedInnerNode(BWNode *node_chain);
-      void ConstructConsolidatedLeafNodeInternal(BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
+      const BWInnerNode *ConstructConsolidatedInnerNode(const BWNode *node_chain);
+      void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
 
-      BWLeafNode *ConstructConsolidatedLeafNode(BWNode *node_chain);
-      void ConstructConsolidatedInnerNodeInternal(BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
+      const BWLeafNode *ConstructConsolidatedLeafNode(const BWNode *node_chain);
+      void ConstructConsolidatedInnerNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
 
-      void ConsolidateInsertNode(BWInsertNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
+      void ConsolidateInsertNode(const BWInsertNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
 
-      void ConsolidateSplitNode(BWSplitNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
-      void ConsolidateSplitNode(BWSplitNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
+      void ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
+      void ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
 
-      void ConsolidateSplitEntryNode(BWSplitEntryNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
+      void ConsolidateSplitEntryNode(const BWSplitEntryNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
 
-      PID GetRightPID(BWNode *node_ptr) {
-        BWNode *cur_ptr = node_ptr;
+      PID GetRightPID(const BWNode *node_ptr) {
+        const BWNode *cur_ptr = node_ptr;
         while(cur_ptr->GetType()!=NLeaf||cur_ptr->GetType()!=NInner) {
           cur_ptr = cur_ptr->GetNext();
         }
@@ -542,7 +516,7 @@ namespace peloton {
           key_stack.pop_back();
           pid_stack.pop_back();
 
-          int pos = BinaryGreaterThan(keys, k, comparator);
+          int pos = BinaryGreaterThan(keys, k, comparator_);
           keys.insert(keys.begin()+pos, k);
           pids.insert(pids.begin()+pos+1, k);
         }
@@ -771,7 +745,7 @@ namespace peloton {
           if(cur_ptr->GetType()==NSplitEntry) {
             BWSplitEntryNode <KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode <KeyType> *>(cur_ptr);
 
-            if(!comparator(key, split_entry_ptr->GetLowKey())&&comparator(key, split_entry_ptr->GetHightKey())) {
+            if(!comparator_(key, split_entry_ptr->GetLowKey())&&comparator_(key, split_entry_ptr->GetHightKey())) {
               return split_entry_ptr->GetNextPID();
             }
           }
@@ -864,7 +838,7 @@ namespace peloton {
             if(node_ptr->GetType()==NSplit) {
               BWSplitNode <KeyType> *split_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
               KeyType split_key = split_ptr->GetSplitKey();
-              if(comparator(key, split_key)==true) { // == true means key < split_key
+              if(comparator_(key, split_key)==true) { // == true means key < split_key
                 node_ptr = split_ptr->GetNext();
               }
               else {
@@ -873,13 +847,13 @@ namespace peloton {
             }
             else if(node_ptr->GetType()==NInsert) {
               BWInsertNode <KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
-              if(keyEqualityChecker(insert_ptr->GetKey(), key)==true&&delete_count==0) {
+              if(key_equality_checker_(insert_ptr->GetKey(), key)==true&&delete_count==0) {
                 ret.push_back(insert_ptr->GetKey());
                 if(!Duplicate) {
                   break;
                 }
               }
-              else if(keyEqualityChecker(insert_ptr->GetKey(), key)==true&&delete_count>0) {
+              else if(key_equality_checker_(insert_ptr->GetKey(), key)==true&&delete_count>0) {
                 delete_count--;
               }
 
@@ -887,13 +861,13 @@ namespace peloton {
             }
             else if(node_ptr->GetType()==NDelete) {
               BWDeleteNode <KeyType> *delete_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
-              if(keyEqualityChecker(delete_ptr->GetKey(), key)==false) {
+              if(key_equality_checker_(delete_ptr->GetKey(), key)==false) {
                 delete_count++;
                 if(!Duplicate) {
                   break;
                 }
               }
-              else if(keyEqualityChecker(delete_ptr->GetKey(), key)==true) {
+              else if(key_equality_checker_(delete_ptr->GetKey(), key)==true) {
                 delete_count++;
               }
 
@@ -902,7 +876,7 @@ namespace peloton {
             else if(node_ptr->GetType()==NLeaf) {
               BWLeafNode <KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
               // TOOD: assume no scan key here.
-              leaf_ptr->ScanKey(key, comparator, ret);
+              leaf_ptr->ScanKey(key, comparator_, ret);
               break;
             }
             else { // TODO: handle other cases here.
@@ -917,7 +891,7 @@ namespace peloton {
       }
 
     public :
-      BWTree(IndexMetadata *indexMetadata): comparator(indexMetadata), keyEqualityChecker(indexMetadata) {
+      BWTree(IndexMetadata *indexMetadata): comparator_(indexMetadata), key_equality_checker_(indexMetadata) {
 
       }
 
