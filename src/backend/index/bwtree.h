@@ -202,7 +202,7 @@ namespace peloton {
       BWInsertNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &key, const ValueType &value):
               BWDeltaNode(slot_usage, chain_length, next), key_(key), value_(value) { }
 
-      inline NodeType GetType() {
+      inline NodeType GetType() const {
         return NInsert;
       }
 
@@ -243,8 +243,6 @@ namespace peloton {
       inline const KeyType &GetSplitKey() const {
         return key_;
       }
-
-      inline PID GetSplitChild() const { return GetRightPID(); }
 
       inline PID GetRightPID() const {
         return right_;
@@ -451,7 +449,7 @@ namespace peloton {
         }
       }
 
-      bool Consolidate(PID cur, BWNode *node_ptr);
+      bool Consolidate(PID cur, const BWNode *node_ptr);
 
       const BWInnerNode *ConstructConsolidatedInnerNode(const BWNode *node_chain);
       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
