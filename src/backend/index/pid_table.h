@@ -62,7 +62,7 @@ namespace peloton {
       }
 
       // atomic operation
-      bool bool_compare_and_swap(PID pid, Address original, Address to) {
+      bool bool_compare_and_swap(PID pid, const Address original, const Address to) {
         int row = (int)((pid&first_level_mask)>>second_level_bits);
         int col = (int)(pid&second_level_mask);
         return __sync_bool_compare_and_swap(

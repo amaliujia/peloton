@@ -31,7 +31,6 @@ namespace peloton {
     constexpr int max_chain_len = 8;
     constexpr int max_node_size = 20;
     constexpr int min_node_size = max_node_size<<1;
-    PID root;
     enum NodeType {
       NInsert,
       NDelete,
@@ -119,9 +118,7 @@ namespace peloton {
                    const PID &right): BWNode(slot_usage, chain_length, if_leaf),
                                left_(left),
                                right_(right) { }
-
       const PID left_, right_;
-
     };
 
     template<typename KeyType>
@@ -392,7 +389,7 @@ namespace peloton {
 
             while(cur_ptr->GetType()!=NInner) {
               if(cur_ptr->GetType()==NSplitEntry) {
-                BWSplitEntryNode <KeyType> *split_ptr = static_cast<BWSplitEntryNode <KeyType> *>(cur_ptr);
+                const BWSplitEntryNode<KeyType> *split_ptr = static_cast<const BWSplitEntryNode<KeyType> *>(cur_ptr);
                 if(split_ptr->GetLowKey()==low_key) {
                   return;
                 }
@@ -452,17 +449,23 @@ namespace peloton {
       bool Consolidate(PID cur, const BWNode *node_ptr);
 
       const BWInnerNode *ConstructConsolidatedInnerNode(const BWNode *node_chain);
-      void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
+
+      void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
+                                                 std::vector<ValueType> &values, PID &left, PID &right);
 
       const BWLeafNode *ConstructConsolidatedLeafNode(const BWNode *node_chain);
-      void ConstructConsolidatedInnerNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
+
+      void ConstructConsolidatedInnerNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
+                                                  std::vector<PID> &children, PID &left, PID &right);
 
       void ConsolidateInsertNode(const BWInsertNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
 
       void ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
+
       void ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
 
-      void ConsolidateSplitEntryNode(const BWSplitEntryNode *node, std::vector<KeyType> &keys, std::vector<PID> &children);
+      void ConsolidateSplitEntryNode(const BWSplitEntryNode *node, std::vector<KeyType> &keys,
+                                     std::vector<PID> &children);
 
       PID GetRightPID(const BWNode *node_ptr) {
         const BWNode *cur_ptr = node_ptr;
@@ -490,7 +493,7 @@ namespace peloton {
         BWNode *cur_ptr = node_ptr;
         while(cur_ptr->GetType()!=NInner) {
           if(cur_ptr->GetType()==NSplitEntry) {
-            BWSplitEntryNode <KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode <KeyType> *>(cur_ptr);
+            const BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<const BWSplitEntryNode<KeyType> *>(cur_ptr);
 
             key_stack.push_back(split_entry_ptr->GetLowKey());
             pid_stack.push_back(split_entry_ptr->GetNextPID());
@@ -503,7 +506,7 @@ namespace peloton {
         }
 
         // come to inner node
-        BWInnerNode <KeyType> *inner_ptr = static_cast<BWInnerNode <KeyType> *>(cur_ptr);
+        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
         keys = inner_ptr->GetKeys();
         pids = inner_ptr->GetPIDs();
         right_pid = inner_ptr->GetRight();
@@ -536,14 +539,14 @@ namespace peloton {
         // What kind of Delta?
         while(cur_ptr->GetType()!=NLeaf) {
           if(cur_ptr->GetType()==NInsert) {
-            BWInsertNode <KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(cur_ptr);
+            BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(cur_ptr);
 
             op_stack.push_back(OInsert);
             key_stack.push_back(insert_ptr->GetKey());
             value_stack.push_back(insert_ptr->GetValue());
           }
           else if(cur_ptr->GetType()==NDelete) {
-            BWDeleteNode <KeyType> *delete_ptr = static_cast<BWDeleteNode <KeyType> *>(cur_ptr);
+            BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(cur_ptr);
 
             op_stack.push_back(ODelete);
             key_stack.push_back(delete_ptr->GetKey());
@@ -557,7 +560,7 @@ namespace peloton {
         }
 
         std::map<KeyType, ValueType> key_value_map;
-        BWLeafNode <KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(cur_ptr);
+        BWLeafNode<KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(cur_ptr);
 
         right_pid = leaf_ptr->GetRight();
 
@@ -692,7 +695,7 @@ namespace peloton {
         do {
           NodeType node_type = node_ptr->GetType();
           if(node_type==NLeaf) {
-            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode <KeyType, ValueType> *>(node_ptr);
+            BWLeafNode *leaf_node_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(node_ptr);
             std::vector<KeyType> keys = leaf_node_ptr->GetKeys();
             for(auto iter = keys.begin(); iter!=keys.end(); ++iter) {
               if(equality_checker(*iter, key)&&(++delta)>0) {
@@ -702,13 +705,13 @@ namespace peloton {
             return false;
           }
           else if(node_type==NInsert) {
-            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode <KeyType, ValueType> *>(node_ptr);
+            BWInsertNode *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
             if(equality_checker(insert_node_ptr->GetKey(), key)&&(++delta>0)) {
               return true;
             }
           }
           else if(node_type==NDelete) {
-            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode <KeyType> *>(node_ptr);
+            BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
             if(equality_checker(delete_node_ptr->GetKey(), key)) {
               --delta;
             }
@@ -741,7 +744,7 @@ namespace peloton {
 
         while(cur_ptr->GetType()!=NInner) {
           if(cur_ptr->GetType()==NSplitEntry) {
-            BWSplitEntryNode <KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode <KeyType> *>(cur_ptr);
+            BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
 
             if(!comparator_(key, split_entry_ptr->GetLowKey())&&comparator_(key, split_entry_ptr->GetHightKey())) {
               return split_entry_ptr->GetNextPID();
@@ -757,7 +760,7 @@ namespace peloton {
           cur_ptr = cur_ptr->GetNext();
         }
 
-        BWInnerNode <KeyType> *inner_ptr = static_cast<BWInnerNode <KeyType> *>(cur_ptr);
+        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
         // TODO: implement scan_key;
 
         return ROOT_PID;
@@ -772,7 +775,7 @@ namespace peloton {
           node_ptr = NULL;
           // If current is split node
           if(node_ptr->GetType()==NSplit) {
-            BWSplitNode <KeyType> *split_ptr = static_cast<BWSplitNode <KeyType> *>(node_ptr);
+            BWSplitNode<KeyType> *split_ptr = static_cast<BWSplitNode<KeyType> *>(node_ptr);
             InsertSplitEntry(path, split_ptr->GetSplitKey(), split_ptr->GetRightPID());
             //continue;
           }
@@ -809,19 +812,23 @@ namespace peloton {
             if(!Duplicate&&DupExist(node_ptr, key)) {
               return false;
             }
-
-            if(!DeltaInsert(cur, node_ptr, key, value)) {
-              continue;
-            }
-
-            return true;
+            // retry
+            path.pop_back();
+            continue;
           }
-          else {
-            PID next_pid = GetNextPID(path.back(), key);
-            path.push_back(cur);
+
+          if(!DeltaInsert(cur, node_ptr, key, value)) {
+            continue;
           }
+
+          return true;
+        }
+        else {
+          PID next_pid = GetNextPID(path.back(), key);
+          path.push_back(cur);
         }
       }
+
 
       void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
         PIDTable pidTable = PIDTable::get_table();
@@ -829,7 +836,6 @@ namespace peloton {
 
         if(node_ptr->GetType()==NLeaf) {
           unsigned short delete_count = 0;
-
           while(true) {
             // TODO: assume no renmoe node delta and merge node delta.
             // Only handle split node, insert node, delete node.

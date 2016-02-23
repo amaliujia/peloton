@@ -54,7 +54,7 @@ namespace peloton {
             const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right) {
       if(node_chain->GetType()==NLeaf) {
         // arrive at bottom
-        const BWLeafNode *node = static_cast<const BWLeafNode *>(node_chain);
+        const BWLeafNode *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
@@ -67,14 +67,14 @@ namespace peloton {
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
         case NInsert:
-          ConsolidateInsertNode(static_cast<const BWInsertNode *>(node_chain), keys, values);
+          ConsolidateInsertNode(static_cast<const BWInsertNode<KeyType, ValueType> *>(node_chain), keys, values);
           break;
         case NDelete:
           // not implemented
           assert(0);
           break;
         case NSplit:
-          ConsolidateSplitNode(static_cast<const BWSplitNode *>(node_chain), keys, values);
+          ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, values);
           break;
         case NMerge:
           assert(0);
@@ -93,7 +93,7 @@ namespace peloton {
             const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right) {
       if(node_chain->GetType()==NInner) {
         // arrive at bottom
-        const BWInnerNode *node = static_cast<const BWInnerNode *>(node_chain);
+        const BWInnerNode *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
         keys = node->GetKeys();
         children = node->GetChildren();
         left = node->GetLeft();
@@ -106,10 +106,10 @@ namespace peloton {
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, children, left, right);
       switch(node_chain->GetType()) {
         case NSplit:
-          ConsolidateSplitNode(static_cast<const BWSplitNode *>(node_chain), keys, children);
+          ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, children);
           break;
         case NSplitEntry:
-          ConsolidateSplitEntryNode(static_cast<const BWSplitEntryNode *>(node_chain), keys, children);
+          ConsolidateSplitEntryNode(static_cast<const BWSplitEntryNode<KeyType> *>(node_chain), keys, children);
           break;
         case NMerge:
           // not implemented
