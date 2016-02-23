@@ -22,7 +22,7 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWInnerNode *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
+    const BWInnerNode<KeyType, > *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
             const BWNode *node_chain) {
       assert(node_chain!=NULL);
       std::vector<KeyType> keys;
@@ -37,7 +37,7 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWLeafNode *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
+    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
       std::vector<KeyType> keys;
       std::vector<ValueType> values;
       PID left, right;

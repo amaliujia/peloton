@@ -240,13 +240,13 @@ namespace peloton {
           return false;
         }
         else if(node_type==NInsert) {
-          BWInsertNode *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
+          BWInsertNode<KeyType, ValueType> *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
           if(equality_checker(insert_node_ptr->GetKey(), key)&&(++delta>0)) {
             return true;
           }
         }
         else if(node_type==NDelete) {
-          BWDeleteNode *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
+          BWDeleteNode<KeyType> *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
           if(equality_checker(delete_node_ptr->GetKey(), key)) {
             --delta;
           }
@@ -386,7 +386,7 @@ namespace peloton {
             node_ptr = delete_ptr->GetNext();
           }
           else if(node_ptr->GetType()==NLeaf) {
-            BWLeafNode<KeyType, ValueType> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType> *>(node_ptr);
+            BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_ptr);
             // TOOD: assume no scan key here.
             leaf_ptr->ScanKey(key, comparator_, ret);
             break;
@@ -412,7 +412,7 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWInnerNode *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
+    const BWInnerNode<KeyType> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
       const BWNode *node_chain) {
       assert(node_chain!=NULL);
       std::vector<KeyType> keys;
@@ -427,7 +427,7 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWLeafNode *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
+    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
       std::vector<KeyType> keys;
       std::vector<ValueType> values;
       PID left, right;
