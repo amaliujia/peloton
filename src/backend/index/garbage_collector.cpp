@@ -9,16 +9,15 @@
 
 namespace peloton {
   namespace index {
-    /*
-    void *GarbageCollector::Begin(void *) {
-      while(!stopped_) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(epoch_interval_));
-        head_ = new Epoch(timer_++, head_);
-        ReclaimGarbage();
+    void *Begin(void *arg) {
+      GarbageCollector *gc = static_cast<GarbageCollector *>(arg);
+      while (!(gc->stopped_)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(GarbageCollector::epoch_interval_));
+        gc->head_ = new Epoch((gc->timer_++), gc->head_);
+        gc->ReclaimGarbage();
       }
       return nullptr;
     }
-     */
     void GarbageCollector::ReclaimGarbage() {
       // reclaim at most this number of epochs every time
       static const int max_number = 5;

@@ -546,7 +546,7 @@ namespace peloton {
       }
 
       bool Consolidate(PID cur, const BWNode *node_ptr);
-/*
+
       const BWInnerNode<KeyType> *ConstructConsolidatedInnerNode(const BWNode *node_chain);
 
       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
@@ -565,7 +565,7 @@ namespace peloton {
 
       void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
                                      std::vector<PID> &children);
-*/
+
       PID GetRightPID(const BWNode *node_ptr) {
         const BWNode *cur_ptr = node_ptr;
         while(cur_ptr->GetType()!=NLeaf||cur_ptr->GetType()!=NInner) {

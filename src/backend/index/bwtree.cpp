@@ -74,6 +74,7 @@ namespace peloton {
                       std::vector<KeyType> &,
                       std::vector<ValueType> &) {
 
+      // TODO this function cannot pass compiler, fix it later.
      /* SplitLeafNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
         std::vector<KeyType> &keys,
         std::vector<ValueType> &values) {*/
@@ -421,7 +422,7 @@ namespace peloton {
      * Create a consolidated inner node logically equivalent to the argument node_chain.
      * Return the new node
      */
-    /*
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     const BWInnerNode<KeyType> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
       const BWNode *node_chain) {
@@ -432,11 +433,11 @@ namespace peloton {
       ConstructConsolidatedInnerNodeInternal(node_chain, keys, children, left, right);
       return new BWInnerNode<KeyType>(keys, children, left, right);
     }
-*/
+
     /*
      * Create a consolidated leaf node logically equivalent to the argument node_chain.
      * Return the new node
-     *//*
+     */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(
       const BWNode *node_chain) {
@@ -445,12 +446,12 @@ namespace peloton {
       PID left, right;
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
       return new BWLeafNode<KeyType, ValueType, KeyComparator>(keys, values, left, right);
-    }*/
+    }
 
     /*
      * Construct vector keys and values from a leaf node linked list, along with its left and right siblings.
      * Collect everthing from node_chain and put it to (or remove it from) keys and values.
-     *//*
+     */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNodeInternal(
       const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left,
@@ -506,7 +507,7 @@ namespace peloton {
 
       // still at delta chain
       assert(node_chain->GetNext()!=NULL);
-      ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, children, left, right);
+      ConstructConsolidatedInnerNodeInternal(node_chain->GetNext(), keys, children, left, right);
       switch(node_chain->GetType()) {
         case NSplit:
           ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, children);
@@ -534,9 +535,11 @@ namespace peloton {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto first = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-      keys.insert(first, key);
-      values.insert(first, value);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto dist = std::distance(keys.begin(), position);
+
+      keys.insert(position, key);
+      values.insert(values.begin()+dist, value);
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -560,7 +563,7 @@ namespace peloton {
       assert(keys.size()+1==children.size());
       const KeyType &key = node->GetSplitKey();
       // TODO key belongs to left or right?
-      auto position = std::lower_bound(keys.begin(), keys.end(), key);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       assert(position!=keys.end()&&key_equality_checker_(*position, key));
       auto dist = std::distance(keys.begin(), position);
       keys.erase(keys.begin()+dist-1, keys.end());
@@ -580,7 +583,7 @@ namespace peloton {
       keys.insert(position, low_key);
       children.insert(children.begin()+dist+1, new_page);
     }
-    */
+
 // Explicit template instantiations
 
     template

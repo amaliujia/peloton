@@ -67,6 +67,8 @@ namespace peloton {
       const EpochTime epoch_time_;
     };
 
+    void *Begin(void *arg);
+
     class GarbageCollector {
       /*
        * This is an epoch-based garbage collector
@@ -74,6 +76,8 @@ namespace peloton {
        * The garbage in a specific epoch is also chained together as a latch-free singly-linked list
        */
     public:
+      // daemon gc thread
+      friend void *Begin(void *arg);
       static const int epoch_interval_ = 10; //ms
       // singleton
       static GarbageCollector global_gc_;
@@ -118,7 +122,7 @@ namespace peloton {
         // make sure there is at least one epoch
         head_ = new Epoch(timer_++, head_);
         // start epoch allocation thread
-        //pthread_create(&clean_thread_, NULL, &Begin, NULL);
+        pthread_create(&clean_thread_, NULL, &Begin, NULL);
 
       }
       GarbageCollector(const GarbageCollector &) = delete;
