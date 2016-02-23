@@ -22,14 +22,14 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWInnerNode<KeyType, > *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
+    const BWInnerNode<KeyType> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
             const BWNode *node_chain) {
       assert(node_chain!=NULL);
       std::vector<KeyType> keys;
       std::vector<PID> children;
       PID left, right;
       ConstructConsolidatedInnerNodeInternal(node_chain, keys, children, left, right);
-      return new BWInnerNode(keys, children, left, right);
+      return new BWInnerNode<KeyType>(keys, children, left, right);
     }
 
     /*
@@ -37,12 +37,13 @@ namespace peloton {
      * Return the new node
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
+    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(
+            const BWNode *node_chain) {
       std::vector<KeyType> keys;
       std::vector<ValueType> values;
       PID left, right;
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
-      return new BWLeafNode(keys, values, left, right);
+      return new BWLeafNode<KeyType, ValueType>(keys, values, left, right);
     }
 
     /*
@@ -51,15 +52,16 @@ namespace peloton {
      */
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNodeInternal(
-            const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right) {
+            const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left,
+            PID &right) {
       if(node_chain->GetType()==NLeaf) {
         // arrive at bottom
-        const BWLeafNode *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
+        const BWLeafNode<KeyType, ValueType, KeyComparator> *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        return ;
+        return;
       }
 
       // still at delta chain
@@ -93,12 +95,12 @@ namespace peloton {
             const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right) {
       if(node_chain->GetType()==NInner) {
         // arrive at bottom
-        const BWInnerNode *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
+        const BWInnerNode<KeyType> *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
         keys = node->GetKeys();
         children = node->GetChildren();
         left = node->GetLeft();
         right = node->GetRight();
-        return ;
+        return;
       }
 
       // still at delta chain
@@ -125,7 +127,9 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateInsertNode(const BWInsertNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node,
+                                                                                              std::vector<KeyType> &keys,
+                                                                                              std::vector<ValueType> &values) {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetType();
@@ -135,7 +139,9 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
+                                                                                             std::vector<KeyType> &keys,
+                                                                                             std::vector<ValueType> &values) {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
       // TODO key belongs to left or right?
@@ -147,7 +153,9 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
+                                                                                             std::vector<KeyType> &keys,
+                                                                                             std::vector<PID> &children) {
       assert(keys.size()+1==children.size());
       const KeyType &key = node->GetSplitKey();
       // TODO key belongs to left or right?
@@ -159,7 +167,8 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitEntryNode(const BWSplitEntryNode *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitEntryNode(
+            const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
       const KeyType &low_key = node->GetLowKey();
       const KeyType &high_key = node->GetHightKey();
       PID new_page = node->GetNextPID();

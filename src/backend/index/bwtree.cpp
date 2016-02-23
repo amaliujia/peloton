@@ -25,7 +25,7 @@ namespace peloton {
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    SplitInnerNodeUlti(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
+    SplitInnerNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
                        std::vector<KeyType> &keys,
                        std::vector<PID> &pids) {
       std::vector<KeyType> key_stack;
@@ -47,7 +47,7 @@ namespace peloton {
       }
 
       // come to inner node
-      BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
+      const BWInnerNode<KeyType> *inner_ptr = static_cast<const BWInnerNode<KeyType> *>(cur_ptr);
       keys = inner_ptr->GetKeys();
       pids = inner_ptr->GetPIDs();
       right_pid = inner_ptr->GetRight();
@@ -60,7 +60,7 @@ namespace peloton {
 
         int pos = BinaryGreaterThan(keys, k, comparator_);
         keys.insert(keys.begin()+pos, k);
-        pids.insert(pids.begin()+pos+1, k);
+        pids.insert(pids.begin()+pos+1, p);
       }
 
       assert(keys.size()>0);
@@ -70,9 +70,15 @@ namespace peloton {
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    SplitLeafNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
-                      std::vector<KeyType> &keys,
-                      std::vector<ValueType> &values) {
+    SplitLeafNodeUtil(const BWNode *, KeyType &, PID &,
+                      std::vector<KeyType> &,
+                      std::vector<ValueType> &) {
+
+     /* SplitLeafNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
+        std::vector<KeyType> &keys,
+        std::vector<ValueType> &values) {*/
+      return;
+      /*
       std::vector<OpType> op_stack;
       std::vector<KeyType> key_stack;
       std::vector<ValueType> value_stack;
@@ -81,14 +87,14 @@ namespace peloton {
       // What kind of Delta?
       while(cur_ptr->GetType()!=NLeaf) {
         if(cur_ptr->GetType()==NInsert) {
-          BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(cur_ptr);
+          const BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<const BWInsertNode<KeyType, ValueType> *>(cur_ptr);
 
           op_stack.push_back(OInsert);
           key_stack.push_back(insert_ptr->GetKey());
           value_stack.push_back(insert_ptr->GetValue());
         }
         else if(cur_ptr->GetType()==NDelete) {
-          BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(cur_ptr);
+          const BWDeleteNode<KeyType> *delete_ptr = static_cast<const BWDeleteNode<KeyType> *>(cur_ptr);
 
           op_stack.push_back(ODelete);
           key_stack.push_back(delete_ptr->GetKey());
@@ -101,7 +107,7 @@ namespace peloton {
       }
 
       std::map<KeyType, ValueType> key_value_map;
-      BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType, KeyComparator> *>(cur_ptr);
+      const BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_ptr = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(cur_ptr);
 
       right_pid = leaf_ptr->GetRight();
 
@@ -137,6 +143,7 @@ namespace peloton {
       }
 
       split_key = keys[keys.size()/2];
+       */
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -146,10 +153,10 @@ namespace peloton {
       std::vector<PID> pids;
       PID old_right = PIDTable::PID_NULL;
 
-      SplitLeafNodeUtil(node_ptr, split_key, old_right, keys, pids);
+      SplitInnerNodeUtil(node_ptr, split_key, old_right, keys, pids);
 
       // Step 1: Create new right page;
-      PIDTable pidTable = PIDTable::get_table();
+      PIDTable& pidTable = PIDTable::get_table();
 
       BWNode *right_ptr = NULL;
       //TODO: check
@@ -185,7 +192,7 @@ namespace peloton {
       assert(keys.size()>=1);
 
       // Step 1: Create new right page;
-      PIDTable pidTable = PIDTable::get_table();
+      PIDTable& pidTable = PIDTable::get_table();
 
       BWNode *right_ptr = NULL;
       right_ptr = new BWLeafNode<KeyType, ValueType, KeyComparator>(keys, values, cur, old_right);
@@ -224,30 +231,30 @@ namespace peloton {
     bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
     DupExist(const BWNode *node_ptr, const KeyType &key) {
       // assume node_ptr is the header of leaf node
-      std::unordered_map<KeyType, int> map;
+      //std::unordered_map<KeyType, int> map;
       int delta = 0;
-      KeyEqualityChecker equality_checker;
+      //KeyEqualityChecker equality_checker;
       do {
         NodeType node_type = node_ptr->GetType();
         if(node_type==NLeaf) {
-          BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_node_ptr = static_cast<BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_ptr);
+          const BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_node_ptr = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_ptr);
           std::vector<KeyType> keys = leaf_node_ptr->GetKeys();
           for(auto iter = keys.begin(); iter!=keys.end(); ++iter) {
-            if(equality_checker(*iter, key)&&(++delta)>0) {
+            if(key_equality_checker_(*iter, key)&&(++delta)>0) {
               return true;
             }
           }
           return false;
         }
         else if(node_type==NInsert) {
-          BWInsertNode<KeyType, ValueType> *insert_node_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
-          if(equality_checker(insert_node_ptr->GetKey(), key)&&(++delta>0)) {
+          const BWInsertNode<KeyType, ValueType> *insert_node_ptr = static_cast<const BWInsertNode<KeyType, ValueType> *>(node_ptr);
+          if(key_equality_checker_(insert_node_ptr->GetKey(), key)&&(++delta>0)) {
             return true;
           }
         }
         else if(node_type==NDelete) {
-          BWDeleteNode<KeyType> *delete_node_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
-          if(equality_checker(delete_node_ptr->GetKey(), key)) {
+          const BWDeleteNode<KeyType> *delete_node_ptr = static_cast<const BWDeleteNode<KeyType> *>(node_ptr);
+          if(key_equality_checker_(delete_node_ptr->GetKey(), key)) {
             --delta;
           }
           //TODO: complete this
@@ -258,20 +265,22 @@ namespace peloton {
 //          } else if (node_type == NMergeEntry){
 
         }
-        node_ptr = (static_cast<BWDeltaNode *>(node_ptr))->GetNext();
+        node_ptr = (static_cast<const BWDeltaNode *>(node_ptr))->GetNext();
       } while(true);
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
     DeltaInsert(PID cur, BWNode *node_ptr, const KeyType &key, const ValueType &value) {
-      PIDTable pidTable = PIDTable::get_table();
+      PIDTable& pidTable = PIDTable::get_table();
       BWInsertNode<KeyType, ValueType> *insert_node_ptr = new BWInsertNode<KeyType, ValueType>(
               node_ptr->GetSlotUsage()+1, node_ptr->GetChainLength()+1, node_ptr, key, value);
-      if(pidTable.bool_compare_and_swap(cur, node_ptr, insert_node_ptr))
+      if(pidTable.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
         return true;
-      else
+      } else {
         delete insert_node_ptr;
+        return false;
+      }
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -331,7 +340,7 @@ namespace peloton {
         }
         else {
           PID next_pid = GetNextPID(path.back(), key);
-          path.push_back(cur);
+          path.push_back(next_pid);
         }
       }
     }
@@ -339,7 +348,7 @@ namespace peloton {
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
     ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
-      PIDTable pidTable = PIDTable::get_table();
+      PIDTable& pidTable = PIDTable::get_table();
       const BWNode *node_ptr = pidTable.get(cur);
 
       if(node_ptr->GetType()==NLeaf) {
@@ -348,19 +357,19 @@ namespace peloton {
           // TODO: assume no renmoe node delta and merge node delta.
           // Only handle split node, insert node, delete node.
           if(node_ptr->GetType()==NSplit) {
-            BWSplitNode<KeyType> *split_ptr = static_cast<BWSplitNode<KeyType> *>(node_ptr);
+            const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
             KeyType split_key = split_ptr->GetSplitKey();
             if(comparator_(key, split_key)==true) { // == true means key < split_key
               node_ptr = split_ptr->GetNext();
             }
             else {
-              node_ptr = pidTable.get(split_key->GetRightPID());
+              node_ptr = pidTable.get(split_ptr->GetRightPID());
             }
           }
           else if(node_ptr->GetType()==NInsert) {
-            BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<BWInsertNode<KeyType, ValueType> *>(node_ptr);
+            const BWInsertNode<KeyType, ValueType> *insert_ptr = static_cast<const BWInsertNode<KeyType, ValueType> *>(node_ptr);
             if(key_equality_checker_(insert_ptr->GetKey(), key)==true&&delete_count==0) {
-              ret.push_back(insert_ptr->GetKey());
+              ret.push_back(insert_ptr->GetValue());
 //                if(!Duplicate) {
 //                  break;
 //                }
@@ -372,7 +381,7 @@ namespace peloton {
             node_ptr = insert_ptr->GetNext();
           }
           else if(node_ptr->GetType()==NDelete) {
-            BWDeleteNode<KeyType> *delete_ptr = static_cast<BWDeleteNode<KeyType> *>(node_ptr);
+            const BWDeleteNode<KeyType> *delete_ptr = static_cast<const BWDeleteNode<KeyType> *>(node_ptr);
             if(key_equality_checker_(delete_ptr->GetKey(), key)==false) {
               delete_count++;
 //                if(!Duplicate) {
@@ -386,7 +395,7 @@ namespace peloton {
             node_ptr = delete_ptr->GetNext();
           }
           else if(node_ptr->GetType()==NLeaf) {
-            BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_ptr = static_cast<BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_ptr);
+            const BWLeafNode<KeyType, ValueType, KeyComparator> *leaf_ptr = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_ptr);
             // TOOD: assume no scan key here.
             leaf_ptr->ScanKey(key, comparator_, ret);
             break;
@@ -401,8 +410,9 @@ namespace peloton {
         ScanKeyUtil(next_pid, key, ret);
       }
     }
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Consolidate(PID cur, const BWNode *node_ptr) {
+    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Consolidate(PID cur __attribute__ ((unused)), const BWNode *node_ptr __attribute__ ((unused))) {
       //TODO: if fail to consolidate, need free memory.
       return false;
     }
@@ -411,6 +421,7 @@ namespace peloton {
      * Create a consolidated inner node logically equivalent to the argument node_chain.
      * Return the new node
      */
+    /*
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     const BWInnerNode<KeyType> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
       const BWNode *node_chain) {
@@ -419,37 +430,39 @@ namespace peloton {
       std::vector<PID> children;
       PID left, right;
       ConstructConsolidatedInnerNodeInternal(node_chain, keys, children, left, right);
-      return new BWInnerNode(keys, children, left, right);
+      return new BWInnerNode<KeyType>(keys, children, left, right);
     }
-
+*/
     /*
      * Create a consolidated leaf node logically equivalent to the argument node_chain.
      * Return the new node
-     */
+     *//*
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(const BWNode *node_chain) {
+    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(
+      const BWNode *node_chain) {
       std::vector<KeyType> keys;
       std::vector<ValueType> values;
       PID left, right;
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
-      return new BWLeafNode(keys, values, left, right);
-    }
+      return new BWLeafNode<KeyType, ValueType, KeyComparator>(keys, values, left, right);
+    }*/
 
     /*
      * Construct vector keys and values from a leaf node linked list, along with its left and right siblings.
      * Collect everthing from node_chain and put it to (or remove it from) keys and values.
-     */
+     *//*
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNodeInternal(
-      const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right) {
+      const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left,
+      PID &right) {
       if(node_chain->GetType()==NLeaf) {
         // arrive at bottom
-        const BWLeafNode *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
+        const BWLeafNode<KeyType, ValueType, KeyComparator> *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        return ;
+        return;
       }
 
       // still at delta chain
@@ -483,12 +496,12 @@ namespace peloton {
       const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right) {
       if(node_chain->GetType()==NInner) {
         // arrive at bottom
-        const BWInnerNode *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
+        const BWInnerNode<KeyType> *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
         keys = node->GetKeys();
         children = node->GetChildren();
         left = node->GetLeft();
         right = node->GetRight();
-        return ;
+        return;
       }
 
       // still at delta chain
@@ -515,17 +528,21 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateInsertNode(const BWInsertNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node,
+                                                                                              std::vector<KeyType> &keys,
+                                                                                              std::vector<ValueType> &values) {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
-      const ValueType &value = node->GetType();
+      const ValueType &value = node->GetValue();
       auto first = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       keys.insert(first, key);
       values.insert(first, value);
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<ValueType> &values) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
+                                                                                             std::vector<KeyType> &keys,
+                                                                                             std::vector<ValueType> &values) {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
       // TODO key belongs to left or right?
@@ -537,7 +554,9 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
+                                                                                             std::vector<KeyType> &keys,
+                                                                                             std::vector<PID> &children) {
       assert(keys.size()+1==children.size());
       const KeyType &key = node->GetSplitKey();
       // TODO key belongs to left or right?
@@ -549,7 +568,8 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitEntryNode(const BWSplitEntryNode *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
+    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitEntryNode(
+      const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
       const KeyType &low_key = node->GetLowKey();
       const KeyType &high_key = node->GetHightKey();
       PID new_page = node->GetNextPID();
@@ -560,7 +580,7 @@ namespace peloton {
       keys.insert(position, low_key);
       children.insert(children.begin()+dist+1, new_page);
     }
-
+    */
 // Explicit template instantiations
 
     template

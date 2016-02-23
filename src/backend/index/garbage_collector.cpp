@@ -9,6 +9,7 @@
 
 namespace peloton {
   namespace index {
+    /*
     void *GarbageCollector::Begin(void *) {
       while(!stopped_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(epoch_interval_));
@@ -17,6 +18,7 @@ namespace peloton {
       }
       return nullptr;
     }
+     */
     void GarbageCollector::ReclaimGarbage() {
       // reclaim at most this number of epochs every time
       static const int max_number = 5;

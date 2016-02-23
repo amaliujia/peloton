@@ -48,13 +48,13 @@ namespace peloton {
 
     class BWNode {
     public:
-      inline virtual NodeType GetType() const = 0;
+      virtual NodeType GetType() const = 0;
 
-      inline virtual const BWNode *GetNext() const = 0;
+      virtual const BWNode *GetNext() const = 0;
 
-      inline virtual PID GetLeft() const = 0;
+      virtual PID GetLeft() const = 0;
 
-      inline virtual PID GetRight() const = 0;
+      virtual PID GetRight() const = 0;
 
       inline bool IfLeafNode() const {
         return if_leaf_;
@@ -172,7 +172,7 @@ namespace peloton {
         return NLeaf;
       }
 
-      void ScanKey(const KeyType &key, const KeyComparator &comparator, std::vector<ValueType> &ret) const {
+      void ScanKey(const KeyType &, const KeyComparator &, std::vector<ValueType> &) const {
 
       }
     protected:
@@ -188,7 +188,11 @@ namespace peloton {
         return next_;
       }
 
-    protected:
+      inline PID GetLeft() const {return next_->GetLeft();}
+
+      inline PID GetRight() const {return next_->GetRight();}
+
+      protected:
 
       BWDeltaNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next): BWNode(slot_usage, chain_length, false), next_(next) { }
       const BWNode *next_;
@@ -493,7 +497,7 @@ namespace peloton {
     private:
 
       void InsertSplitEntry(const std::vector<PID> &path, const KeyType &low_key, const PID &right_pid) {
-        PIDTable pid_table = PIDTable::get_table();
+        PIDTable & pid_table = PIDTable::get_table();
         if(path.size()>1) { // In this case, this is a normal second step split
           // KeyType high_key;
 
@@ -505,7 +509,7 @@ namespace peloton {
             while(cur_ptr->GetType()!=NInner) {
               if(cur_ptr->GetType()==NSplitEntry) {
                 const BWSplitEntryNode<KeyType> *split_ptr = static_cast<const BWSplitEntryNode<KeyType> *>(cur_ptr);
-                if(split_ptr->GetLowKey()==low_key) {
+                if(key_equality_checker_(split_ptr->GetLowKey(),low_key)) {
                   return;
                 }
               }
@@ -542,7 +546,7 @@ namespace peloton {
       }
 
       bool Consolidate(PID cur, const BWNode *node_ptr);
-
+/*
       const BWInnerNode<KeyType> *ConstructConsolidatedInnerNode(const BWNode *node_chain);
 
       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
@@ -561,7 +565,7 @@ namespace peloton {
 
       void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
                                      std::vector<PID> &children);
-
+*/
       PID GetRightPID(const BWNode *node_ptr) {
         const BWNode *cur_ptr = node_ptr;
         while(cur_ptr->GetType()!=NLeaf||cur_ptr->GetType()!=NInner) {
@@ -579,7 +583,7 @@ namespace peloton {
        *
        *  TODO: Handle MergeEntryNode.
        */
-      void SplitInnerNodeUlti(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
+      void SplitInnerNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
                               std::vector<KeyType> &keys,
                               std::vector<PID> &pids);
 
@@ -606,7 +610,7 @@ namespace peloton {
 
         while(cur_ptr->GetType()!=NInner) {
           if(cur_ptr->GetType()==NSplitEntry) {
-            BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<BWSplitEntryNode<KeyType> *>(cur_ptr);
+            const BWSplitEntryNode<KeyType> *split_entry_ptr = static_cast<const BWSplitEntryNode<KeyType> *>(cur_ptr);
 
             if(!comparator_(key, split_entry_ptr->GetLowKey())&&comparator_(key, split_entry_ptr->GetHightKey())) {
               return split_entry_ptr->GetNextPID();
@@ -622,7 +626,7 @@ namespace peloton {
           cur_ptr = cur_ptr->GetNext();
         }
 
-        BWInnerNode<KeyType> *inner_ptr = static_cast<BWInnerNode<KeyType> *>(cur_ptr);
+        //const BWInnerNode<KeyType> *inner_ptr = static_cast<const BWInnerNode<KeyType> *>(cur_ptr);
         // TODO: implement scan_key;
 
         return PIDTable::PID_ROOT;
@@ -649,12 +653,12 @@ namespace peloton {
         ScanKeyUtil(PIDTable::PID_ROOT, key, ret);
       }
 
-      void ScanAllKeys(std::vector<ValueType> &ret) {
-        PIDTable pidTable = PIDTable::get_table();
+      void ScanAllKeys(std::vector<ValueType> & ) {
+        PIDTable & pidTable = PIDTable::get_table();
         const BWNode *node_ptr = pidTable.get(PIDTable::PID_ROOT);
 
         while (node_ptr->GetType() != NLeaf) {
-          BWInnerNode<KeyType> *cur_ptr = static_cast<BWInnerNode<KeyType> *>(node_ptr);
+          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
 
           PID next_pid = cur_ptr->GetPIDs()[0];
           node_ptr = pidTable.get(next_pid);

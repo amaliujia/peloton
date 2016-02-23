@@ -35,7 +35,7 @@ namespace peloton {
        * Class representing an epoch
        */
     public:
-      Epoch(EpochTime t, Epoch *n): head_(nullptr), registered_number_(0), epoch_time_(t) {}
+      Epoch(EpochTime t, Epoch *next): next_(next), head_(nullptr), registered_number_(0), epoch_time_(t) {}
       ~Epoch() {
         const GarbageNode *now = head_;
         if(now==nullptr)
@@ -76,7 +76,7 @@ namespace peloton {
     public:
       static const int epoch_interval_ = 10; //ms
       // singleton
-      GarbageCollector global_gc_;
+      static GarbageCollector global_gc_;
 
       virtual ~GarbageCollector() {
         // stop epoch generation
@@ -118,12 +118,13 @@ namespace peloton {
         // make sure there is at least one epoch
         head_ = new Epoch(timer_++, head_);
         // start epoch allocation thread
-        pthread_create(&clean_thread_, NULL, &Begin, NULL);
+        //pthread_create(&clean_thread_, NULL, &Begin, NULL);
+
       }
       GarbageCollector(const GarbageCollector &) = delete;
       GarbageCollector &operator=(const GarbageCollector &) = delete;
 
-      void *Begin(void *);
+      //void *Begin(void *);
       void ReclaimGarbage();
       void Stop() {
         stopped_ = true;

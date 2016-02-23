@@ -25,7 +25,7 @@ namespace peloton {
        */
       typedef std::uint_fast32_t PID;
       typedef std::atomic<PID> CounterType;
-      typedef BWNode * Address;
+      typedef const BWNode * Address;
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
       static constexpr PID first_level_mask = 0xFFFC00;
