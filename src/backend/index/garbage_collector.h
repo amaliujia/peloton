@@ -1,186 +1,134 @@
 //
-// Created by Lu Zhang on 2/18/16.
+// Created by wendongli on 2/19/16.
 //
 
-#ifndef PELOTON_GARBAGE_COLLECTOR_H
-#define PELOTON_GARBAGE_COLLECTOR_H
+#pragma once
 
-#include <chrono>
-#include <forward_list>
-#include <backend/expression/expressions.h>
-#include "bwtree2.h"
+#include <cstdint>
+#include <pthread.h>
+
+#include "bwtree.h"
 
 namespace peloton {
   namespace index {
+    typedef std::uint_fast32_t EpochTime;
 
-
-#define EPOCH 10 // unit : ms
-
-
-
-/*------------------------------------------------------------------
- *                    Begin of class Garbage Collector
- *-----------------------------------------------------------------*/
-// chrono library in c++ 11
-// http://en.cppreference.com/w/cpp/chrono
-
-  class GarbageCollector {
-    typedef size_t EpochId;
-    typedef std::chrono::high_resolution_clock Clock;
-    typedef std::chrono::milliseconds milliseconds;
-
-  private:
-
-    std::forward_list<EpochBlock *> epoch_list_;
-    Clock::time_point base_time_;
-
-  public:
-
-    GarbageCollector(){
-      EpochBlock * head = new EpochBlock(1); // assign 1 as initial value, 0 as invalid value.
-      epoch_list_.push_front(head);
-      base_time_ = Clock::now();
-
-    }
-
-    ~GarbageCollector(){
-      // delete all the epochBlock
-      for (auto iter = epoch_list_.begin(); iter != epoch_list_.end(); ++iter){
-        // is that right?
-        delete(iter);
+    class GarbageNode {
+      /*
+       * Wrap a piece of garbage into a list node
+       */
+    public:
+      GarbageNode(BWNode *g, GarbageNode *n): garbage_(g), next_(n) { }
+      ~GarbageNode() {
+        delete garbage_;
       }
-      epoch_list_.clear();
-    }
-
-
-
-    EpochId Register(){
-      // For simplicity, always register in the "head".
-      EpochBlock  *head = epoch_list_.front();
-      EpochId epochId = head->epochId_;
-      head->Register();
+      const BWNode *garbage_;
+      GarbageNode *next_;
+      inline void SetNext(GarbageNode *n) { next_ = n; }
+    private:
+      GarbageNode(const GarbageNode &) = delete;
+      GarbageNode &operator=(const GarbageNode &) = delete;
     };
 
-
-    void Deregister(EpochId epochId, BWNode * garbage){
-      auto iter = epoch_list_.begin();
-      for (;iter != epoch_list_.end(); ++iter){
-        if ((*iter)->epochId_ == epochId)
-          break;
-      }
-      // Shouldn't happen: can't find that epochBlock.
-      assert(iter!= epoch_list_.end());
-
-      (*iter)->Deregister();
-
-    }
-
-    void SubmitGarbage(EpochId epochId, BWNode *garbage){
-      auto iter = epoch_list_.begin();
-      for (;iter != epoch_list_.end(); ++iter){
-        if ((*iter)->epochId_ == epochId)
-          break;
-      }
-      assert(iter!= epoch_list_.end());
-      (*iter)->CollectGarbage(garbage);
-    }
-
-    void Start();
-
-    // periodically add epoch block
-    // no need to concurrent?
-    // b.c. only one thread do this.
-    void AddEpoch(){
-      Clock::time_point curt_time = Clock::now();
-      milliseconds duration_ms = std::chrono::duration_cast<milliseconds>(curt_time - base_time_);
-      EpochId expected_id = (EpochId)(duration_ms.count() / EPOCH);
-
-
-      // ATOMIC()
-      EpochBlock head = epoch_list_.front();
-      if (head.epochId_ != expected_id ){
-//        if (head.everUsed){
-          EpochBlock * new_head = new EpochBlock(expected_id);
-          epoch_list_.push_front(*new_head);
-
-          // remove outdated epochBlock in the epochList
-          // until meet a certain epochBlock is not empty.
-          auto iter = epoch_list_.begin();
-          auto prev = iter;
-          ++iter;
-          for (; iter != epoch_list_.end() && iter->thread_cnt_ == 0; ){
-            // do remove outdated epochBlock
-            RemoveEpoch(*iter);
-            iter++;
-            epoch_list_.erase_after(prev);
-          }
-
-      }
-      // UNATOMIC()
-
-    }
-
-    void RemoveEpoch(EpochBlock block_to_remove){
-
-    };
-
-    void ThrowGarbage(){
-
-    };
-
-/*------------------------------------------------------------------
- *                    Begin of class EpochBLock
- *-----------------------------------------------------------------*/
-
-    class EpochBlock {
-
-      public:
-
-      const EpochId epochId_;
-      std::atomic<bool> everUsed = ATOMIC_VAR_INIT(false);
-
-      std::forward_list< BWNode *> garbageList;
-      std::atomic<int>  thread_cnt_ = ATOMIC_VAR_INIT(0);
-
-      EpochBlock(EpochId epochId): epochId_(epochId) {};
-
-      // combine the deconstructor and throwGarbage?
-      // The deamon thread can just change the pointer, and deconstruct this epochblock
-      ~EpochBlock(){
-        ThrowGarbage();
-      }
-
-      void Register(){
-        std::atomic_fetch_add(&thread_cnt_, 1);
-
-        // if this operation fails, then everUsed must be true.
-//        std::atomic_compare_exchange_strong(&everUsed, false, true);
-      };
-
-      void Deregister(){
-        std::atomic_fetch_sub(&thread_cnt_, 1);
-      }
-
-      void CollectGarbage(BWNode * garbage){
-        // along the lists, add all these into the garbageList
-      }
-
-      // A deamon thread periodically lu the list
-      // once it finds a outdated epoch block, throw it  away.
-      // Note: the deamon should call ~EpochBlock
-      void ThrowGarbage(){
-        for (auto iter = garbageList.begin(); iter != garbageList.end(); ++iter){
-          delete(iter);
+    class Epoch {
+      /*
+       * Class representing an epoch
+       */
+    public:
+      Epoch(EpochTime t, Epoch *n): head_(nullptr), registered_number_(0), epoch_time_(t) {}
+      ~Epoch() {
+        const GarbageNode *now = head_;
+        if(now==nullptr)
+          return ;
+        const GarbageNode *next;
+        while(now!=nullptr) {
+          next = now->next_;
+          delete now;
+          now = next;
         }
-        garbageList.clear();
       }
-
-
-
+      inline bool SubmitGarbage(GarbageNode *new_garbage) {
+        GarbageNode *head = head_;
+        new_garbage->SetNext(head);
+        return __sync_bool_compare_and_swap(&head_, head, new_garbage);
+      }
+      inline EpochTime Register() {
+        ++registered_number_;
+        return epoch_time_;
+      }
+      inline void Deregister() { --registered_number_; }
+      inline bool TimeEquals(const EpochTime t) const { return epoch_time_==t; }
+      inline void SetNext(Epoch *n) { next_ = n; }
+      inline bool SafeToReclaim() const { return registered_number_==0; }
+      Epoch *next_;
+    private:
+      GarbageNode *head_ = nullptr;
+      std::atomic<EpochTime> registered_number_;
+      const EpochTime epoch_time_;
     };
-  };
 
+    class GarbageCollector {
+      /*
+       * This is an epoch-based garbage collector
+       * The epochs are chained together as a latch-free singly-linked list
+       * The garbage in a specific epoch is also chained together as a latch-free singly-linked list
+       */
+    public:
+      static const int epoch_interval_ = 10; //ms
+      // singleton
+      GarbageCollector global_gc_;
 
+      virtual ~GarbageCollector() {
+        // stop epoch generation
+        Stop();
+        // TODO wait till all epochs are ready to be cleaned-up
+        // force delete every garbage now
+        Epoch *next;
+        while(head_!=nullptr) {
+          next = head_->next_;
+          delete head_;
+          head_ = next;
+        }
+      }
+      inline void SubmitGarbage(BWNode *garbage) {
+        GarbageNode *new_garbage = new GarbageNode(garbage, nullptr);
+        // loop until we successfully add this new garbage into the list
+        Epoch *head = head_;
+        while(!head->SubmitGarbage(new_garbage))
+          head = head_;
+      }
+      inline EpochTime Register() { return head_->Register(); }
+      inline void Deregister(EpochTime time) {
+        for(Epoch *iter = head_; iter!=nullptr; iter = iter->next_) {
+          if(iter->TimeEquals(time)) {
+            iter->Deregister();
+            return ;
+          }
+        }
+        // should not happen
+        assert(0);
+      }
+    private:
+      Epoch *head_;
+      EpochTime timer_;
+      volatile bool stopped_;
+      pthread_t clean_thread_;
+
+      GarbageCollector(): head_(nullptr), timer_(0) {
+        // make sure there is at least one epoch
+        head_ = new Epoch(timer_++, head_);
+        // start epoch allocation thread
+        pthread_create(&clean_thread_, NULL, &Begin, NULL);
+      }
+      GarbageCollector(const GarbageCollector &) = delete;
+      GarbageCollector &operator=(const GarbageCollector &) = delete;
+
+      void *Begin(void *);
+      void ReclaimGarbage();
+      void Stop() {
+        stopped_ = true;
+        pthread_join(clean_thread_, nullptr);
+      }
+    };
   }
 }
-#endif //PELOTON_GARBAGE_COLLECTOR_H

@@ -359,8 +359,8 @@ namespace peloton {
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     class BWTree {
-      static KeyComparator comparator_;
-      static KeyEqualityChecker key_equality_checker_;
+      KeyComparator comparator_;
+      KeyEqualityChecker key_equality_checker_;
 
     private:
       int BinaryGreaterThan(std::vector<KeyType> &arr, KeyType target, KeyComparator comp) {

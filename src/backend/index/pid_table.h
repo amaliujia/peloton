@@ -24,7 +24,7 @@ namespace peloton {
        */
       typedef std::uint_fast32_t PID;
       typedef std::atomic<PID> CounterType;
-      typedef BWNode *Address;
+      typedef const BWNode *Address;
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
       static constexpr PID first_level_mask = 0xFFFC00;
@@ -47,11 +47,13 @@ namespace peloton {
       }
 
       // allocate a new PID
-      inline PID allocate_PID() {
+      inline PID allocate_PID(Address address) {
         PID result;
-        if(free_PIDs.pop(result))
+        if(free_PIDs.pop(result)) {
+          set(result, address);
           return result;
-        return allocate_new_PID();
+        }
+        return allocate_new_PID(address);
       }
 
       // free up a new PID
@@ -75,7 +77,7 @@ namespace peloton {
       boost::lockfree::stack <PID> free_PIDs;
 
       PIDTable(): counter_(0) {
-        first_level_table_[0] = (Address* )malloc(sizeof(Address)*second_level_slots);
+        first_level_table_[0] = (Address *)malloc(sizeof(Address)*second_level_slots);
       }
 
       PIDTable(const PIDTable &) = delete;
@@ -90,13 +92,22 @@ namespace peloton {
         return (pid&second_level_mask)==0;
       }
 
-      inline PID allocate_new_PID() {
+      inline PID allocate_new_PID(Address address) {
         PID pid = counter_++;
         if(is_first_PID(pid)) {
           Address *table = (Address* )malloc(sizeof(Address)*second_level_slots);
           first_level_table_[((pid&first_level_mask)>>second_level_bits)+1] = table;
         }
+        int row = (int)((pid&first_level_mask)>>second_level_bits);
+        int col = (int)(pid&second_level_mask);
+        first_level_table_[row][col] = pid;
         return pid;
+      }
+
+      inline void set(PID pid, Address address) {
+        int row = (int)((pid&first_level_mask)>>second_level_bits);
+        int col = (int)(pid&second_level_mask);
+        first_level_table_[row][col] = address;
       }
     };
   }
