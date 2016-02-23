@@ -97,7 +97,6 @@ namespace peloton {
           //TODO: how about next?
           continue;
         }
-134gg
         cur_ptr = cur_ptr->GetNext();
       }
 
