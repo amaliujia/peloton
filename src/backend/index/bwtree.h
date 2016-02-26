@@ -550,6 +550,10 @@ namespace peloton {
 
       const BWInnerNode<KeyType> *ConstructConsolidatedInnerNode(const BWNode *node_chain);
 
+      void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
+
+      void CreateInnerNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
+
       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
                                                  std::vector<ValueType> &values, PID &left, PID &right);
 
@@ -560,9 +564,13 @@ namespace peloton {
 
       void ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
 
-      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
+      void ConsolidateDeleteNode(const BWDeleteNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
 
-      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children);
+      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values,
+                                PID &right);
+
+      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children,
+                                PID &right);
 
       void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
                                      std::vector<PID> &children);
