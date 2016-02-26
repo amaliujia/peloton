@@ -15,7 +15,6 @@
 namespace peloton {
   namespace index {
     class PIDTable {
-
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -23,9 +22,11 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
+    public:
       typedef std::uint_fast32_t PID;
       typedef std::atomic<PID> CounterType;
       typedef const BWNode * Address;
+    private:
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
       static constexpr PID first_level_mask = 0xFFFC00;
@@ -37,7 +38,7 @@ namespace peloton {
     public:
       // NULL for PID
       static constexpr PID PID_NULL = std::numeric_limits<PID>::max();
-      static constexpr PID PID_ROOT = 0;
+      //static constexpr PID PID_ROOT = 0;
       static inline PIDTable& get_table() { return global_table_; }
 
       // get the address corresponding to the pid
@@ -47,16 +48,6 @@ namespace peloton {
         [pid&second_level_mask];
       }
 
-      // allocate a new PID
-      inline PID allocate_PID(Address address) {
-        PID result;
-        if(free_PIDs.pop(result)) {
-          set(result, address);
-          return result;
-        }
-        return allocate_new_PID(address);
-      }
-
       // free up a new PID
       inline void free_PID(PID pid) {
         free_PIDs.push(pid);
@@ -64,7 +55,19 @@ namespace peloton {
         // assert(push_result);
       }
 
-      // atomic operation
+      // allocate a new PID, use argument "address" as its initial address
+      inline PID allocate_PID(Address address) {
+        PID result;
+        if(!free_PIDs.pop(result))
+          result = allocate_new_PID(address);
+        set(result, address);
+        return result;
+      }
+
+      // atomically CAS the address associated with "pid"
+      // it compares the content associated with "pid" with "original"
+      // if they are same, change the content associated with pid to "to" and return true
+      // otherwise return false directly
       bool bool_compare_and_swap(PID pid, const Address original, const Address to) {
         int row = (int)((pid&first_level_mask)>>second_level_bits);
         int col = (int)(pid&second_level_mask);
@@ -73,7 +76,7 @@ namespace peloton {
       }
 
     private:
-      volatile Address *first_level_table_[first_level_slots] = {nullptr};
+      Address *first_level_table_[first_level_slots] = {nullptr};
       CounterType counter_;
       boost::lockfree::stack <PID> free_PIDs;
 
@@ -89,26 +92,29 @@ namespace peloton {
 
       PIDTable &operator=(PIDTable &&) = delete;
 
-      inline bool is_first_PID(PID pid) {
-        return (pid&second_level_mask)==0;
-      }
+      // allow GC to free PIDs
+      friend class PIDNode;
 
+      // no reclaimed PIDs available, need to allocate a new PID
       inline PID allocate_new_PID(Address address) {
         PID pid = counter_++;
         if(is_first_PID(pid)) {
           Address *table = (Address* )malloc(sizeof(Address)*second_level_slots);
           first_level_table_[((pid&first_level_mask)>>second_level_bits)+1] = table;
         }
-        int row = (int)((pid&first_level_mask)>>second_level_bits);
-        int col = (int)(pid&second_level_mask);
-        first_level_table_[row][col] = pid;
         return pid;
       }
 
+      // set the content associated with "pid" to "address"
+      // only used upon "pid"'s allocation
       inline void set(PID pid, Address address) {
         int row = (int)((pid&first_level_mask)>>second_level_bits);
         int col = (int)(pid&second_level_mask);
         first_level_table_[row][col] = address;
+      }
+
+      inline static bool is_first_PID(PID pid) const {
+        return (pid&second_level_mask)==0;
       }
     };
   }

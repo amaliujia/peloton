@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "bwtree.h"
+#include "pid_table.h"
 
 namespace peloton {
   namespace index {
@@ -18,16 +19,35 @@ namespace peloton {
        * Wrap a piece of garbage into a list node
        */
     public:
-      GarbageNode(BWNode *g, GarbageNode *n): garbage_(g), next_(n) { }
+      GarbageNode(BWNode *g, GarbageNode *next): garbage_(g), next_(next) { }
       ~GarbageNode() {
         delete garbage_;
       }
-      const BWNode *garbage_;
+      // next garbage node in this garbage list
       GarbageNode *next_;
-      inline void SetNext(GarbageNode *n) { next_ = n; }
+      inline void SetNext(GarbageNode *next) { next_ = next; }
     private:
       GarbageNode(const GarbageNode &) = delete;
       GarbageNode &operator=(const GarbageNode &) = delete;
+      // the actual garbage bwnode
+      const BWNode *garbage_;
+    };
+
+    class PIDNode {
+      /*
+       * Wrap a PID into a list node
+       */
+    public:
+      PIDNode(PID pid, PIDNode *next): pid_(pid), next_(next) {}
+      ~PIDNode() { (PIDTable::get_table()).free_PID(pid_); }
+      // next PIDNode in the list
+      PIDNode *next_;
+      inline void SetNext(PIDNode *next) { next_ = next; }
+    private:
+      PIDNode(const PIDNode &) = delete;
+      PIDNode &operator=(const PIDNode &) = delete;
+      // actual PID needed to be reclaimed
+      const PID pid_;
     };
 
     class Epoch {
@@ -35,8 +55,10 @@ namespace peloton {
        * Class representing an epoch
        */
     public:
-      Epoch(EpochTime t, Epoch *next): next_(next), head_(nullptr), registered_number_(0), epoch_time_(t) {}
+      Epoch(EpochTime time, Epoch *next): next_(next), registered_number_(0), epoch_time_(time) {}
       ~Epoch() {
+        // delete all garbage nodes, which will
+        // delete the actual garbage in their destructor
         const GarbageNode *now = head_;
         if(now==nullptr)
           return ;
@@ -46,23 +68,54 @@ namespace peloton {
           delete now;
           now = next;
         }
+        // delete all PID garbage nodes, which will
+        // reclaim the actual PID in their destructor
+        const PIDNode *pid_now = pid_head_;
+        if(pid_now==nullptr)
+          return ;
+        const PIDNode *pid_next;
+        while(pid_now!=nullptr) {
+          pid_next = pid_now->next_;
+          delete pid_now;
+          pid_now = pid_next;
+        }
       }
+
+      // try to atomically submit a garbage node, return the submission result
       inline bool SubmitGarbage(GarbageNode *new_garbage) {
         GarbageNode *head = head_;
         new_garbage->SetNext(head);
         return __sync_bool_compare_and_swap(&head_, head, new_garbage);
       }
+
+      // try to atomically submit a PID garbage node, return the submission result
+      inline bool SubmitPID(PIDNode *new_pid) {
+        PIDNode *head = pid_head_;
+        new_pid->SetNext(head);
+        return __sync_bool_compare_and_swap(&pid_head_, head, new_pid);
+      }
+
+      // register in this epoch
       inline EpochTime Register() {
         ++registered_number_;
         return epoch_time_;
       }
+
+      // deregister a previous registration
       inline void Deregister() { --registered_number_; }
+
       inline bool TimeEquals(const EpochTime t) const { return epoch_time_==t; }
+
       inline void SetNext(Epoch *n) { next_ = n; }
+
+      // whether it is safe to reclaim all the garbage in this epoch
       inline bool SafeToReclaim() const { return registered_number_==0; }
+
       Epoch *next_;
+
     private:
       GarbageNode *head_ = nullptr;
+      PIDNode *pid_head_ = nullptr;
       std::atomic<EpochTime> registered_number_;
       const EpochTime epoch_time_;
     };
@@ -94,14 +147,31 @@ namespace peloton {
           head_ = next;
         }
       }
+
+      // submit a new bwnode garbage
       inline void SubmitGarbage(BWNode *garbage) {
         GarbageNode *new_garbage = new GarbageNode(garbage, nullptr);
         // loop until we successfully add this new garbage into the list
+        // TODO volatile?
         Epoch *head = head_;
         while(!head->SubmitGarbage(new_garbage))
           head = head_;
       }
+
+      // submit a new garbage PID
+      inline void SubmitPID(PID pid) {
+        PIDNode *new_pid_garbage = new PIDNode(pid, nullptr);
+        // loop until we successfully add this new pid garbage into the list
+        // TODO volatile?
+        Epoch *head = head_;
+        while(!head->SubmitPID(new_pid_garbage))
+          head = head_;
+      }
+
+      // register a thread, return the EpochTime that it registered in
       inline EpochTime Register() { return head_->Register(); }
+
+      // deregister a previous registration at "time"
       inline void Deregister(EpochTime time) {
         for(Epoch *iter = head_; iter!=nullptr; iter = iter->next_) {
           if(iter->TimeEquals(time)) {
@@ -112,13 +182,17 @@ namespace peloton {
         // should not happen
         assert(0);
       }
+
     private:
       Epoch *head_;
       EpochTime timer_;
-      volatile bool stopped_;
+      // the Epoch at which we stopped at in the last garbage collection iteration
+      Epoch *last_stopped_prev_;
+      volatile bool stopped_ = false;
+      // daemon thread to do garbage collection, timer incrementation
       pthread_t clean_thread_;
 
-      GarbageCollector(): head_(nullptr), timer_(0) {
+      GarbageCollector(): head_(nullptr), timer_(0), last_stopped_(nullptr) {
         // make sure there is at least one epoch
         head_ = new Epoch(timer_++, head_);
         // start epoch allocation thread
@@ -132,8 +206,11 @@ namespace peloton {
       void ReclaimGarbage();
       void Stop() {
         stopped_ = true;
-        pthread_join(clean_thread_, nullptr);
+        pthread_join(clean_thread_, NULL);
       }
+
+      // reclaim all the epochs in the list starts at "head"
+      static void ReclaimGarbageList(Epoch *head);
     };
   }
 }

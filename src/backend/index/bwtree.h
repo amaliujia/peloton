@@ -102,7 +102,7 @@ namespace peloton {
       virtual NodeType GetType() const = 0;
 
       // TODO ???
-      inline const BWNode *GetNext() const {
+      const BWNode *GetNext() const {
         return NULL;
       };
 
@@ -194,6 +194,7 @@ namespace peloton {
 
       protected:
 
+      //TODO slot_usage, chain_length, next, if_leaf
       BWDeltaNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next): BWNode(slot_usage, chain_length, false), next_(next) { }
       const BWNode *next_;
     };
@@ -266,7 +267,7 @@ namespace peloton {
 
       // new one
       const PID right_;
-
+      // TODO old is in fact the right link
       // old right
       const PID old_;
     };
