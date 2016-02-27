@@ -163,7 +163,7 @@ namespace peloton {
               keys_(keys),
               values_(values) { }
       BWLeafNode(const std::vector<KeyType> &keys, const std::vector<ValueType> &values, const PID &left, const PID &right):
-              BWLeafNode<KeyType, ValueType>(keys, values, left, right, std::numeric_limits<VersionNumber>::min()) { }
+              BWLeafNode(keys, values, left, right, std::numeric_limits<VersionNumber>::min()) { }
 
       inline const std::vector<KeyType> &GetKeys() const { return keys_; }
 
@@ -283,13 +283,15 @@ namespace peloton {
       BWSplitEntryNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &low, const KeyType &high,
                        const PID &to):
               BWDeltaNode(slot_usage, chain_length, next, next->GetVersionNumber()), low_key_(low), high_key_(high), to_(to), has_high_key_(true) { }
+
       BWSplitEntryNode(const BWNode *next, const KeyType &low, const KeyType &high, PID to):
               BWSplitEntryNode(next->GetSlotUsage()+1, next->GetChainLength()+1, next, low, high, to) { }
 
       BWSplitEntryNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &low, const PID &to):
               BWDeltaNode(slot_usage, chain_length, next, next->GetVersionNumber()), low_key_(low), high_key_(low), to_(to), has_high_key_(false) { }
+
       BWSplitEntryNode(const BWNode *next, const KeyType &low, PID to):
-              BWSplitNode(next->GetSlotUsage()+1, next->GetChainLength()+1, next, low, to) { }
+              BWSplitEntryNode(next->GetSlotUsage()+1, next->GetChainLength()+1, next, low, to) { }
 
       inline NodeType GetType() const {
         return NSplitEntry;
