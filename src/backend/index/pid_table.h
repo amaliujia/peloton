@@ -14,6 +14,8 @@
 
 namespace peloton {
   namespace index {
+    typedef std::uint_fast32_t PID;
+    typedef const BWNode * Address;
     class PIDTable {
       /*
        * class storing the mapping table between a PID and its corresponding address
@@ -23,9 +25,8 @@ namespace peloton {
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
     public:
-      typedef std::uint_fast32_t PID;
       typedef std::atomic<PID> CounterType;
-      typedef const BWNode * Address;
+
     private:
       static constexpr unsigned int first_level_bits = 14;
       static constexpr unsigned int second_level_bits = 10;
@@ -33,13 +34,23 @@ namespace peloton {
       static constexpr PID second_level_mask = 0x3FF;
       static constexpr unsigned int first_level_slots = 1<<first_level_bits;
       static constexpr unsigned int second_level_slots = 1<<second_level_bits;
-      // singleton
-      static PIDTable global_table_;
+
     public:
       // NULL for PID
       static constexpr PID PID_NULL = std::numeric_limits<PID>::max();
       //static constexpr PID PID_ROOT = 0;
-      static inline PIDTable& get_table() { return global_table_; }
+
+      PIDTable(): counter_(0) {
+        first_level_table_[0] = (Address *)malloc(sizeof(Address)*second_level_slots);
+      }
+
+      ~PIDTable() {
+        int counter = counter_;
+        for(int i=0; i<counter; ++i) {
+          free(first_level_table_[i]);
+        }
+        assert(counter==counter_);
+      }
 
       // get the address corresponding to the pid
       inline Address get(PID pid) const {
@@ -79,10 +90,6 @@ namespace peloton {
       Address *first_level_table_[first_level_slots] = {nullptr};
       CounterType counter_;
       boost::lockfree::stack <PID> free_PIDs;
-
-      PIDTable(): counter_(0) {
-        first_level_table_[0] = (Address *)malloc(sizeof(Address)*second_level_slots);
-      }
 
       PIDTable(const PIDTable &) = delete;
 

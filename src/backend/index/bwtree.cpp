@@ -14,6 +14,8 @@
 #include "backend/common/types.h"
 #include "backend/index/index_key.h"
 #include "backend/storage/tuple.h"
+#include "backend/index/pid_table.h"
+#include "bwtree.h"
 
 namespace peloton {
   namespace index {
@@ -22,7 +24,7 @@ namespace peloton {
 //    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::KeyComparator comparator_;
 //    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 //    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::KeyEqualityChecker key_equality_checker_;
-
+/*
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
     SplitInnerNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
@@ -67,7 +69,8 @@ namespace peloton {
 
       split_key = keys[keys.size()/2];
     }
-
+*/
+    /*
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
     void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
     SplitLeafNodeUtil(const BWNode *, KeyType &, PID &,
@@ -75,11 +78,11 @@ namespace peloton {
                       std::vector<ValueType> &) {
 
       // TODO this function cannot pass compiler, fix it later.
-     /* SplitLeafNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
+      SplitLeafNodeUtil(const BWNode *node_ptr, KeyType &split_key, PID &right_pid,
         std::vector<KeyType> &keys,
-        std::vector<ValueType> &values) {*/
+        std::vector<ValueType> &values) {
       return;
-      /*
+
       std::vector<OpType> op_stack;
       std::vector<KeyType> key_stack;
       std::vector<ValueType> value_stack;
@@ -144,92 +147,260 @@ namespace peloton {
       }
 
       split_key = keys[keys.size()/2];
-       */
+
     }
+    */
 
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    SplitInnerNode(PID cur, const BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
-      std::vector<KeyType> keys;
-      std::vector<PID> pids;
-      PID old_right = PIDTable::PID_NULL;
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    InsertSplitEntry(const BWNode *top, const KeyType &key, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
+      assert(path.size()==version_number.size());
+      assert(top->GetType()==NSplit);
+      const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(top);
+      const KeyType &low_key = split_ptr->GetSplitKey();
+      const PID &right_pid = split_ptr->GetRightPID();
 
-      SplitInnerNodeUtil(node_ptr, split_key, old_right, keys, pids);
+      if(path.size()>1) { // In this case, this is a normal second step split
+        // get the parent
+        PID pid = path[path.size()-2];
+        while(true) {
+          // irst check if it is safe to do so
+          PID save_pid = path.back();
+          path.pop_back();
+          VersionNumber save_vn = version_number.back();
+          version_number.pop_back();
+          const BWNode *node = pid_table_.get(pid);
+          if(!CheckStatus(node, key, path, version_number)) {
+            path.push_back(save_pid);
+            version_number.push_back(save_vn);
+            return false;
+          }
 
-      // Step 1: Create new right page;
-      PIDTable& pidTable = PIDTable::get_table();
+          // then check version number
+          assert(node->IfInnerNode());
+          if(node->GetVersionNumber()!=version_number[version_number.size()-2])
+            return false;
 
-      BWNode *right_ptr = NULL;
-      //TODO: check
-      right_ptr = new BWInnerNode<KeyType>(keys, pids, cur, old_right);
-      right_pid = pidTable.allocate_PID(right_ptr);
+          std::vector<KeyType> keys_view;
+          std::vector<PID> children_view;
+          PID left_view, right_view;
+          CreateInnerNodeView(node, keys_view, children_view, left_view, right_view);
+          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), low_key, comparator_);
 
-      // Step 2: Create split node
-      BWNode *split_ptr = NULL;
-      split_ptr = new BWSplitNode<KeyType>(node_ptr->GetSlotUsage()-keys.size(), node_ptr->GetChainLength()+1,
-                                  node_ptr, split_key, right_pid, old_right);
+          // then check if this split entry has been inserted by others
+          if(position!=keys_view.cbegin()&&key_equality_checker_(low_key, *(position-1)))
+            return true;
 
-      // Step 3: install split node
-      bool ret = pidTable.bool_compare_and_swap(cur, node_ptr, split_ptr);
-      if(ret==false) {
-        delete right_ptr;
-        delete split_ptr;
-        pidTable.free_PID(right_pid);
+          // try to insert the split entry
+          const BWNode *split_entry;
+          if(position!=keys_view.cend())
+            split_entry = new BWSplitEntryNode<KeyType>(node, low_key, *position, right_pid);
+          else
+            split_entry = new BWSplitEntryNode<KeyType>(node, low_key, right_pid);
+          if(pid_table_.bool_compare_and_swap(pid, node, split_entry))
+            return true;
 
-        return false;
-      }
-
-      return true;
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    SplitLeafNode(PID cur, const BWNode *node_ptr, KeyType &split_key, PID &right_pid) {
-      std::vector<KeyType> keys;
-      std::vector<ValueType> values;
-      PID old_right = PIDTable::PID_NULL;
-
-      SplitLeafNodeUtil(node_ptr, split_key, old_right, keys, values);
-      assert(keys.size()>=1);
-
-      // Step 1: Create new right page;
-      PIDTable& pidTable = PIDTable::get_table();
-
-      BWNode *right_ptr = NULL;
-      right_ptr = new BWLeafNode<KeyType, ValueType, KeyComparator>(keys, values, cur, old_right);
-      right_pid = pidTable.allocate_PID(right_ptr);
-
-      // Step 2: Create split node
-      BWNode *split_ptr = NULL;
-      split_ptr = new BWSplitNode<KeyType>(node_ptr->GetSlotUsage()-keys.size(), node_ptr->GetChainLength()+1,
-                                  node_ptr, split_key, right_pid, old_right);
-
-      // Step 3: install split node
-      bool ret = pidTable.bool_compare_and_swap(cur, node_ptr, split_ptr);
-      if(ret==false) {
-        delete right_ptr;
-        delete split_ptr;
-        pidTable.free_PID(right_pid);
-
-        return false;
-      }
-
-      return true;
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    Split(PID cur, const BWNode *node_ptr, KeyType &split_key, PID &right_pid, NodeType right_type) {
-      if(right_type==NLeaf) {
-        return SplitLeafNode(cur, node_ptr, split_key, right_pid);
+          // fail, clean up, retry
+          delete split_entry;
+        }
       }
       else {
-        return SplitInnerNode(cur, node_ptr, split_key, right_pid);
+        assert(path.back()==root_);
+        const BWNode *old_root = pid_table_.get(root_);
+        VersionNumber old_root_version = old_root->GetVersionNumber();
+        PID new_pid = pid_table_.allocate_PID(old_root);
+        BWNode *new_root = new BWInnerNode<KeyType>({low_key}, {new_pid, right_pid}, nullptr, nullptr, old_root_version+1);
+        if(!pid_table_.bool_compare_and_swap(root_, old_root, new_root)) {
+          delete new_root;
+          pid_table_.free_PID(new_pid);
+          return false;
+        }
+        path.push_back(new_pid);
+        version_number.insert(version_number.cbegin(), (VersionNumber)(old_root_version+1));
+        return true;
       }
     }
 
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    const BWNode *
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    SplitInnerNode(const BWNode *inner_node, const PID &node_pid) {
+      assert(inner_node->IfInnerNode());
+      std::vector<KeyType> keys_view;
+      std::vector<PID> children_view;
+      PID left_view, right_view;
+      CreateInnerNodeView(inner_node, keys_view, children_view, left_view, right_view);
+      assert(keys_view.size()+1==children_view.size());
+      assert(keys_view.size()>=max_node_size);
+
+      auto index = keys_view.size()/2;
+      const KeyType &low_key = keys_view[index];
+      const BWNode *new_node = new BWInnerNode<KeyType>(
+              std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
+              std::vector<PID>(children_view.cbegin()+index, children_view.cend()),
+              node_pid,
+              inner_node->GetRight(),
+              std::numeric_limits<VersionNumber>::min()
+              );
+      PID new_pid = pid_table_.allocate_PID(new_node);
+      //TODO slot usage, keys or children
+      const BWNode *split_node = new BWSplitNode<KeyType>(index-1, inner_node, low_key, new_pid);
+
+      if(!pid_table_.bool_compare_and_swap(node_pid, inner_node, split_node)) {
+        delete new_node;
+        delete split_node;
+        pid_table_.free_PID(new_pid);
+        return nullptr;
+      }
+
+      return split_node;
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    const BWNode *
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    SplitLeafNode(const BWNode *leaf_node, const PID &node_pid) {
+      assert(leaf_node->IfLeafNode());
+      if(!Duplicate) {
+        std::vector<KeyType> keys_view;
+        std::vector<ValueType> values_view;
+        PID left_view, right_view;
+        CreateLeafNodeView(leaf_node, keys_view, values_view, left_view, right_view);
+        assert(keys_view.size()==values_view.size());
+        assert(keys_view.size()>=max_node_size);
+
+        auto index = keys_view.size()/2;
+        const KeyType &low_key = keys_view[index];
+        const BWNode *new_node = new BWLeafNode<KeyType, ValueType>(
+                std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
+                std::vector<ValueType>(values_view.cbegin()+index, values_view.cend()),
+                node_pid,
+                leaf_node->GetRight()
+        );
+        PID new_pid = pid_table_.allocate_PID(new_node);
+        const BWNode *split_node = new BWSplitNode<KeyType>(index, leaf_node, low_key, new_pid);
+
+        if(!pid_table_.bool_compare_and_swap(node_pid, leaf_node, split_node)) {
+          delete new_node;
+          delete split_node;
+          pid_table_.free_PID(new_pid);
+          return nullptr;
+        }
+        return split_node;
+      }
+      else {
+        std::vector<KeyType> keys_view;
+        std::vector<std::vector<ValueType>> values_view;
+        PID left_view, right_view;
+        CreateLeafNodeView(leaf_node, keys_view, values_view, left_view, right_view);
+        assert(keys_view.size()==values_view.size());
+        assert(keys_view.size()>=max_node_size);
+
+        auto index = keys_view.size()/2;
+        const KeyType &low_key = keys_view[index];
+        const BWNode *new_node = new BWLeafNode<KeyType, std::vector<ValueType>>(
+                std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
+                std::vector<std::vector<ValueType>>(values_view.cbegin()+index, values_view.cend()),
+                node_pid,
+                leaf_node->GetRight()
+        );
+        PID new_pid = pid_table_.allocate_PID(new_node);
+        const BWNode *split_node = new BWSplitNode<KeyType>(index, leaf_node, low_key, new_pid);
+
+        if(!pid_table_.bool_compare_and_swap(node_pid, leaf_node, split_node)) {
+          delete new_node;
+          delete split_node;
+          pid_table_.free_PID(new_pid);
+          return nullptr;
+        }
+        return split_node;
+      }
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    const BWNode *
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    Split(const BWNode *node_ptr, const PID &node_pid) {
+      switch(node_ptr->GetType()) {
+        case NLeaf:
+          return SplitLeafNode(node_ptr, node_pid);
+        case NInner:
+          return SplitInnerNode(node_ptr, node_pid);
+        default:
+          assert(0);
+          return nullptr;
+      }
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    CheckStatus(const BWNode *node_ptr, const KeyType &key, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
+      const PID &current = path.back();
+      if(node_ptr->GetType()==NSplit) {
+        // first try to help finishing the split
+        bool result = InsertSplitEntry(node_ptr, key, path, version_number);
+        assert(path.size()==version_number.size());
+        // if split results in invalid path, go back
+        if(!result) {
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
+          return false;
+        }
+        const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
+        // if split succeeded, but we are on the wrong path
+        if(!comparator_(key, split_ptr->GetSplitKey())) {
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
+          return false;
+        }
+      }
+
+      // If delta chain is too long
+      if(node_ptr->IfChainTooLong()) {
+        Consolidate(current, node_ptr);
+        //TODO no need to pop back?
+        //path.pop_back();
+        return false;
+      }
+
+      // if the node is too big
+      if(node_ptr->IfOverflow()) {
+        // first try the first step of split
+        node_ptr = Split(node_ptr, current);
+        if(node_ptr==nullptr)
+          return false;
+        // then try the second step of split
+        bool result = InsertSplitEntry(node_ptr, key, path, version_number);
+        assert(path.size()==version_number.size());
+        if(!result) {
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
+          return false;
+        }
+        const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
+        if(!comparator_(key, split_ptr->GetSplitKey())) {
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DupExist(const BWNode *node_ptr, const KeyType &key) {
       // assume node_ptr is the header of leaf node
       //std::unordered_map<KeyType, int> map;
@@ -270,84 +441,254 @@ namespace peloton {
       } while(true);
     }
 
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    DeltaInsert(PID cur, BWNode *node_ptr, const KeyType &key, const ValueType &value) {
-      PIDTable& pidTable = PIDTable::get_table();
-      BWInsertNode<KeyType, ValueType> *insert_node_ptr = new BWInsertNode<KeyType, ValueType>(
-              node_ptr->GetSlotUsage()+1, node_ptr->GetChainLength()+1, node_ptr, key, value);
-      if(pidTable.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
-        return true;
-      } else {
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    DeltaInsert(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool need_expand) {
+      const BWNode *insert_node_ptr =
+              new BWInsertNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()+(need_expand?1:0), key, value);
+      if(!pid_table_.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
         delete insert_node_ptr;
         return false;
       }
+      return true;
     }
 
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
-    InsertEntryUtil(KeyType key, ValueType value, std::vector<PID> &path, PID cur) {
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool &exist_value) {
+      if(!Duplicate) {
+        const BWNode *delete_node_ptr =
+                new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-1, key, value);
+        if(!pid_table_.bool_compare_and_swap(cur, node_ptr, delete_node_ptr)) {
+          delete delete_node_ptr;
+          exist_value = true;
+          return false;
+        }
+        return true;
+      }
+      else {
+        std::vector<KeyType> keys_view;
+        std::vector<std::vector<ValueType>> values_view;
+        PID left_view, right_view;
+        CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
+        assert(keys_view.size()+1==values_view.size());
+        auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), comparator_);
+        assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
+        auto dist = std::distance(keys_view.cbegin(), position);
+        std::vector<ValueType> &value_vector = values_view[dist];
+        //TODO
+        if(!std::find_if(value_vector.cbegin(), value_vector.cend(), )) {
+          exist_value = false;
+          return false;
+        }
+        exist_value = true;
+        const BWNode *delete_node_ptr =
+                new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-(value_vector.size()==1?1:0), key, value);
+        if(!pid_table_.bool_compare_and_swap(cur, node_ptr, delete_node_ptr)) {
+          delete delete_node_ptr;
+          return false;
+        }
+        return true;
 
-      BWNode *node_ptr = NULL;
+      }
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    InsertEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       while(true) {
-        // TODO: Get from last element of path.
-        node_ptr = NULL;
+        assert(path.size()==version_number.size());
+        const PID &current = path.back();
+        const BWNode *node_ptr = pid_table_.get(current);
+        /*
+        VersionNumber version = node_ptr->GetVersionNumber();
+        if(version!=version_number.back()) {
+          path.pop_back();
+          version_number.pop_back();
+          if(path.empty()) {
+            path.push_back(root_);
+            version_number.push_back(pid_table_.get(root_)->GetVersionNumber());
+          }
+          continue;
+        }
+        */
         // If current is split node
+        if(!CheckStatus(node_ptr, key, path, version_number))
+          continue;
+        /*
         if(node_ptr->GetType()==NSplit) {
-          BWSplitNode<KeyType> *split_ptr = static_cast<BWSplitNode<KeyType> *>(node_ptr);
-          InsertSplitEntry(path, split_ptr->GetSplitKey(), split_ptr->GetRightPID());
-          //continue;
+          bool result = InsertSplitEntry(node_ptr, path, version_number);
+          assert(path.size()==version_number.size());
+          if(!result) {
+            if(path.size()>1) {
+              path.pop_back();
+              version_number.pop_back();
+            }
+            continue;
+          }
+          const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
+          if(!comparator_(key, split_ptr->GetSplitKey()))
+            continue;
         }
 
         // If delta chain is too long
         if(node_ptr->IfChainTooLong()) {
-          Consolidate(cur, node_ptr);
-          path.pop_back();
+          Consolidate(current, node_ptr);
+          //TODO no need to pop back?
+          //path.pop_back();
           continue;
         }
 
-        // TODO: should get size from node_ptr
         if(node_ptr->IfOverflow()) {
-          KeyType split_key;
-          PID right_pid;
-          NodeType right_type = Unknown;
-          if(node_ptr->IfLeafNode()) {
-            right_type = NLeaf;
-          }
-          else {
-            right_type = NInner;
-          }
-          bool ret = Split(cur, node_ptr, split_key, right_pid, right_type);
-          if(ret==true) {
-            // note: only do two step.
-            InsertSplitEntry(path, split_key, right_pid);
-          }
+          node_ptr = Split(node_ptr, current);
+          if(node_ptr==nullptr)
+            continue;
+          InsertSplitEntry(node_ptr, path, version_number);
+          assert(path.size()==version_number.size());
           // retry
-          path.pop_back();
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
           continue;
         }
-
-        if(node_ptr->IfLeafNode()) {
-          // TODO: check
-          if(DupExist(node_ptr, key)) {
-            return false;
-          }
-
-          if(!DeltaInsert(cur, node_ptr, key, value)) {
+        */
+        if(node_ptr->IfInnerNode()) {
+          std::vector<KeyType> keys_view;
+          std::vector<PID> children_view;
+          PID left_view, right_view;
+          CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
+          assert(keys_view.size()+1==children_view.size());
+          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), comparator_);
+          auto dist = std::distance(keys_view.cbegin(), position);
+          PID next_pid = children_view[dist];
+          VersionNumber final_number = pid_table_.get(path.back())->GetVersionNumber();
+          if(final_number!=version_number.back()) {
+            version_number.pop_back();
+            version_number.push_back(final_number);
             continue;
           }
-
-          return true;
+          path.push_back(next_pid);
+          version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
-          PID next_pid = GetNextPID(path.back(), key);
-          path.push_back(next_pid);
+          assert(node_ptr->IfLeafNode());
+          if(ExistKey(node_ptr, key)) {
+            if(!Duplicate)
+              return false;
+            if(!DeltaInsert(current, node_ptr, key, value, true))
+              continue;
+            return true;
+          }
+          else {
+            if(!DeltaInsert(current, node_ptr, key, value, false))
+              continue;
+            return true;
+          }
         }
       }
     }
 
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
+      while(true) {
+        assert(path.size()==version_number.size());
+        const PID &current = path.back();
+        const BWNode *node_ptr = pid_table_.get(current);
+        /*
+        VersionNumber version = node_ptr->GetVersionNumber();
+        if(version!=version_number.back()) {
+          path.pop_back();
+          version_number.pop_back();
+          if(path.empty()) {
+            path.push_back(root_);
+            version_number.push_back(pid_table_.get(root_)->GetVersionNumber());
+          }
+          continue;
+        }
+        */
+        // If current is split node
+        if(!CheckStatus(node_ptr, key, path, version_number))
+          continue;
+        /*
+        if(node_ptr->GetType()==NSplit) {
+          bool result = InsertSplitEntry(node_ptr, path, version_number);
+          assert(path.size()==version_number.size());
+          if(!result) {
+            if(path.size()>1) {
+              path.pop_back();
+              version_number.pop_back();
+            }
+            continue;
+          }
+          const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
+          if(!comparator_(key, split_ptr->GetSplitKey()))
+            continue;
+        }
+
+        // If delta chain is too long
+        if(node_ptr->IfChainTooLong()) {
+          Consolidate(current, node_ptr);
+          //TODO no need to pop back?
+          //path.pop_back();
+          continue;
+        }
+
+        if(node_ptr->IfOverflow()) {
+          node_ptr = Split(node_ptr, current);
+          if(node_ptr==nullptr)
+            continue;
+          InsertSplitEntry(node_ptr, path, version_number);
+          assert(path.size()==version_number.size());
+          // retry
+          if(path.size()>1) {
+            path.pop_back();
+            version_number.pop_back();
+          }
+          continue;
+        }
+        */
+        if(node_ptr->IfInnerNode()) {
+          std::vector<KeyType> keys_view;
+          std::vector<PID> children_view;
+          PID left_view, right_view;
+          CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
+          assert(keys_view.size()+1==children_view.size());
+          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), comparator_);
+          auto dist = std::distance(keys_view.cbegin(), position);
+          PID next_pid = children_view[dist];
+          VersionNumber final_number = pid_table_.get(path.back())->GetVersionNumber();
+          if(final_number!=version_number.back()) {
+            version_number.pop_back();
+            version_number.push_back(final_number);
+            continue;
+          }
+          path.push_back(next_pid);
+          version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
+        }
+        else {
+          assert(node_ptr->IfLeafNode());
+          if(!ExistKey(node_ptr, key))
+            return false;
+          bool exist_value;
+          bool result = DeltaDelete(current, node_ptr, key, value, exist_value);
+          if(result)
+            return true;
+          if(!exist_value) {
+            assert(Duplicate);
+            return false;
+          }
+          continue;
+        }
+      }
+    }
+/*
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    void
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
       PIDTable& pidTable = PIDTable::get_table();
       const BWNode *node_ptr = pidTable.get(cur);
@@ -411,178 +752,7 @@ namespace peloton {
         ScanKeyUtil(next_pid, key, ret);
       }
     }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Consolidate(PID cur __attribute__ ((unused)), const BWNode *node_ptr __attribute__ ((unused))) {
-      //TODO: if fail to consolidate, need free memory.
-      return false;
-    }
-
-    /*
-     * Create a consolidated inner node logically equivalent to the argument node_chain.
-     * Return the new node
-     */
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWInnerNode<KeyType> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNode(
-      const BWNode *node_chain) {
-      assert(node_chain!=NULL);
-      std::vector<KeyType> keys;
-      std::vector<PID> children;
-      PID left, right;
-      ConstructConsolidatedInnerNodeInternal(node_chain, keys, children, left, right);
-      return new BWInnerNode<KeyType>(keys, children, left, right);
-    }
-
-    /*
-     * Create a consolidated leaf node logically equivalent to the argument node_chain.
-     * Return the new node
-     */
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    const BWLeafNode<KeyType, ValueType, KeyComparator> *BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNode(
-      const BWNode *node_chain) {
-      std::vector<KeyType> keys;
-      std::vector<ValueType> values;
-      PID left, right;
-      ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
-      return new BWLeafNode<KeyType, ValueType, KeyComparator>(keys, values, left, right);
-    }
-
-    /*
-     * Construct vector keys and values from a leaf node linked list, along with its left and right siblings.
-     * Collect everthing from node_chain and put it to (or remove it from) keys and values.
-     */
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedLeafNodeInternal(
-      const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left,
-      PID &right) {
-      if(node_chain->GetType()==NLeaf) {
-        // arrive at bottom
-        const BWLeafNode<KeyType, ValueType, KeyComparator> *node = static_cast<const BWLeafNode<KeyType, ValueType, KeyComparator> *>(node_chain);
-        keys = node->GetKeys();
-        values = node->GetValues();
-        left = node->GetLeft();
-        right = node->GetRight();
-        return;
-      }
-
-      // still at delta chain
-      assert(node_chain->GetNext()!=NULL);
-      ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
-      switch(node_chain->GetType()) {
-        case NInsert:
-          ConsolidateInsertNode(static_cast<const BWInsertNode<KeyType, ValueType> *>(node_chain), keys, values);
-          break;
-        case NDelete:
-          // not implemented
-          assert(0);
-          break;
-        case NSplit:
-          ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, values);
-          break;
-        case NMerge:
-          assert(0);
-          break;
-        case NRemove:
-          assert(0);
-          break;
-        default:
-          // fault
-          assert(0);
-      }
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConstructConsolidatedInnerNodeInternal(
-      const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right) {
-      if(node_chain->GetType()==NInner) {
-        // arrive at bottom
-        const BWInnerNode<KeyType> *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
-        keys = node->GetKeys();
-        children = node->GetChildren();
-        left = node->GetLeft();
-        right = node->GetRight();
-        return;
-      }
-
-      // still at delta chain
-      assert(node_chain->GetNext()!=NULL);
-      ConstructConsolidatedInnerNodeInternal(node_chain->GetNext(), keys, children, left, right);
-      switch(node_chain->GetType()) {
-        case NSplit:
-          ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, children);
-          break;
-        case NSplitEntry:
-          ConsolidateSplitEntryNode(static_cast<const BWSplitEntryNode<KeyType> *>(node_chain), keys, children);
-          break;
-        case NMerge:
-          // not implemented
-          assert(0);
-          break;
-        case NRemove:
-          assert(0);
-          break;
-        default:
-          // fault
-          assert(0);
-      }
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node,
-                                                                                              std::vector<KeyType> &keys,
-                                                                                              std::vector<ValueType> &values) {
-      assert(keys.size()==values.size());
-      const KeyType &key = node->GetKey();
-      const ValueType &value = node->GetValue();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-      auto dist = std::distance(keys.begin(), position);
-
-      keys.insert(position, key);
-      values.insert(values.begin()+dist, value);
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
-                                                                                             std::vector<KeyType> &keys,
-                                                                                             std::vector<ValueType> &values) {
-      assert(keys.size()==values.size());
-      const KeyType &key = node->GetSplitKey();
-      // TODO key belongs to left or right?
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-      assert(position!=keys.end()&&key_equality_checker_(*position, key));
-      auto dist = std::distance(keys.begin(), position);
-      keys.erase(keys.begin()+dist, keys.end());
-      values.erase(values.begin()+dist, values.end());
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitNode(const BWSplitNode<KeyType> *node,
-                                                                                             std::vector<KeyType> &keys,
-                                                                                             std::vector<PID> &children) {
-      assert(keys.size()+1==children.size());
-      const KeyType &key = node->GetSplitKey();
-      // TODO key belongs to left or right?
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-      assert(position!=keys.end()&&key_equality_checker_(*position, key));
-      auto dist = std::distance(keys.begin(), position);
-      keys.erase(keys.begin()+dist-1, keys.end());
-      children.erase(children.begin()+dist, children.end());
-    }
-
-    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-    void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ConsolidateSplitEntryNode(
-      const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
-      const KeyType &low_key = node->GetLowKey();
-      const KeyType &high_key = node->GetHightKey();
-      PID new_page = node->GetNextPID();
-      // TODO key belongs to left or right?
-      auto position = std::lower_bound(keys.begin(), keys.end(), high_key, comparator_);
-      assert(position!=keys.begin()&&key_equality_checker_(*position, high_key));
-      auto dist = std::distance(keys.begin(), position);
-      keys.insert(position, low_key);
-      children.insert(children.begin()+dist+1, new_page);
-    }
+*/
 
 // Explicit template instantiations
 
@@ -653,9 +823,6 @@ namespace peloton {
     template
     class BWTree<TupleKey, ItemPointer, TupleKeyComparator,
             TupleKeyEqualityChecker>;
-
-
-    PIDTable PIDTable::global_table_;
 
   }  // End index namespace
 }  // End peloton namespace

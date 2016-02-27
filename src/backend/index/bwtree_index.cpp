@@ -14,6 +14,8 @@
 #include "backend/index/bwtree_index.h"
 #include "backend/index/index_key.h"
 #include "backend/storage/tuple.h"
+#include "backend/index/combined_key.h"
+#include "backend/common/types.h"
 
 namespace peloton {
 namespace index {
@@ -25,21 +27,24 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
       container(metadata),
       equals(metadata),
       comparator(metadata) {
-
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex() {
+
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(
   __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
-  KeyType index_key;
-  index_key.SetFromKey(key);
-
-  container.InsertEntry(index_key, location);
-  return false;
+  // TODO two containers
+  if(HasUniqueKeys()) {
+    KeyType index_key;
+    index_key.SetFromKey(key);
+    return container.InsertEntry(index_key, location);
+  }
+  else
+    return container.InsertEntry(CombinedKey<KeyType>(key, location), true);
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>

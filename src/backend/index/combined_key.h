@@ -2,6 +2,8 @@
 // Created by wendongli on 2/26/16.
 //
 
+#include "backend/common/types.h"
+
 namespace peloton {
   namespace index {
     template<class KeyType>
