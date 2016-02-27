@@ -401,7 +401,7 @@ namespace peloton {
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
-    DupExist(const BWNode *node_ptr, const KeyType &key) {
+    ExistKey(const BWNode *node_ptr, const KeyType &key) {
       // assume node_ptr is the header of leaf node
       //std::unordered_map<KeyType, int> map;
       int delta = 0;

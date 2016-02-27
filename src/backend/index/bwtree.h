@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-
+//
 #include "backend/catalog/manager.h"
 #include "backend/common/platform.h"
 #include "backend/common/types.h"
 #include "backend/index/index.h"
-//#include "backend/index/pid_table.h"
+#include "backend/index/pid_table.h"
 #include "backend/common/value.h"
 #include <boost/lockfree/stack.hpp>
 
@@ -109,11 +109,11 @@ namespace peloton {
       };
 
       // left and right are not used or updated now
-      inline PID GetLeft() const {
+      inline const PID& GetLeft() const {
         return left_;
       }
 
-      inline PID GetRight() const {
+      inline const PID& GetRight() const {
         return right_;
       }
 
@@ -130,7 +130,7 @@ namespace peloton {
     class BWInnerNode: public BWNormalNode {
     public:
       BWInnerNode(const std::vector<KeyType> &keys, const std::vector<PID> &children, const PID &left, const PID &right, const VersionNumber &version_number):
-              BWNormalNode<KeyType>(keys.size(), 0, false, left, right, version_number),
+              BWNormalNode(keys.size(), 0, false, left, right, version_number),
               keys_(keys),
               children_(children) { }
 
@@ -159,11 +159,11 @@ namespace peloton {
     public:
       // keys and values should not be used anymore
       BWLeafNode(const std::vector<KeyType> &keys, const std::vector<ValueType> &values, const PID &left, const PID &right, const VersionNumber &version_number):
-              BWNormalNode<KeyType>(keys.size(), 0, true, left, right, version_number),
+              BWNormalNode(keys.size(), 0, true, left, right, version_number),
               keys_(keys),
               values_(values) { }
       BWLeafNode(const std::vector<KeyType> &keys, const std::vector<ValueType> &values, const PID &left, const PID &right):
-              BWLeafNode<KeyType>(keys, values, left, right, std::numeric_limits<VersionNumber>::min()) { }
+              BWLeafNode<KeyType, ValueType>(keys, values, left, right, std::numeric_limits<VersionNumber>::min()) { }
 
       inline const std::vector<KeyType> &GetKeys() const { return keys_; }
 
@@ -194,10 +194,11 @@ namespace peloton {
       }
 
       protected:
+      const BWNode * next_;
 
       //TODO slot_usage, chain_length, next, if_leaf
       BWDeltaNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const VersionNumber &version_number):
-              BWNode(slot_usage, chain_length, next.IfLeafNode(), version_number), next_(next) { }
+              BWNode(slot_usage, chain_length, next->IfLeafNode(), version_number), next_(next) { }
     };
 
     template<typename KeyType, typename ValueType>
@@ -320,7 +321,7 @@ namespace peloton {
     class BWRemoveNode: public BWDeltaNode {
     public:
       BWRemoveNode(size_type slot_usage, size_type chain_length, const BWNode *next):
-              BWDeltaNode(slot_usage, chain_length, next) { }
+              BWDeltaNode(slot_usage, chain_length, next, version_number_) { }
 
       inline NodeType GetType() const {
         return NRemove;
@@ -331,7 +332,7 @@ namespace peloton {
     class BWMergeNode: public BWDeltaNode {
     public:
       BWMergeNode(size_type slot_usage, size_type chain_length, const BWNode *next, const BWNode *right):
-              BWDeltaNode(slot_usage, chain_length, next), right_(right) { }
+              BWDeltaNode(slot_usage, chain_length, next, version_number_), right_(right) { }
 
       inline NodeType GetType() const {
         return NMerge;
@@ -346,7 +347,7 @@ namespace peloton {
     class MergeEntryNode: public BWDeltaNode {
     public:
       MergeEntryNode(size_type slot_usage, size_type chain_length, BWNode *next):
-              BWDeltaNode(slot_usage, chain_length, next) { }
+              BWDeltaNode(slot_usage, chain_length, next, version_number_) { }
 
       inline NodeType GetType() const {
         return NMergeEntry;
@@ -395,7 +396,7 @@ namespace peloton {
     public :
       BWTree(IndexMetadata *indexMetadata): comparator_(indexMetadata), key_equality_checker_(indexMetadata) {
         const BWNode *first_leaf_node;
-        if(Duplicate)
+        if(!Duplicate)
           first_leaf_node = new BWLeafNode<KeyType, ValueType>(std::vector<KeyType>(), std::vector<ValueType>(),
                                                                nullptr, nullptr);
         else
@@ -444,7 +445,7 @@ namespace peloton {
 
       bool InsertEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number);
 
-      bool DeleteEntryUtil(const KeyType &key, std::vector<PID> &path, std::vector<VersionNumber> &version_number);
+      bool DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number);
       
       const BWNode *Split(const BWNode *node_ptr, const PID &node_pid);
 
@@ -455,8 +456,6 @@ namespace peloton {
       bool InsertSplitEntry(const BWNode *top, const KeyType &key, const std::vector<PID> &path, std::vector<VersionNumber> &version_number);
 
       bool ExistKey(const BWNode *node_ptr, const KeyType &key);
-
-      bool DupExist(const BWNode *node_ptr, const KeyType &key);
 
       void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
 
@@ -492,8 +491,6 @@ namespace peloton {
       void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children,
                                 PID &right);
 
-      void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
-                                     std::vector<PID> &children);
       void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
                                      std::vector<PID> &children);
 
