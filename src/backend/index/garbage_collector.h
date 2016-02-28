@@ -8,11 +8,12 @@
 #include <pthread.h>
 
 #include "bwtree.h"
-#include "pid_table.h"
+//#include "pid_table.h"
 
 namespace peloton {
   namespace index {
     typedef std::uint_fast32_t EpochTime;
+
 
     class GarbageNode {
       /*
@@ -30,7 +31,7 @@ namespace peloton {
       GarbageNode(const GarbageNode &) = delete;
       GarbageNode &operator=(const GarbageNode &) = delete;
       // the actual garbage bwnode
-      const BWNode *garbage_;
+      const BWNode *garbage_ = ;
     };
 
     class PIDNode {

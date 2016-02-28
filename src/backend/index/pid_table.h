@@ -14,6 +14,7 @@
 
 namespace peloton {
   namespace index {
+
     typedef std::uint_fast32_t PID;
     typedef const BWNode * Address;
     class PIDTable {

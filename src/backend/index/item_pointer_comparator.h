@@ -9,8 +9,8 @@ namespace peloton {
   namespace index {
     struct ItemPointerComparator {
       inline bool operator()(const ItemPointer &lhs, const ItemPointer &rhs) {
-        return lhs.block<rhs.block||
-               lhs.block==rhs.block&&lhs.offset<rhs.offset;
+        return (lhs.block<rhs.block)||
+          ((lhs.block==rhs.block)&&(lhs.offset<rhs.offset));
       }
     };
   }

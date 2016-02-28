@@ -14,7 +14,6 @@
 #include "backend/index/bwtree_index.h"
 #include "backend/index/index_key.h"
 #include "backend/storage/tuple.h"
-#include "backend/index/combined_key.h"
 #include "backend/common/types.h"
 
 namespace peloton {
@@ -24,9 +23,8 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     IndexMetadata *metadata)
     : Index(metadata),
-      container(metadata),
-      equals(metadata),
-      comparator(metadata) {
+      container_duplicate(metadata),
+      container_unique(metadata) {
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
@@ -38,21 +36,23 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(
   __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
   // TODO two containers
-  if(HasUniqueKeys()) {
-    KeyType index_key;
-    index_key.SetFromKey(key);
-    return container.InsertEntry(index_key, location);
-  }
+  KeyType index_key;
+  index_key.SetFromKey(key);
+  if(HasUniqueKeys())
+    return container_unique.InsertEntry(index_key, location);
   else
-    return container.InsertEntry(CombinedKey<KeyType>(key, location), true);
+    return container_duplicate.InsertEntry(index_key, location);
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::DeleteEntry(
     __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
-  // Add your implementation here
-  return false;
-}
+  KeyType index_key;
+  index_key.SetFromKey(key);
+  if(HasUniqueKeys())
+    return container_unique.DeleteEntry(index_key, location);
+  else
+    return container_duplicate.DeleteEntry(index_key, location);}
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 std::vector<ItemPointer>
@@ -70,7 +70,7 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 std::vector<ItemPointer>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys() {
   std::vector<ItemPointer> result;
-  container.ScanAllKeys(result);
+  //container.ScanAllKeys(result);
 
   return result;
 }
@@ -85,7 +85,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
   std::vector<ItemPointer> result;
   KeyType index_key;
   index_key.SetFromKey(key);
-  container.ScanKey(index_key, result);
+  //container.ScanKey(index_key, result);
   return result;
 }
 

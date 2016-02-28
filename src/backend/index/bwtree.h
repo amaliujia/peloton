@@ -16,9 +16,15 @@
 #include "backend/common/platform.h"
 #include "backend/common/types.h"
 #include "backend/index/index.h"
-#include "backend/index/pid_table.h"
+//#include "backend/index/pid_table.h"
 #include "backend/common/value.h"
+#include "backend/index/item_pointer_comparator.h"
+#include "backend/index/item_pointer_equality_checker.h"
+
+
 #include <boost/lockfree/stack.hpp>
+
+
 
 #include <cstdint>
 #include <vector>
@@ -28,6 +34,13 @@
 
 namespace peloton {
   namespace index {
+
+
+    typedef std::uint_fast32_t PID;
+
+
+
+
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
     constexpr int max_chain_len = 8;
@@ -387,6 +400,162 @@ namespace peloton {
 
 
 
+
+    typedef const BWNode * Address;
+    class PIDTable {
+      /*
+       * class storing the mapping table between a PID and its corresponding address
+       * the mapping table is organized as a two-level array, like a virtual memory table.
+       * the first level table is statically allocated, second level tables are allocated as needed
+       * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
+       * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
+       */
+      public:
+      typedef std::atomic<PID> CounterType;
+
+      private:
+      static constexpr unsigned int first_level_bits = 14;
+      static constexpr unsigned int second_level_bits = 10;
+      static constexpr PID first_level_mask = 0xFFFC00;
+      static constexpr PID second_level_mask = 0x3FF;
+      static constexpr unsigned int first_level_slots = 1<<first_level_bits;
+      static constexpr unsigned int second_level_slots = 1<<second_level_bits;
+
+      public:
+      // NULL for PID
+      static const PID PID_NULL;
+      //static constexpr PID PID_ROOT = 0;
+
+      PIDTable(): counter_(0) {
+        first_level_table_[0] = (Address *)malloc(sizeof(Address)*second_level_slots);
+      }
+
+      ~PIDTable() {
+        PID counter = counter_;
+        for(PID i=0; i<counter; ++i) {
+          free(first_level_table_[i]);
+        }
+        assert(counter==counter_);
+      }
+
+      // get the address corresponding to the pid
+      inline Address get(PID pid) const {
+        return first_level_table_
+        [(pid&first_level_mask)>>second_level_bits]
+        [pid&second_level_mask];
+      }
+
+      // free up a new PID
+      inline void free_PID(PID pid) {
+        free_PIDs.push(pid);
+        // bool push_result = freePIDs_.push(pid);
+        // assert(push_result);
+      }
+
+      // allocate a new PID, use argument "address" as its initial address
+      inline PID allocate_PID(Address address) {
+        PID result;
+        if(!free_PIDs.pop(result))
+          result = allocate_new_PID(address);
+        set(result, address);
+        return result;
+      }
+
+      // atomically CAS the address associated with "pid"
+      // it compares the content associated with "pid" with "original"
+      // if they are same, change the content associated with pid to "to" and return true
+      // otherwise return false directly
+      bool bool_compare_and_swap(PID pid, const Address original, const Address to) {
+        int row = (int)((pid&first_level_mask)>>second_level_bits);
+        int col = (int)(pid&second_level_mask);
+        return __sync_bool_compare_and_swap(
+          &first_level_table_[row][col], original, to);
+      }
+
+      private:
+      Address *first_level_table_[first_level_slots] = {nullptr};
+      CounterType counter_;
+      boost::lockfree::stack <PID> free_PIDs;
+
+      PIDTable(const PIDTable &) = delete;
+
+      PIDTable(PIDTable &&) = delete;
+
+      PIDTable &operator=(const PIDTable &) = delete;
+
+      PIDTable &operator=(PIDTable &&) = delete;
+
+      // allow GC to free PIDs
+      friend class PIDNode;
+
+      // no reclaimed PIDs available, need to allocate a new PID
+      inline PID allocate_new_PID(Address ) {
+        PID pid = counter_++;
+        if(is_first_PID(pid)) {
+          Address *table = (Address* )malloc(sizeof(Address)*second_level_slots);
+          first_level_table_[((pid&first_level_mask)>>second_level_bits)+1] = table;
+        }
+        return pid;
+      }
+
+      // set the content associated with "pid" to "address"
+      // only used upon "pid"'s allocation
+      inline void set(PID pid, Address address) {
+        int row = (int)((pid&first_level_mask)>>second_level_bits);
+        int col = (int)(pid&second_level_mask);
+        first_level_table_[row][col] = address;
+      }
+
+      inline static bool is_first_PID(PID pid) {
+        return (pid&second_level_mask)==0;
+      }
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
       KeyComparator comparator_;
@@ -400,14 +569,14 @@ namespace peloton {
         const BWNode *first_leaf_node;
         if(!Duplicate)
           first_leaf_node = new BWLeafNode<KeyType, ValueType>(std::vector<KeyType>(), std::vector<ValueType>(),
-                                                               nullptr, nullptr);
+                                                               PIDTable::PID_NULL, PIDTable::PID_NULL);
         else
           first_leaf_node = new BWLeafNode<KeyType, std::vector<ValueType>>(std::vector<KeyType>(), std::vector<std::vector<ValueType>>(),
-                                                                     nullptr, nullptr);
+                                                                            PIDTable::PID_NULL, PIDTable::PID_NULL);
         first_leaf_ = pid_table_.allocate_PID(first_leaf_node);
 
-        const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf_}, nullptr,
-                                                           nullptr, std::numeric_limits<VersionNumber>::min());
+        const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf_}, PIDTable::PID_NULL,
+                                                           PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
       }
 
@@ -455,39 +624,95 @@ namespace peloton {
 
       const BWNode *SplitLeafNode(const BWNode *leaf_node, const PID &node_pid);
 
-      bool InsertSplitEntry(const BWNode *top, const KeyType &key, const std::vector<PID> &path, std::vector<VersionNumber> &version_number);
+      bool InsertSplitEntry(const BWNode *top, std::vector<PID> &path, std::vector<VersionNumber> &version_number){
+        assert(path.size()==version_number.size());
+        assert(top->GetType()==NSplit);
+        const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(top);
+        const KeyType &low_key = split_ptr->GetSplitKey();
+        const PID &right_pid = split_ptr->GetRightPID();
 
-      bool ExistKey(const BWNode *node_ptr, const KeyType &key);
+        if(path.size()>1) { // In this case, this is a normal second step split
+          // get the parent
+          PID pid = path[path.size()-2];
+          while(true) {
+            const BWNode *parent_node = pid_table_.get(pid);
+            if(version_number[version_number.size()-2]!=parent_node->GetVersionNumber())
+              return false;
 
-      void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
+            std::vector<KeyType> keys_view;
+            std::vector<PID> children_view;
+            PID left_view, right_view;
+            CreateInnerNodeView(parent_node, keys_view, children_view, left_view, right_view);
+            auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), low_key, comparator_);
 
-      void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values, PID &left, PID &right);
+            // then check if this split entry has been inserted by others
+            if(position!=keys_view.cbegin()&&key_equality_checker_(low_key, *(position-1)))
+              return true;
 
-      void CreateInnerNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
+            // try to insert the split entry
+            const BWNode *split_entry;
+            if(position!=keys_view.cend())
+              split_entry = new BWSplitEntryNode<KeyType>(parent_node, low_key, *position, right_pid);
+            else
+              split_entry = new BWSplitEntryNode<KeyType>(parent_node, low_key, right_pid);
+            if(pid_table_.bool_compare_and_swap(pid, parent_node, split_entry))
+              return true;
 
-      bool Consolidate(PID cur, const BWNode *node_ptr);
+            // fail, clean up, retry
+            delete split_entry;
+          }
+        }
+        else {
+          assert(path.back()==root_);
+          const BWNode *old_root = pid_table_.get(root_);
+          VersionNumber old_root_version = old_root->GetVersionNumber();
+          PID new_pid = pid_table_.allocate_PID(old_root);
+          BWNode *new_root = new BWInnerNode<KeyType>({}, {new_pid}, PIDTable::PID_NULL, PIDTable::PID_NULL, old_root_version+1);
+          if(!pid_table_.bool_compare_and_swap(root_, old_root, new_root)) {
+            delete new_root;
+            pid_table_.free_PID(new_pid);
+            return false;
+          }
+          return false;
+          /*
+          path.push_back(new_pid);
+          version_number.insert(version_number.begin(), (VersionNumber)(old_root_version+1));
+          return InsertSplitEntry(top, key, path, version_number);
+           */
+        }
+      }
 
-      const BWNode *ConstructConsolidatedInnerNode(const BWNode *node_chain);
+       bool ExistKey(const BWNode *node_ptr, const KeyType &key);
 
-      const BWNode *ConstructConsolidatedLeafNode(const BWNode *node_chain);
+       void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left, PID &right);
 
-      void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
+       void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values, PID &left, PID &right);
+
+       void CreateInnerNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right);
+
+       bool Consolidate(PID cur, const BWNode *node_ptr);
+
+       const BWNode *ConstructConsolidatedInnerNode(const BWNode *node_chain);
+
+       const BWNode *ConstructConsolidatedLeafNode(const BWNode *node_chain);
+
+       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
                                                  std::vector<ValueType> &values, PID &left, PID &right);
-      void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
+       void ConstructConsolidatedLeafNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
                                                  std::vector<std::vector<ValueType>> &values, PID &left, PID &right);
 
       void ConstructConsolidatedInnerNodeInternal(const BWNode *node_chain, std::vector<KeyType> &keys,
                                                   std::vector<PID> &children, PID &left, PID &right);
 
       void ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
-      void ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node, std::vector<std::vector<KeyType>> &keys, std::vector<ValueType> &values);
+      void ConsolidateInsertNode(const BWInsertNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values);
 
-      void ConsolidateDeleteNode(const BWDeleteNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
-      void ConsolidateDeleteNode(const BWDeleteNode<KeyType> *node, std::vector<std::vector<KeyType>> &keys, std::vector<ValueType> &values);
+      void ConsolidateDeleteNode(const BWDeleteNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values);
+      void ConsolidateDeleteNode(const BWDeleteNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values);
 
       void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values,
                                 PID &right);
-      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<std::vector<KeyType>> &keys, std::vector<ValueType> &values,
+      void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values,
                                 PID &right);
 
       void ConsolidateSplitNode(const BWSplitNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children,
@@ -562,6 +787,7 @@ namespace peloton {
 
 
 //      void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret);
+
 
     };
 
