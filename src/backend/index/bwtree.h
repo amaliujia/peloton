@@ -614,7 +614,7 @@ namespace peloton {
       void ScanAllKeys(std::vector<ValueType> &ret) {
         const BWNode *node_ptr = pid_table_.get(root_);
         PID next_pid;
-        while(node_ptr->GetType() != NLeaf) {
+        while(!node_ptr->IfLeafNode()) {
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
