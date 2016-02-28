@@ -591,26 +591,26 @@ namespace peloton {
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
         return DeleteEntryUtil(key, value, path, version_number);
       }
-/*
+
       void ScanKey(KeyType key, std::vector<ValueType> &ret) {
-        ScanKeyUtil(PIDTable::PID_ROOT, key, ret);
+        ScanKeyUtil(root_, key, ret);
       }
+//
+//      void ScanAllKeys(std::vector<ValueType> & ) {
+//        PIDTable & pidTable = PIDTable::get_table();
+//        const BWNode *node_ptr = pidTable.get(PIDTable::PID_ROOT);
+//
+//        while (node_ptr->GetType() != NLeaf) {
+//          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
+//
+//          PID next_pid = cur_ptr->GetPIDs()[0];
+//          node_ptr = pidTable.get(next_pid);
+//        }
+//
+//        // reach first leaf node
+//
+//      }
 
-      void ScanAllKeys(std::vector<ValueType> & ) {
-        PIDTable & pidTable = PIDTable::get_table();
-        const BWNode *node_ptr = pidTable.get(PIDTable::PID_ROOT);
-
-        while (node_ptr->GetType() != NLeaf) {
-          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
-
-          PID next_pid = cur_ptr->GetPIDs()[0];
-          node_ptr = pidTable.get(next_pid);
-        }
-
-        // reach first leaf node
-
-      }
-*/
     private:
       bool CheckStatus(const BWNode *node, const KeyType &key, std::vector<PID> &path, std::vector<VersionNumber> &version_number);
 
@@ -786,7 +786,50 @@ namespace peloton {
 */
 
 
-//      void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret);
+      void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
+          const BWNode *node_ptr = pid_table_.get(cur);
+
+          if (node_ptr->IfLeafNode()) {
+            if (!Duplicate) {
+              std::vector<KeyType> keys;
+              std::vector<ValueType> values;
+              PID left, right;
+              ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
+
+              // unique
+              auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+              assert(position!=keys.end() && key_equality_checker_(key, *position));
+              auto dist = std::distance(keys.begin(), position);
+
+              ret.push_back(values[dist]);
+            }
+            else {
+              std::vector<KeyType> keys;
+              std::vector<std::vector<ValueType>> values;
+              PID left, right;
+              ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
+              auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+              assert(position!=keys.end() && key_equality_checker_(key, *position));
+              auto dist = std::distance(keys.begin(), position);
+
+              ret.insert(ret.end(), values[dist].begin(), values[dist].end());
+            }
+          }
+          else {
+            std::vector<KeyType> keys;
+            std::vector<PID> children;
+            PID left, right;
+            ConstructConsolidatedInnerNodeInternal(node_ptr, keys, children, left, right);
+            auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+            if (position == keys.begin()) {
+              ScanKeyUtil(children[0], key, ret);
+            } else {
+              assert(position != keys.end());
+              auto dist = std::distance(keys.begin(), position);
+              ScanKeyUtil(children[dist + 1], key, ret);
+            }
+          }
+        }
 
 
     };
