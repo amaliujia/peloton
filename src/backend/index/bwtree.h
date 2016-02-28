@@ -21,6 +21,10 @@
 #include "backend/index/item_pointer_equality_checker.h"
 
 
+//#include <boost/lockfree/stack.hpp>
+
+
+#include <mutex>
 #include <boost/lockfree/stack.hpp>
 #include <cstdint>
 #include <vector>
@@ -382,7 +386,74 @@ namespace peloton {
 
     typedef const BWNode *Address;
 
-    class PIDTable {
+      class PIDTable {
+          /*
+           * class storing the mapping table between a PID and its corresponding address
+           * the mapping table is organized as a two-level array, like a virtual memory table.
+           * the first level table is statically allocated, second level tables are allocated as needed
+           * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
+           * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
+           */
+      private:
+          std::unordered_map<PID, Address> pid_table_;
+          std::mutex lock_;
+          long long id;
+      public:
+          // NULL for PID
+          static const PID PID_NULL;
+          //static constexpr PID PID_ROOT = 0;
+
+          PIDTable() {
+            id = 0;
+          }
+
+          ~PIDTable() {
+            for (auto kv : pid_table_) {
+              free_PID(kv.first);
+            }
+          }
+
+          // get the address corresponding to the pid
+          inline Address get(PID pid) {
+            Address ret;
+            lock_.lock();
+            ret = pid_table_[pid];
+            lock_.unlock();
+            return ret;
+          }
+
+          // free up a new PID
+          inline void free_PID(PID pid) {
+            lock_.lock();
+            pid_table_.erase(pid_table_.find(pid));
+            lock_.unlock();
+          }
+
+          // allocate a new PID, use argument "address" as its initial address
+          inline PID allocate_PID(Address address) {
+            PID result;
+            lock_.lock();
+            id++;
+            result = id;
+            pid_table_[id] = address;
+            lock_.unlock();
+            return result;
+          }
+
+          // atomically CAS the address associated with "pid"
+          // it compares the content associated with "pid" with "original"
+          // if they are same, change the content associated with pid to "to" and return true
+          // otherwise return false directly
+          bool bool_compare_and_swap(PID pid, const Address, const Address to) {
+            lock_.lock();
+            pid_table_[pid] = to;
+            lock_.unlock();
+            return true;
+          }
+      };
+
+
+//    class PIDTable {
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -390,7 +461,7 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
-    public:
+/*    public:
       typedef std::atomic<PID> CounterType;
 
     private:
@@ -490,7 +561,7 @@ namespace peloton {
       inline static bool is_first_PID(PID pid) {
         return (pid&second_level_mask)==0;
       }
-    };
+    };*/
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
