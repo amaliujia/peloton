@@ -498,12 +498,12 @@ namespace peloton {
           if(ExistKey(node_ptr, key)) {
             if(!Duplicate)
               return false;
-            if(!DeltaInsert(current, node_ptr, key, value, true))
+            if(!DeltaInsert(current, node_ptr, key, value, false))
               continue;
             return true;
           }
           else {
-            if(!DeltaInsert(current, node_ptr, key, value, false))
+            if(!DeltaInsert(current, node_ptr, key, value, true))
               continue;
             return true;
           }
