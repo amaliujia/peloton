@@ -798,10 +798,10 @@ namespace peloton {
 
               // unique
               auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-              assert(position!=keys.end() && key_equality_checker_(key, *position));
-              auto dist = std::distance(keys.begin(), position);
-
-              ret.push_back(values[dist]);
+              if (position!=keys.end() && key_equality_checker_(key, *position)) {
+                auto dist = std::distance(keys.begin(), position);
+                ret.push_back(values[dist]);
+              }
             }
             else {
               std::vector<KeyType> keys;
@@ -809,10 +809,10 @@ namespace peloton {
               PID left, right;
               ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
               auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
-              assert(position!=keys.end() && key_equality_checker_(key, *position));
-              auto dist = std::distance(keys.begin(), position);
-
-              ret.insert(ret.end(), values[dist].begin(), values[dist].end());
+              if (position!=keys.end() && key_equality_checker_(key, *position)) {
+                auto dist = std::distance(keys.begin(), position);
+                ret.insert(ret.end(), values[dist].begin(), values[dist].end());
+              }
             }
           }
           else {
@@ -820,13 +820,18 @@ namespace peloton {
             std::vector<PID> children;
             PID left, right;
             ConstructConsolidatedInnerNodeInternal(node_ptr, keys, children, left, right);
+            /*
+             *  An iterator to the lower bound of val in the range.
+             *  If all the element in the range compare less than val, the function returns last.
+             *  I assume if the element is the smallest in the range, return begin
+             *  Otherwise returnl lowkey of keyspace [lowkey, highkey) in which current key is.
+             */
             auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
             if (position == keys.begin()) {
               ScanKeyUtil(children[0], key, ret);
             } else {
-              assert(position != keys.end());
               auto dist = std::distance(keys.begin(), position);
-              ScanKeyUtil(children[dist + 1], key, ret);
+              ScanKeyUtil(children[dist], key, ret);
             }
           }
         }
