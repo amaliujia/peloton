@@ -105,6 +105,214 @@ TEST(IndexTests, BasicTest) {
   delete tuple_schema;
 }
 
+TEST(IndexTests, NodupInsertsTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+  std::unique_ptr<storage::Tuple> key1(new storage::Tuple(key_schema, true));
+  std::unique_ptr<storage::Tuple> key2(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  key1->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key1->SetValue(1, ValueFactory::GetStringValue("b"), pool);
+  key2->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key2->SetValue(1, ValueFactory::GetStringValue("c"), pool);
+
+  // INSERT
+  index->InsertEntry(key0.get(), item0);
+  index->InsertEntry(key1.get(), item1);
+  index->InsertEntry(key2.get(), item2);
+  
+  locations = index->ScanKey(key0.get());
+  EXPECT_EQ(locations.size(), 1);
+  EXPECT_EQ(locations[0].block, item0.block);
+  
+  locations = index->ScanKey(key1.get());
+  EXPECT_EQ(locations.size(), 1);
+  EXPECT_EQ(locations[0].block, item1.block);
+
+  locations = index->ScanKey(key2.get());
+  EXPECT_EQ(locations.size(), 1);
+  EXPECT_EQ(locations[0].block, item2.block);
+
+  delete tuple_schema;
+}
+
+TEST(IndexTests, NodupInsertDupExistTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+ 
+  // INSERT
+  bool ret = index->InsertEntry(key0.get(), item0);
+  EXPECT_EQ(ret, true); 
+  ret = index->InsertEntry(key0.get(), item1);
+  EXPECT_EQ(ret, false); 
+  
+  locations = index->ScanKey(key0.get());
+  EXPECT_EQ(locations.size(), 1);
+  EXPECT_EQ(locations[0].block, item0.block);
+  
+  delete tuple_schema;
+}
+
+TEST(IndexTests, NodupScanAllKeysTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+  std::unique_ptr<storage::Tuple> key1(new storage::Tuple(key_schema, true));
+  std::unique_ptr<storage::Tuple> key2(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  key1->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key1->SetValue(1, ValueFactory::GetStringValue("b"), pool);
+  key2->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key2->SetValue(1, ValueFactory::GetStringValue("c"), pool);
+
+  // INSERT
+  index->InsertEntry(key0.get(), item0);
+  index->InsertEntry(key1.get(), item1);
+  index->InsertEntry(key2.get(), item2);
+  
+  locations = index->ScanAllKeys();
+  EXPECT_EQ(locations.size(), 3);
+  EXPECT_EQ(locations[0].block, item0.block);
+  EXPECT_EQ(locations[1].block, item1.block);
+  EXPECT_EQ(locations[2].block, item2.block);
+  
+  delete tuple_schema;
+}
+
+
+TEST(IndexTests, ScanKeyEmptyTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  
+  locations = index->ScanKey(key0.get());
+  EXPECT_EQ(locations.size(), 0);
+  
+  delete tuple_schema;
+}
+
+TEST(IndexTests, ScanAllKeysEmptyTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  
+  locations = index->ScanAllKeys();
+  EXPECT_EQ(locations.size(), 0);
+  
+  delete tuple_schema;
+}
+
+// Set max_node_size as 3, so after insert 4 tuples, bwtree should has split.
+TEST(IndexTests, NodupSplitTest) {
+auto pool = TestingHarness::GetInstance().GetTestingPool();
+std::vector<ItemPointer> locations;
+
+std::unique_ptr<index::Index> index(BuildIndex());
+
+std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+std::unique_ptr<storage::Tuple> key1(new storage::Tuple(key_schema, true));
+std::unique_ptr<storage::Tuple> key2(new storage::Tuple(key_schema, true));
+std::unique_ptr<storage::Tuple> key3(new storage::Tuple(key_schema, true));
+std::unique_ptr<storage::Tuple> key4(new storage::Tuple(key_schema, true));
+
+key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+key1->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+key1->SetValue(1, ValueFactory::GetStringValue("b"), pool);
+key2->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+key2->SetValue(1, ValueFactory::GetStringValue("c"), pool);
+key3->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+key3->SetValue(1, ValueFactory::GetStringValue("d"), pool);
+key4->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+key4->SetValue(1, ValueFactory::GetStringValue("e"), pool);
+
+
+// INSERT
+index->InsertEntry(key0.get(), item0);
+index->InsertEntry(key1.get(), item1);
+index->InsertEntry(key2.get(), item2);
+index->InsertEntry(key3.get(), item1);
+index->InsertEntry(key4.get(), item2);
+
+locations = index->ScanAllKeys();
+EXPECT_EQ(locations.size(), 5);
+EXPECT_EQ(locations[0].block, item0.block);
+EXPECT_EQ(locations[1].block, item1.block);
+EXPECT_EQ(locations[2].block, item2.block);
+EXPECT_EQ(locations[3].block, item1.block);
+EXPECT_EQ(locations[4].block, item2.block);
+
+delete tuple_schema;
+}
+
+// Set max_node_size as 3, so after insert 13 tuples, bwtree should has split to 3 levels.
+TEST(IndexTests, NodupRootSplitTest) {
+auto pool = TestingHarness::GetInstance().GetTestingPool();
+std::vector<ItemPointer> locations;
+
+std::unique_ptr<index::Index> index(BuildIndex());
+std::vector<std::unique_ptr<storage::Tuple>> keys;
+
+for (size_t i = 0; i < 15; i++) {
+  std::unique_ptr<storage::Tuple> key(new storage::Tuple(key_schema, true));
+  key->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key->SetValue(1, ValueFactory::GetStringValue(std::to_string("a" + i)), pool);
+  keys.push_back(key);
+}
+std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+// INSERT
+for (size_t i = 0; i < 15; i++) {
+  index->InsertEntry(keys[i].get(), item0);
+}
+
+
+locations = index->ScanAllKeys();
+EXPECT_EQ(locations.size(), 15);
+EXPECT_EQ(locations[0].block, item0.block);
+EXPECT_EQ(locations[3].block, item0.block);
+EXPECT_EQ(locations[7].block, item0.block);
+EXPECT_EQ(locations[8].block, item0.block);
+EXPECT_EQ(locations[14].block, item0.block);
+
+delete tuple_schema;
+}
+
 // INSERT HELPER FUNCTION
 void InsertTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
 

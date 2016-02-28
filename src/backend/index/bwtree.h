@@ -37,9 +37,9 @@ namespace peloton {
     typedef std::uint_fast32_t PID;
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
-    constexpr int max_chain_len = 8;
-    constexpr int max_node_size = 20;
-    constexpr int min_node_size = max_node_size<<1;
+    constexpr int max_chain_len = 30;
+    constexpr int max_node_size = 3;
+    constexpr int min_node_size = max_node_size<<1; // 3 / 2 = 1
     enum NodeType {
       NInsert,
       NDelete,
@@ -625,16 +625,19 @@ namespace peloton {
       void ScanAllKeys(std::vector<ValueType> &ret) {
         const BWNode *node_ptr = pid_table_.get(root_);
         PID next_pid;
-        while(node_ptr->GetType()!=NLeaf) {
-          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
-
-          next_pid = cur_ptr->GetChildren()[0];
+        while(!node_ptr->IfLeafNode()) {
+          std::vector<KeyType> keys;
+          std::vector<PID> children;
+          PID left, right;
+          ConstructConsolidatedInnerNodeInternal(node_ptr, keys, children, left, right);
+          assert(children.size() != 0);
+          next_pid = children[0];
           node_ptr = pid_table_.get(next_pid);
         }
 
         // reach first leaf node
         // Ready to scan
-        while(node_ptr!=NULL) {
+        while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
             std::vector<KeyType> keys;

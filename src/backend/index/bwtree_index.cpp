@@ -25,7 +25,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     : Index(metadata),
       container_duplicate(metadata),
       container_unique(metadata) {
-  no_dup_ = false;
+  no_dup_ = true;
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
