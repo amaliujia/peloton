@@ -33,9 +33,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(
-  __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
-  // TODO two containers
+bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(const storage::Tuple *key, const ItemPointer location) {
   KeyType index_key;
   index_key.SetFromKey(key);
   if(HasUniqueKeys())
@@ -45,8 +43,7 @@ bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertE
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
-bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::DeleteEntry(
-    __attribute__((unused)) const storage::Tuple *key, __attribute__((unused)) const ItemPointer location) {
+bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::DeleteEntry(const storage::Tuple *key, const ItemPointer location) {
   KeyType index_key;
   index_key.SetFromKey(key);
   if(HasUniqueKeys())
@@ -85,7 +82,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys(
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 std::vector<ItemPointer>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
-    __attribute__((unused)) const storage::Tuple *key) {
+   const storage::Tuple *key) {
   std::vector<ItemPointer> result;
   KeyType index_key;
   index_key.SetFromKey(key);
