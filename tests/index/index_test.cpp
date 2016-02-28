@@ -280,6 +280,39 @@ EXPECT_EQ(locations[4].block, item2.block);
 delete tuple_schema;
 }
 
+// Set max_node_size as 3, so after insert 13 tuples, bwtree should has split to 3 levels.
+TEST(IndexTests, NodupRootSplitTest) {
+auto pool = TestingHarness::GetInstance().GetTestingPool();
+std::vector<ItemPointer> locations;
+
+std::unique_ptr<index::Index> index(BuildIndex());
+std::vector<std::unique_ptr<storage::Tuple>> keys;
+
+for (size_t i = 0; i < 15; i++) {
+  std::unique_ptr<storage::Tuple> key(new storage::Tuple(key_schema, true));
+  key->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key->SetValue(1, ValueFactory::GetStringValue(std::to_string("a" + i)), pool);
+  keys.push_back(key);
+}
+std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+// INSERT
+for (size_t i = 0; i < 15; i++) {
+  index->InsertEntry(keys[i].get(), item0);
+}
+
+
+locations = index->ScanAllKeys();
+EXPECT_EQ(locations.size(), 15);
+EXPECT_EQ(locations[0].block, item0.block);
+EXPECT_EQ(locations[3].block, item0.block);
+EXPECT_EQ(locations[7].block, item0.block);
+EXPECT_EQ(locations[8].block, item0.block);
+EXPECT_EQ(locations[14].block, item0.block);
+
+delete tuple_schema;
+}
+
 // INSERT HELPER FUNCTION
 void InsertTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
 
