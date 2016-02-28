@@ -616,8 +616,8 @@ namespace peloton {
         PID next_pid;
         while(node_ptr->GetType()!=NLeaf) {
           const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
-
-          next_pid = cur_ptr->GetChildren()[0];
+          assert(cur_ptr->GetChildren().size() == 0);
+          next_pid = (cur_ptr->GetChildren())[0];
           node_ptr = pid_table_.get(next_pid);
         }
 
