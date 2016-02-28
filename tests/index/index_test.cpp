@@ -201,6 +201,42 @@ TEST(IndexTests, NodupScanAllKeysTest) {
 }
 
 
+TEST(IndexTests, ScanKeyEmptyTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  
+  locations = index->ScanKey(key0.get());
+  EXPECT_EQ(locations.size(), 0);
+  
+  delete tuple_schema;
+}
+
+TEST(IndexTests, ScanAllKeysEmptyTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  // INDEX
+  std::unique_ptr<index::Index> index(BuildIndex());
+
+  std::unique_ptr<storage::Tuple> key0(new storage::Tuple(key_schema, true));
+
+  key0->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+  key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
+  
+  locations = index->ScanAllKeys();
+  EXPECT_EQ(locations.size(), 0);
+  
+  delete tuple_schema;
+}
+
 // INSERT HELPER FUNCTION
 void InsertTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
 
