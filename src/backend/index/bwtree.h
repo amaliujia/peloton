@@ -386,7 +386,7 @@ namespace peloton {
 
     typedef const BWNode *Address;
 
-//      class PIDTable {
+      class PIDTable {
           /*
            * class storing the mapping table between a PID and its corresponding address
            * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -394,7 +394,7 @@ namespace peloton {
            * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
            * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
            */
-/*      private:
+      private:
           std::unordered_map<PID, Address> pid_table_;
           std::mutex lock_;
           long long id;
@@ -452,9 +452,9 @@ namespace peloton {
             return true;
           }
       };
-*/
 
-    class PIDTable {
+
+//    class PIDTable {
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -462,6 +462,7 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
+/*
     public:
       typedef std::atomic<PID> CounterType;
 
@@ -574,7 +575,8 @@ namespace peloton {
         return (pid&second_level_mask)==0;
       }
     };
-
+*/
+    
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
       KeyComparator comparator_;
