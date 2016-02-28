@@ -412,7 +412,8 @@ namespace peloton {
 
       ~PIDTable() {
         PID counter = counter_;
-        for(PID i = 0; i<counter; ++i) {
+        PID num_slots = ((counter&first_level_mask)>>second_level_bits)+1;
+        for(PID i = 0; i<num_slots; ++i) {
           free(first_level_table_[i]);
         }
         assert(counter==counter_);

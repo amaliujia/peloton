@@ -361,6 +361,7 @@ namespace peloton {
         std::vector<ValueType> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
+        assert(keys_view.size()==values_view.size());
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
@@ -382,7 +383,7 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size()+1==values_view.size());
+        assert(keys_view.size()==values_view.size());
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
