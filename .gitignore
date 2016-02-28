@@ -155,5 +155,3 @@ third_party/nanomsg
 CMake files
 #==============================================================================#
 CMakeLists.txt
-
-tests/index/pid_table_test.cpp

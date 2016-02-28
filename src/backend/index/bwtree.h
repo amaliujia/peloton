@@ -614,16 +614,19 @@ namespace peloton {
       void ScanAllKeys(std::vector<ValueType> &ret) {
         const BWNode *node_ptr = pid_table_.get(root_);
         PID next_pid;
-        while(node_ptr->GetType()!=NLeaf) {
-          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
-          assert(cur_ptr->GetChildren().size() == 0);
-          next_pid = (cur_ptr->GetChildren())[0];
+        while(node_ptr->GetType() != NLeaf) {
+          std::vector<KeyType> keys;
+          std::vector<PID> children;
+          PID left, right;
+          ConstructConsolidatedInnerNodeInternal(node_ptr, keys, children, left, right);
+          assert(children.size() != 0);
+          next_pid = children[0];
           node_ptr = pid_table_.get(next_pid);
         }
 
         // reach first leaf node
         // Ready to scan
-        while(node_ptr!=NULL) {
+        while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
             std::vector<KeyType> keys;
