@@ -85,10 +85,11 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
   std::vector<ItemPointer> result;
   KeyType index_key;
   index_key.SetFromKey(key);
-  if (HasUniqueKeys())
-    container_unique.ScanKey(key, result);
-  else
-    container_duplicate.ScanKey(index_key, result);
+  //if (HasUniqueKeys())
+  //  container_unique.ScanKey(key, result);
+  //else
+  //  container_duplicate.ScanKey(index_key, result);
+  return result;
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
