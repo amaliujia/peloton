@@ -564,6 +564,7 @@ namespace peloton {
       ValueEqualityChecker value_equality_checker_;
       PID root_, first_leaf_;
       PIDTable pid_table_;
+      PID null_;
     public :
       BWTree(IndexMetadata *indexMetadata): comparator_(indexMetadata), key_equality_checker_(indexMetadata) {
         const BWNode *first_leaf_node;
@@ -578,6 +579,7 @@ namespace peloton {
         const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf_}, PIDTable::PID_NULL,
                                                            PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
+        null_ = 0;
       }
 
       bool InsertEntry(const KeyType &key, const ValueType &value) {
@@ -595,21 +597,48 @@ namespace peloton {
       void ScanKey(KeyType key, std::vector<ValueType> &ret) {
         ScanKeyUtil(root_, key, ret);
       }
-//
-//      void ScanAllKeys(std::vector<ValueType> & ) {
-//        PIDTable & pidTable = PIDTable::get_table();
-//        const BWNode *node_ptr = pidTable.get(PIDTable::PID_ROOT);
-//
-//        while (node_ptr->GetType() != NLeaf) {
-//          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
-//
-//          PID next_pid = cur_ptr->GetPIDs()[0];
-//          node_ptr = pidTable.get(next_pid);
-//        }
-//
-//        // reach first leaf node
-//
-//      }
+
+      void ScanAllKeys(std::vector<ValueType> & ret) {
+        const BWNode *node_ptr = pid_table_.get(root_);
+        PID next_pid;
+        while (node_ptr->GetType() != NLeaf) {
+          const BWInnerNode<KeyType> *cur_ptr = static_cast<const BWInnerNode<KeyType> *>(node_ptr);
+
+          next_pid = cur_ptr->GetChildren()[0];
+          node_ptr = pid_table_.get(next_pid);
+        }
+
+        // reach first leaf node
+        // Ready to scan
+        while (node_ptr != NULL) {
+          PID left, right;
+          if (!Duplicate) {
+            std::vector<KeyType> keys;
+            std::vector<ValueType> values;
+
+            ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
+
+            ret.insert(ret.end(), values.begin(), values.end());
+          }
+          else {
+            std::vector<KeyType> keys;
+            std::vector<std::vector<ValueType>> values;
+            ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
+
+            for (const auto& v : values) {
+              ret.insert(ret.end(), v.begin(), v.end());
+            }
+          }
+
+          // Assume node_ptr->GetRight() returns the most recent split node delta's right (aka new page
+          // in that split), if any.
+          if (node_ptr->GetRight() != null_) {
+            node_ptr = pid_table_.get(node_ptr->GetRight());
+          } else {
+            node_ptr = NULL;
+          }
+        }
+      }
 
     private:
       bool CheckStatus(const BWNode *node, const KeyType &key, std::vector<PID> &path, std::vector<VersionNumber> &version_number);
@@ -720,15 +749,6 @@ namespace peloton {
 
       void ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys,
                                      std::vector<PID> &children);
-
-      PID GetRightPID(const BWNode *node_ptr) {
-        const BWNode *cur_ptr = node_ptr;
-        while(cur_ptr->GetType()!=NLeaf||cur_ptr->GetType()!=NInner) {
-          cur_ptr = cur_ptr->GetNext();
-        }
-
-        return cur_ptr->GetLeft();
-      }
 
       /*
        *  In inner levels, the delta nodes should be SplitEntryNode, MergeEntryNode, SplitNode.
