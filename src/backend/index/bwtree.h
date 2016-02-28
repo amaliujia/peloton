@@ -447,6 +447,7 @@ namespace peloton {
           bool bool_compare_and_swap(PID pid, const Address, const Address to) {
             lock_.lock();
             pid_table_[pid] = to;
+            LOG_INFO("install %p to slot %lu", to, pid);
             lock_.unlock();
             return true;
           }
@@ -584,11 +585,12 @@ namespace peloton {
                                                                             std::vector<std::vector<ValueType>>(),
                                                                             PIDTable::PID_NULL, PIDTable::PID_NULL);
         first_leaf_ = pid_table_.allocate_PID(first_leaf_node);
-
+        LOG_INFO("PID of first_leaf is %lu", first_leaf_);
         const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf_}, PIDTable::PID_NULL,
                                                            PIDTable::PID_NULL,
                                                            std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
+        LOG_INFO("PID of root is %lu", root_);
         null_ = 0;
       }
 

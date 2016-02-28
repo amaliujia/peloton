@@ -25,18 +25,19 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     : Index(metadata),
       container_duplicate(metadata),
       container_unique(metadata) {
+  no_dup_ = false;
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex() {
-
+  //no_dup_ = true;
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::InsertEntry(const storage::Tuple *key, const ItemPointer location) {
   KeyType index_key;
   index_key.SetFromKey(key);
-  if(HasUniqueKeys())
+  if(no_dup_)
     return container_unique.InsertEntry(index_key, location);
   else
     return container_duplicate.InsertEntry(index_key, location);
@@ -46,7 +47,7 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 bool BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::DeleteEntry(const storage::Tuple *key, const ItemPointer location) {
   KeyType index_key;
   index_key.SetFromKey(key);
-  if(HasUniqueKeys())
+  if(no_dup_)
     return container_unique.DeleteEntry(index_key, location);
   else
     return container_duplicate.DeleteEntry(index_key, location);}
@@ -67,7 +68,7 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 std::vector<ItemPointer>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys() {
   std::vector<ItemPointer> result;
-  if (HasUniqueKeys())
+  if (no_dup_)
     container_unique.ScanAllKeys(result);
   else
     container_duplicate.ScanAllKeys(result);
@@ -86,7 +87,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
   std::vector<ItemPointer> result;
   KeyType index_key;
   index_key.SetFromKey(key);
-  if (HasUniqueKeys())
+  if (no_dup_)
     container_unique.ScanKey(index_key, result);
   else
     container_duplicate.ScanKey(index_key, result);

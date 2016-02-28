@@ -76,6 +76,8 @@ class BWTreeIndex : public Index {
 
   // synch helper
   RWLock index_lock;
+
+  bool no_dup_;
 };
 
 }  // End index namespace

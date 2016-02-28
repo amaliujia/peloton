@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+
 //
 //                         PelotonDB
 //
@@ -105,8 +105,8 @@ namespace peloton {
       std::vector<PID> children_view;
       PID left_view, right_view;
       CreateInnerNodeView(inner_node, keys_view, children_view, left_view, right_view);
-      assert(keys_view.size()+1==children_view.size());
-      assert(keys_view.size()>=max_node_size);
+      assert(keys_view.size() + 1 == children_view.size());
+      assert(keys_view.size() >= max_node_size);
 
       auto index = keys_view.size()/2;
       const KeyType &low_key = keys_view[index];
@@ -341,11 +341,14 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool need_expand) {
       const BWNode *insert_node_ptr =
-              new BWInsertNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()+(need_expand?1:0), key, value);
+              new BWInsertNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0), key, value);
       if(!pid_table_.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
         delete insert_node_ptr;
+        LOG_INFO("Insert fail with pid %lu", cur);
         return false;
       }
+
+      LOG_INFO("Insert done with pid %lu", cur);
       return true;
     }
 
@@ -378,11 +381,12 @@ namespace peloton {
         return true;
       }
       else {
+        LOG_INFO("DeltaDelete ---- using pid %lu, addr %p", cur, node_ptr);
         std::vector<KeyType> keys_view;
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size()+1==values_view.size());
+        assert(keys_view.size() == values_view.size());
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
@@ -413,10 +417,10 @@ namespace peloton {
       while(true) {
         // first check if we have the up-to-date version number
         const PID &current = path.back();
-        assert(path.size()==version_number.size());
+        assert(path.size() == version_number.size());
         const BWNode *node_ptr = pid_table_.get(current);
-        if(node_ptr->GetVersionNumber()!=version_number.back()) {
-          if(path.size()==1) {
+        if(node_ptr->GetVersionNumber() != version_number.back()) {
+          if(path.size() == 1) {
             version_number.pop_back();
             version_number.push_back(node_ptr->GetVersionNumber());
           }
@@ -481,7 +485,7 @@ namespace peloton {
           std::vector<PID> children_view;
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
-          assert(keys_view.size()+1==children_view.size());
+          assert(keys_view.size() + 1 == children_view.size());
           auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
           auto dist = std::distance(keys_view.cbegin(), position);
           PID next_pid = children_view[dist];
@@ -509,11 +513,12 @@ namespace peloton {
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
+      LOG_INFO("DeleteEntryUtil --------------------");
       while(true) {
-        assert(path.size()==version_number.size());
+        assert(path.size() == version_number.size());
         const PID &current = path.back();
         const BWNode *node_ptr = pid_table_.get(current);
-
+        LOG_INFO("DeleteEntryUtil -- using pid %lu, addr %p", current, node_ptr);
         if(!CheckStatus(node_ptr, key, path, version_number))
           continue;
 
@@ -639,6 +644,7 @@ namespace peloton {
                        std::vector<std::vector<ValueType>> &values,
                        PID &left, PID &right) {
       assert(Duplicate);
+      LOG_INFO("CreateLeafNodeView allow Duplicate (Call ConstructConsolidatedLeafNodeInternal recursively) --");
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
     };
 
@@ -674,6 +680,7 @@ namespace peloton {
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
+        LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 
@@ -710,18 +717,19 @@ namespace peloton {
       PID &right) {
       assert(Duplicate);
       assert(node_chain->IfLeafNode());
-      if(node_chain->GetType()==NLeaf) {
+      if(node_chain->GetType() == NLeaf) {
         // arrive at bottom
         const BWLeafNode<KeyType, std::vector<ValueType>> *node = static_cast<const BWLeafNode<KeyType, std::vector<ValueType>> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
+        LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 
       // still at delta chain
-      assert(node_chain->GetNext()!=NULL);
+      assert(node_chain->GetNext() != NULL);
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
         case NInsert:
@@ -805,6 +813,7 @@ namespace peloton {
       auto dist = std::distance(keys.begin(), position);
       keys.insert(position, key);
       values.insert(values.begin()+dist, value);
+      LOG_INFO("\t\t In insert delta, key size %lu, value size %lu", keys.size(), values.size());
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>

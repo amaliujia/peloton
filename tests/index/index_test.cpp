@@ -90,8 +90,8 @@ TEST(IndexTests, BasicTest) {
   key0->SetValue(1, ValueFactory::GetStringValue("a"), pool);
 
   // INSERT
-  index->InsertEntry(key0.get(), item0);
-
+  bool ret = index->InsertEntry(key0.get(), item0);
+  EXPECT_EQ(ret, true);
   locations = index->ScanKey(key0.get());
   EXPECT_EQ(locations.size(), 1);
   EXPECT_EQ(locations[0].block, item0.block);
