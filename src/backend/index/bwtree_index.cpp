@@ -70,7 +70,11 @@ template <typename KeyType, typename ValueType, class KeyComparator, class KeyEq
 std::vector<ItemPointer>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys() {
   std::vector<ItemPointer> result;
-  //container.ScanAllKeys(result);
+  if (HasUniqueKeys())
+    container_unique.ScanAllKeys(result);
+  else
+    container_duplicate.ScanAllKeys(result);
+  return result;
 
   return result;
 }
@@ -85,7 +89,10 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
   std::vector<ItemPointer> result;
   KeyType index_key;
   index_key.SetFromKey(key);
-  //container.ScanKey(index_key, result);
+  if (HasUniqueKeys())
+    container_unique.ScanKey(index_key, result);
+  else
+    container_duplicate.ScanKey(index_key, result);
   return result;
 }
 
