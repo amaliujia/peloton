@@ -36,7 +36,7 @@ index::Index *BuildIndex() {
   std::vector<std::vector<std::string>> column_names;
   std::vector<catalog::Column> columns;
   std::vector<catalog::Schema *> schemas;
-  //IndexType index_type = INDEX_TYPE_BTREE;
+  IndexType index_type = INDEX_TYPE_BTREE;
   // TODO: Uncomment the line below
   index_type = INDEX_TYPE_BWTREE;
 
