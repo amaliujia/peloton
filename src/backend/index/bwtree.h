@@ -386,7 +386,7 @@ namespace peloton {
 
     typedef const BWNode *Address;
 
-      class PIDTable {
+//      class PIDTable {
           /*
            * class storing the mapping table between a PID and its corresponding address
            * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -394,7 +394,7 @@ namespace peloton {
            * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
            * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
            */
-      private:
+/*      private:
           std::unordered_map<PID, Address> pid_table_;
           std::mutex lock_;
           long long id;
@@ -452,9 +452,9 @@ namespace peloton {
             return true;
           }
       };
+*/
 
-
-//    class PIDTable {
+    class PIDTable {
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -462,7 +462,7 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
-/*    public:
+    public:
       typedef std::atomic<PID> CounterType;
 
     private:
@@ -484,7 +484,8 @@ namespace peloton {
 
       ~PIDTable() {
         PID counter = counter_;
-        PID num_slots = ((counter&first_level_mask)>>second_level_bits)+1;
+        PID num_slots = ((counter&first_level_mask)>>second_level_bits)+1+1;
+        LOG_DEBUG("counter=%lu, table[%lu][%lu], num_slots=%lu", counter, (counter&first_level_mask)>>second_level_bits, counter&second_level_mask, num_slots);
         for(PID i = 0; i<num_slots; ++i) {
           free(first_level_table_[i]);
         }
@@ -493,6 +494,13 @@ namespace peloton {
 
       // get the address corresponding to the pid
       inline Address get(PID pid) const {
+
+//        LOG_DEBUG("PIDTable::get(%lu)=table[%lu][%lu]=%p", pid,
+//                  (pid&first_level_mask)>>second_level_bits,
+//                  pid&second_level_mask,
+//                  first_level_table_
+//                  [(pid&first_level_mask)>>second_level_bits]
+//                  [pid&second_level_mask]);
         return first_level_table_
         [(pid&first_level_mask)>>second_level_bits]
         [pid&second_level_mask];
@@ -500,6 +508,7 @@ namespace peloton {
 
       // free up a new PID
       inline void free_PID(PID pid) {
+//        LOG_DEBUG("PIDTable::free(%lu)", pid);
         free_PIDs.push(pid);
         // bool push_result = freePIDs_.push(pid);
         // assert(push_result);
@@ -511,6 +520,7 @@ namespace peloton {
         if(!free_PIDs.pop(result))
           result = allocate_new_PID(address);
         set(result, address);
+//        LOG_DEBUG("PIDTable::allocatePID(%p)=%lu", address, result);
         return result;
       }
 
@@ -545,6 +555,7 @@ namespace peloton {
       inline PID allocate_new_PID(Address) {
         PID pid = counter_++;
         if(is_first_PID(pid)) {
+          LOG_DEBUG("%lu table[%lu][%lu] is first pid", pid, (pid&first_level_mask)>>second_level_bits, pid&second_level_mask);
           Address *table = (Address *) malloc(sizeof(Address)*second_level_slots);
           first_level_table_[((pid&first_level_mask)>>second_level_bits)+1] = table;
         }
@@ -562,7 +573,7 @@ namespace peloton {
       inline static bool is_first_PID(PID pid) {
         return (pid&second_level_mask)==0;
       }
-    };*/
+    };
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {

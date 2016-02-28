@@ -5,11 +5,12 @@
 ######################################################################
 
 check_PROGRAMS += \
-##                pid_table_test \
+                pid_table_test \
                 index_test
 
 
 index_test_SOURCES = index/index_test.cpp \
                      harness.cpp
 
-## pid_table_test_SOURCES = index/pid_table_test.cpp
+pid_table_test_SOURCES = index/pid_table_test.cpp \
+                         harness.cpp
