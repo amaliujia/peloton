@@ -314,6 +314,41 @@ TEST(IndexTests, NodupRootSplitTest) {
   delete tuple_schema;
 }
 
+// set max_chain_len as 99
+// focus on testing split
+TEST(IndexTests, NodupSplitLoadTest) {
+  auto pool = TestingHarness::GetInstance().GetTestingPool();
+  std::vector<ItemPointer> locations;
+
+  std::unique_ptr<index::Index> index(BuildIndex());
+  std::vector<std::unique_ptr<storage::Tuple>> keys;
+
+  for (size_t i = 0; i < 99; i++) {
+    std::unique_ptr<storage::Tuple> key(new storage::Tuple(key_schema, true));
+    key->SetValue(0, ValueFactory::GetIntegerValue(100), pool);
+    key->SetValue(1, ValueFactory::GetStringValue(std::to_string(i)), pool);
+    keys.push_back(std::move(key));
+  }
+
+  // INSERT
+  for (size_t i = 0; i < 99; i += 3) {
+    index->InsertEntry(keys[i].get(), item0);
+    index->InsertEntry(keys[i+1].get(), item1);
+    index->InsertEntry(keys[i+2].get(), item2);
+  }
+
+
+  locations = index->ScanAllKeys();
+  EXPECT_EQ(locations.size(), 99);
+  for (size_t i = 0; i < 99; i += 3) {
+    EXPECT_EQ(locations[i].block, item0.block);
+    EXPECT_EQ(locations[i+1].block, item1.block);
+    EXPECT_EQ(locations[i+2].block, item2.block);
+  }
+
+  delete tuple_schema;
+}
+
 // INSERT HELPER FUNCTION
 void InsertTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
 
