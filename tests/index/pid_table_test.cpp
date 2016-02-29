@@ -10,12 +10,13 @@
 #include "backend/index/bwtree.h"
 
 #include <cstdlib>
+#include <ctime>
 #include <vector>
 #include <algorithm>
 #include <iostream>
 #include <chrono>
 
-#define TT
+//#define TT
 
 namespace peloton {
   namespace test {
@@ -53,16 +54,8 @@ namespace peloton {
           addresses.push_back((index::Address)(unsigned long) rand());
           pids.push_back(table.allocate_PID(addresses[i]));
         }
-        VerifyAndFree(table, addresses, pids);
-        /*
         // verify
-        for(size_t i = 0; i<addresses.size(); ++i) {
-          EXPECT_EQ(table.get(pids[i]), addresses[i]);
-        }
-        // free
-        for(size_t i = 0; i<addresses.size(); ++i)
-          table.free_PID(pids[i]);
-        */
+        VerifyAndFree(table, addresses, pids);
         addresses.clear();
         pids.clear();
       }
@@ -78,7 +71,7 @@ namespace peloton {
       for(int i = 0; i<size_each; ++i) {
         (*pids)[size_each*no+i] = table->allocate_PID((*addresses)[size_each*no+i]);
         if(i%100==0)
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
       LOG_DEBUG("allocate thread %d done.", no);
     }
@@ -107,18 +100,11 @@ namespace peloton {
 
         LaunchParallelTest(total, Allocate, &no_gen, size_each, &addresses, &pids, &table);
 
-        // TODO lanuch will wait till all done?
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-        VerifyAndFree(table, addresses, pids);
-        /*
+
         // verify
-        for(size_t i = 0; i<addresses.size(); ++i) {
-          EXPECT_EQ(table.get(pids[i]), addresses[i]);
-        }
-        // free
-        for(size_t i = 0; i<addresses.size(); ++i)
-          table.free_PID(pids[i]);
-        */
+        VerifyAndFree(table, addresses, pids);
+
         no_gen = 0;
         addresses.clear();
         pids.clear();
@@ -137,7 +123,7 @@ namespace peloton {
         for(int i = 0; i<size_each; ++i) {
           (*pids)[size_each*no+i] = table->allocate_PID((*addresses)[size_each*no+i]);
           if(i%100==0)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         LOG_DEBUG("allocate thread %d allocation done.", no);
 

@@ -14,15 +14,20 @@ namespace peloton {
   namespace index {
     typedef std::uint_fast32_t EpochTime;
 
-
     class GarbageNode {
       /*
        * Wrap a piece of garbage into a list node
        */
     public:
-      GarbageNode(BWNode *g, GarbageNode *next): garbage_(g), next_(next) { }
+      GarbageNode(const BWNode *g, GarbageNode *next): next_(next), garbage_(g) { }
       ~GarbageNode() {
-        delete garbage_;
+        const BWNode *head = garbage_;
+        assert(head!=nullptr);
+        while(head!=nullptr) {
+          const BWNode *next = head->GetNext();
+          delete head;
+          head = next;
+        }
       }
       // next garbage node in this garbage list
       GarbageNode *next_;
@@ -31,7 +36,7 @@ namespace peloton {
       GarbageNode(const GarbageNode &) = delete;
       GarbageNode &operator=(const GarbageNode &) = delete;
       // the actual garbage bwnode
-      const BWNode *garbage_ = ;
+      const BWNode *garbage_;
     };
 
     class PIDNode {
@@ -39,8 +44,8 @@ namespace peloton {
        * Wrap a PID into a list node
        */
     public:
-      PIDNode(PID pid, PIDNode *next): pid_(pid), next_(next) {}
-      ~PIDNode() { (PIDTable::get_table()).free_PID(pid_); }
+      PIDNode(PID pid, PIDNode *next): next_(next), pid_(pid) {}
+      ~PIDNode() { /*(PIDTable::get_table()).free_PID(pid_);*/ assert(0); }
       // next PIDNode in the list
       PIDNode *next_;
       inline void SetNext(PIDNode *next) { next_ = next; }
@@ -57,12 +62,12 @@ namespace peloton {
        */
     public:
       Epoch(EpochTime time, Epoch *next): next_(next), registered_number_(0), epoch_time_(time) {}
+
       ~Epoch() {
+        assert(SafeToReclaim());
         // delete all garbage nodes, which will
         // delete the actual garbage in their destructor
         const GarbageNode *now = head_;
-        if(now==nullptr)
-          return ;
         const GarbageNode *next;
         while(now!=nullptr) {
           next = now->next_;
@@ -72,8 +77,6 @@ namespace peloton {
         // delete all PID garbage nodes, which will
         // reclaim the actual PID in their destructor
         const PIDNode *pid_now = pid_head_;
-        if(pid_now==nullptr)
-          return ;
         const PIDNode *pid_next;
         while(pid_now!=nullptr) {
           pid_next = pid_now->next_;
@@ -117,7 +120,7 @@ namespace peloton {
     private:
       GarbageNode *head_ = nullptr;
       PIDNode *pid_head_ = nullptr;
-      std::atomic<EpochTime> registered_number_;
+      std::atomic<uint_fast32_t> registered_number_;
       const EpochTime epoch_time_;
     };
 
@@ -132,7 +135,7 @@ namespace peloton {
     public:
       // daemon gc thread
       friend void *Begin(void *arg);
-      static const int epoch_interval_ = 10; //ms
+      static const int epoch_interval_; //ms
       // singleton
       static GarbageCollector global_gc_;
 
@@ -143,6 +146,7 @@ namespace peloton {
         // force delete every garbage now
         Epoch *next;
         while(head_!=nullptr) {
+          assert(head_->SafeToReclaim());
           next = head_->next_;
           delete head_;
           head_ = next;
@@ -150,11 +154,10 @@ namespace peloton {
       }
 
       // submit a new bwnode garbage
-      inline void SubmitGarbage(BWNode *garbage) {
+      inline void SubmitGarbage(const BWNode *garbage) {
         GarbageNode *new_garbage = new GarbageNode(garbage, nullptr);
         // loop until we successfully add this new garbage into the list
-        // TODO volatile?
-        Epoch *head = head_;
+        Epoch * volatile head = head_;
         while(!head->SubmitGarbage(new_garbage))
           head = head_;
       }
@@ -163,8 +166,7 @@ namespace peloton {
       inline void SubmitPID(PID pid) {
         PIDNode *new_pid_garbage = new PIDNode(pid, nullptr);
         // loop until we successfully add this new pid garbage into the list
-        // TODO volatile?
-        Epoch *head = head_;
+        Epoch * volatile head = head_;
         while(!head->SubmitPID(new_pid_garbage))
           head = head_;
       }
@@ -174,7 +176,7 @@ namespace peloton {
 
       // deregister a previous registration at "time"
       inline void Deregister(EpochTime time) {
-        for(Epoch *iter = head_; iter!=nullptr; iter = iter->next_) {
+        for(Epoch * volatile iter = head_; iter!=nullptr; iter = iter->next_) {
           if(iter->TimeEquals(time)) {
             iter->Deregister();
             return ;
@@ -185,19 +187,19 @@ namespace peloton {
       }
 
     private:
-      Epoch *head_;
-      EpochTime timer_;
+      Epoch * volatile head_;
+      volatile EpochTime timer_;
       // the Epoch at which we stopped at in the last garbage collection iteration
       Epoch *last_stopped_prev_;
       volatile bool stopped_ = false;
       // daemon thread to do garbage collection, timer incrementation
       pthread_t clean_thread_;
 
-      GarbageCollector(): head_(nullptr), timer_(0), last_stopped_(nullptr) {
+      GarbageCollector(): head_(nullptr), timer_(0), last_stopped_prev_(nullptr) {
         // make sure there is at least one epoch
         head_ = new Epoch(timer_++, head_);
         // start epoch allocation thread
-        pthread_create(&clean_thread_, NULL, &Begin, NULL);
+        pthread_create(&clean_thread_, NULL, &Begin, this);
 
       }
       GarbageCollector(const GarbageCollector &) = delete;
@@ -206,6 +208,7 @@ namespace peloton {
       //void *Begin(void *);
       void ReclaimGarbage();
       void Stop() {
+        LOG_DEBUG("GarbageCollector::Stop()");
         stopped_ = true;
         pthread_join(clean_thread_, NULL);
       }
