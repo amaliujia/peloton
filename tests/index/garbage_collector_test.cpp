@@ -43,6 +43,7 @@ namespace peloton {
         }
         gc.Deregister(registered_time);
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        LOG_DEBUG("BASIC_TEST iteration %d finished.", iter);
       }
     }
 
@@ -68,7 +69,7 @@ namespace peloton {
     }
 
 #ifdef TT
-    TEST(GarbageCollectorTest, ConcurrentSubmitGarbage) {
+    TEST(GarbageCollectorTest, ConcurrentSubmitGarbageTest) {
 #else
     void main2() {
 #endif
@@ -78,6 +79,7 @@ namespace peloton {
       for(int iter = 0; iter<3; ++iter) {
         LaunchParallelTest(total, SubmitGarbage, &no_gen);
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        LOG_DEBUG("CONCURRENT_SUBMIT_GARBAGE_TEST iteration %d finished.", iter);
       }
     }
   }
