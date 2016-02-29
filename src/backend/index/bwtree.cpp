@@ -18,9 +18,58 @@
 //#include "backend/index/pid_table.h"
 #include "bwtree.h"
 
+#include <ctime>
+#include <cstdlib>
+#include <limits>
+
 namespace peloton {
   namespace index {
     const PID PIDTable::PID_NULL = std::numeric_limits<PID>::max();
+
+    const BWNode *BWNode::GenerateRandomNodeChain(int length) {
+      //LOG_DEBUG("BWNode::GenerateRandomNodeChain(%d)", length);
+      srand(time(NULL));
+      assert(length>=0);
+      if(length==0)
+        return nullptr;
+
+      const BWNode *head = GenerateRandomNode((NodeType)(rand()%2), nullptr);
+      assert(head->GetType()==NLeaf||head->GetType()==NInner);
+
+      while(--length>0) {
+        head = GenerateRandomNode((NodeType)(rand()%4+2), head);
+        assert(head->GetType()==NInsert||head->GetType()==NDelete||
+               head->GetType()==NSplit||head->GetType()==NSplitEntry);
+      }
+
+      return head;
+    }
+
+    const BWNode *BWNode::GenerateRandomNode(NodeType type, const BWNode *next) {
+      switch(type) {
+        case NInner:
+          assert(next==nullptr);
+          return new BWInnerNode<IntsKey<1>>(std::vector<IntsKey<1>>(),std::vector<PID>({PIDTable::PID_NULL}), PIDTable::PID_NULL, PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
+        case NLeaf:
+          assert(next==nullptr);
+          return new BWLeafNode<IntsKey<1>, ItemPointer>(std::vector<IntsKey<1>>(),std::vector<ItemPointer>(), PIDTable::PID_NULL, PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
+        case NInsert:
+          assert(next!=nullptr);
+          return new BWInsertNode<IntsKey<1>, ItemPointer>(next, 1, IntsKey<1>(), ItemPointer());
+        case NDelete:
+          assert(next!=nullptr);
+          return new BWDeleteNode<IntsKey<1>, ItemPointer>(next, 1, IntsKey<1>(), ItemPointer());
+        case NSplit:
+          assert(next!=nullptr);
+          return new BWSplitNode<IntsKey<1>>(1, next, IntsKey<1>(), PIDTable::PID_NULL);
+        case NSplitEntry:
+          assert(next!=nullptr);
+          return new BWSplitEntryNode<IntsKey<1>>(next, IntsKey<1>(), PIDTable::PID_NULL);
+        default:
+          assert(0);
+          return nullptr;
+      }
+    }
 
     /*
      * insert a split entry node at the parent of 'top' to finish the second step of split

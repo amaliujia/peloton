@@ -41,21 +41,24 @@ namespace peloton {
     constexpr int max_node_size = 3;
     constexpr int min_node_size = max_node_size<<1; // 3 / 2 = 1
     enum NodeType {
-      NInsert,
-      NDelete,
-      NRemove,
-      NMerge,
-      NSplit,
-      NInner,
-      NLeaf,
-      NSplitEntry,
-      NMergeEntry
+      NInner = 0,
+      NLeaf = 1,
+      NInsert = 2,
+      NDelete = 3,
+      NSplit = 4,
+      NSplitEntry = 5,
+      NMerge = 6,
+      NRemove = 7,
+      NMergeEntry = 8
       //NUpdate
       //Unknown
     };
 
     class BWNode {
     public:
+      static const BWNode *GenerateRandomNodeChain(int length);
+      static const BWNode *GenerateRandomNode(NodeType type, const BWNode *next);
+
       virtual NodeType GetType() const = 0;
 
       virtual const BWNode *GetNext() const = 0;
@@ -576,7 +579,7 @@ namespace peloton {
       }
     };
 */
-    
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
       KeyComparator comparator_;
