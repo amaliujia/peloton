@@ -48,7 +48,7 @@ namespace peloton {
     }
 
     void SubmitGarbage(std::atomic<std::uint_least8_t> *no_gen) {
-      static constexpr int max_duration = 20;
+      static constexpr int max_duration = 50;
       static constexpr int max_length = 10;
       static constexpr int size = 4096;
       int no = (*no_gen)++;

@@ -88,6 +88,10 @@ namespace peloton {
       const KeyType &low_key = split_ptr->GetSplitKey();
       const PID &right_pid = split_ptr->GetRightPID();
 
+      //TODO evil first need to check the version number of parent
+      //TODO in both cases.
+      //TODO whenever we want to do some operation on a node, we need to check version number
+      //TODO to ensure that we are on the right path
       if(path.size()>1) { // In this case, this is a normal second step split
         // get the parent
         PID pid = path[path.size()-2];
@@ -127,6 +131,8 @@ namespace peloton {
         VersionNumber old_root_version = old_root->GetVersionNumber();
         // allocate a new pid for the original root node
         PID new_pid = pid_table_.allocate_PID(old_root);
+        //TODO evil need to insert a split entry node on top of the new root
+        //TODO and CAS the two nodes to root pid
         // allocate a new node for the original root pid
         BWNode *new_root = new BWInnerNode<KeyType>({}, {new_pid}, PIDTable::PID_NULL, PIDTable::PID_NULL, (VersionNumber)(old_root_version+1));
         // try to atomically install the new root
@@ -158,8 +164,10 @@ namespace peloton {
       assert(keys_view.size() >= max_node_size);
 
       auto index = keys_view.size()/2;
+      //TODO evil keys_view[index-1]?
       const KeyType &low_key = keys_view[index];
       const BWNode *new_node = new BWInnerNode<KeyType>(
+              //TODO evil
               std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
               std::vector<PID>(children_view.cbegin()+index, children_view.cend()),
               node_pid,
@@ -1005,6 +1013,7 @@ namespace peloton {
              (position+1==keys.end()||!key_equality_checker_(key, *(position+1)))&&
              (position==keys.begin()||!key_equality_checker_(key, *(position-1))));
       auto dist = std::distance(keys.begin(), position);
+      //TODO evil change to position and children.begin()+dist+1
       keys.erase(position-1, keys.end());
       children.erase(children.begin()+dist, children.end());
       right = node->GetRightPID();
