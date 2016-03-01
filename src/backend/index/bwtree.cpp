@@ -549,6 +549,7 @@ namespace peloton {
           PID next_pid = children_view[dist];
           path.push_back(next_pid);
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
+          //TODO evil check version number of this node again before go into the child
         }
         else {
           assert(node_ptr->IfLeafNode());
