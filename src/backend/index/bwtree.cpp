@@ -106,6 +106,12 @@ namespace peloton {
           std::vector<PID> children_view;
           PID left_view, right_view;
           CreateInnerNodeView(parent_node, keys_view, children_view, left_view, right_view);
+          /*
+          auto position = keys_view.begin();
+          for(; position!=keys_view.end(); ++position)
+            if(comparator_(low_key, *position))
+              break;
+              */
           auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), low_key, comparator_);
 
           // then check if this split entry has been inserted by others
@@ -267,14 +273,10 @@ namespace peloton {
     const BWNode *
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     Split(const BWNode *node_ptr, const PID &node_pid) {
-      switch(node_ptr->GetType()) {
-        case NLeaf:
-          return SplitLeafNode(node_ptr, node_pid);
-        case NInner:
-          return SplitInnerNode(node_ptr, node_pid);
-        default:
-          assert(0);
-          return nullptr;
+      if (node_ptr->IfLeafNode()) {
+        return SplitLeafNode(node_ptr, node_pid);
+      }else {
+        return SplitInnerNode(node_ptr, node_pid);
       }
     }
 
@@ -397,15 +399,17 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool need_expand) {
+      LOG_INFO("DeltaInsert");
       const BWNode *insert_node_ptr =
               new BWInsertNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0), key, value);
       if(!pid_table_.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
         delete insert_node_ptr;
         LOG_INFO("Insert fail with pid %lu", cur);
+
         return false;
       }
 
-      LOG_INFO("Insert done with pid %lu", cur);
+      LOG_INFO("Insert done with pid %lu, old:%p, new:%p", cur, node_ptr, insert_node_ptr);
       return true;
     }
 
@@ -416,6 +420,7 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool &exist_value) {
+      LOG_DEBUG("Entering DeltaDelete");
       if(!Duplicate) {
         std::vector<KeyType> keys_view;
         std::vector<ValueType> values_view;
@@ -426,9 +431,11 @@ namespace peloton {
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         if(!value_equality_checker_(value, *(values_view.begin()+dist))) {
+          LOG_DEBUG("Value equality check failed");
           exist_value = false;
           return false;
         }
+        LOG_DEBUG("Value equality check passed");
         exist_value = true;
         const BWNode *delete_node_ptr =
                 new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-1, key, value);
@@ -444,19 +451,36 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
+        LOG_INFO("keys_view.size():%lu, values_view.size():%lu", keys_view.size(), values_view[0].size());
         assert(keys_view.size() == values_view.size());
+
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
+        LOG_DEBUG("dist:%ld", dist);
         std::vector<ValueType> &value_vector = values_view[dist];
         //TODO
+
+
+
         const ValueEqualityChecker &eqchecker = value_equality_checker_;
-        if(std::find_if(value_vector.cbegin(), value_vector.cend(),
-                        [&eqchecker, &value](ValueType v) { return eqchecker(value, v); } )
-           !=value_vector.cend()) {
+        auto iter = value_vector.begin();
+        for (; iter!=value_vector.end(); iter++){
+          if (eqchecker(*iter, value)){
+            break;
+          }
+        }
+
+//        if(std::find_if(value_vector.cbegin(), value_vector.cend(),
+//                        [&eqchecker, &value](ValueType v) { return eqchecker(value, v); } )
+//           !=value_vector.cend()) {
+
+        if (iter == value_vector.end()){
+        LOG_DEBUG("Value equality check failed");
           exist_value = false;
           return false;
         }
+        LOG_DEBUG("Value equality check passed");
         exist_value = true;
         const BWNode *delete_node_ptr =
                 new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-(value_vector.size()==1?1:0), key, value);
@@ -554,15 +578,25 @@ namespace peloton {
         else {
           assert(node_ptr->IfLeafNode());
           if(ExistKey(node_ptr, key)) {
-            if(!Duplicate)
+            if(!Duplicate) {
               return false;
-            if(!DeltaInsert(current, node_ptr, key, value, false))
+//              LOG_INFO("Key Exist && No Duplicate, return false");
+            }
+//            LOG_INFO("Key Exist && Allow Duplicate, Insert DeltaInsert");
+            if(!DeltaInsert(current, node_ptr, key, value, false)) {
+//              LOG_INFO("Insert DeltaInsert failed, retry");
               continue;
+            }
+//            LOG_INFO("Insert DeltaInsert succeed");
             return true;
           }
           else {
-            if(!DeltaInsert(current, node_ptr, key, value, true))
+//            LOG_INFO("Key NOT Exist, Insert DeltaInsert");
+            if(!DeltaInsert(current, node_ptr, key, value, true)) {
+//              LOG_INFO("Insert DeltaInsert failed, retry");
               continue;
+            }
+//            LOG_INFO("Insert DeltaInsert succeed");
             return true;
           }
         }
@@ -600,15 +634,20 @@ namespace peloton {
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
+          LOG_DEBUG("Find Leaf");
           assert(node_ptr->IfLeafNode());
-          if(!ExistKey(node_ptr, key))
+          if(!ExistKey(node_ptr, key)) {
+            LOG_DEBUG("NOT EXIST KEY");
             return false;
+          }
+          LOG_DEBUG("EXIST KEY");
           bool exist_value;
           bool result = DeltaDelete(current, node_ptr, key, value, exist_value);
-          if(result)
+          if(result) {
+            LOG_DEBUG("Install Delta Delete succeed");
             return true;
+          }
           if(!exist_value) {
-            assert(Duplicate);
             return false;
           }
           continue;
@@ -689,7 +728,9 @@ namespace peloton {
                        std::vector<ValueType> &values,
                        PID &left, PID &right) {
       assert(!Duplicate);
+      //LOG_DEBUG("============================Entering construct consolidated Leaf node internal");
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
+      //LOG_DEBUG("============================Leaving construct consolidated Leaf node internal");
     };
 
     /*
@@ -703,7 +744,7 @@ namespace peloton {
                        std::vector<std::vector<ValueType>> &values,
                        PID &left, PID &right) {
       assert(Duplicate);
-      LOG_INFO("CreateLeafNodeView allow Duplicate (Call ConstructConsolidatedLeafNodeInternal recursively) --");
+      //LOG_INFO("CreateLeafNodeView allow Duplicate (Call ConstructConsolidatedLeafNodeInternal recursively) --");
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
     };
 
@@ -739,7 +780,7 @@ namespace peloton {
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
+        //LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 
@@ -776,7 +817,9 @@ namespace peloton {
       PID &right) {
       assert(Duplicate);
       assert(node_chain->IfLeafNode());
+      LOG_DEBUG("Current address:%p", node_chain);
       if(node_chain->GetType() == NLeaf) {
+        LOG_DEBUG("Current Node is Leaf");
         // arrive at bottom
         const BWLeafNode<KeyType, std::vector<ValueType>> *node = static_cast<const BWLeafNode<KeyType, std::vector<ValueType>> *>(node_chain);
         keys = node->GetKeys();
@@ -791,21 +834,28 @@ namespace peloton {
       assert(node_chain->GetNext() != NULL);
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
-        case NInsert:
+        case NInsert: {
+          LOG_DEBUG("Find NInsert. address:%p", node_chain);
           ConsolidateInsertNode(static_cast<const BWInsertNode<KeyType, ValueType> *>(node_chain), keys, values);
           break;
-        case NDelete:
+        }
+        case NDelete: {
           ConsolidateDeleteNode(static_cast<const BWDeleteNode<KeyType, ValueType> *>(node_chain), keys, values);
           break;
-        case NSplit:
+        }
+        case NSplit: {
           ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, values, right);
           break;
-        case NMerge:
+
+        }
+        case NMerge: {
           assert(0);
           break;
-        case NRemove:
+        }
+        case NRemove: {
           assert(0);
           break;
+        }
         default:
           // fault
           assert(0);
@@ -861,7 +911,6 @@ namespace peloton {
       const BWInsertNode<KeyType, ValueType> *node,
       std::vector<KeyType> &keys,
       std::vector<ValueType> &values) {
-
       assert(!Duplicate);
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
@@ -872,7 +921,7 @@ namespace peloton {
       auto dist = std::distance(keys.begin(), position);
       keys.insert(position, key);
       values.insert(values.begin()+dist, value);
-      LOG_INFO("\t\t In insert delta, key size %lu, value size %lu", keys.size(), values.size());
+      //LOG_INFO("\t\t In insert delta, key size %lu, value size %lu", keys.size(), values.size());
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
@@ -895,6 +944,7 @@ namespace peloton {
       else {
         values[dist].push_back(value);
       }
+      LOG_INFO("\t\t In insert delta, key size %lu, value size %lu", keys.size(), values.size());
     }
 
 
@@ -923,7 +973,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConsolidateDeleteNode(
       const BWDeleteNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values) {
-      assert(!Duplicate);
+      assert(Duplicate);
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
@@ -969,6 +1019,7 @@ namespace peloton {
       keys.erase(position, keys.end());
       values.erase(values.begin()+dist, values.end());
       right = node->GetRightPID();
+      assert(!Duplicate);
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
@@ -1051,8 +1102,20 @@ namespace peloton {
 
 
 
-
-
+    template<typename KeyType>
+    void BWInnerNode<KeyType>::Print(PIDTable &, int indent) const {
+      std::string s;
+      for (size_t i = 0; i < indent; i++) {
+        s += "\t";
+      }
+      LOG_INFO("%s InnerNode: size;: %lu", s.c_str(), keys_.size());
+      /*
+      for (size_t i = 0; i < children_.size(); i++) {
+        pid_table.get(children_[i])->Print(pid_table, indent + 2);
+        LOG_INFO(" ");
+      }
+       */
+    }
 
 
 

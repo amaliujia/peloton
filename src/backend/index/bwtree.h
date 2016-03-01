@@ -54,6 +54,8 @@ namespace peloton {
       //Unknown
     };
 
+    class PIDTable;
+
     class BWNode {
     public:
       static const BWNode *GenerateRandomNodeChain(int length);
@@ -68,6 +70,8 @@ namespace peloton {
       virtual const PID &GetLeft() const = 0;
 
       virtual const PID &GetRight() const = 0;
+
+      virtual void Print(PIDTable & , int indent) const = 0;
 
       inline bool IfLeafNode() const {
         return if_leaf_;
@@ -165,6 +169,11 @@ namespace peloton {
         return GetChildren();
       }
 
+      void Print(PIDTable& , int indent) const;
+
+      void PrintTwice(PIDTable&, int indent) const;
+
+
     protected:
       const std::vector<KeyType> keys_;
       const std::vector<PID> children_;
@@ -192,6 +201,13 @@ namespace peloton {
         return NLeaf;
       }
 
+      void Print(PIDTable& , int indent) const {
+        std::string s;
+        for (size_t i = 0; i < indent; i++) {
+          s += "\t";
+        }
+        LOG_INFO("%s LeafNode, left %lu, right %lu, size %lu", s.c_str(), left_, right_, keys_.size());
+      }
     protected:
       const std::vector<KeyType> keys_;
       const std::vector<ValueType> values_;
@@ -242,7 +258,14 @@ namespace peloton {
       inline const ValueType &GetValue() const {
         return value_;
       }
-
+      void Print(PIDTable& pid_table, int indent) const {
+        std::string s;
+        for (size_t i = 0; i < indent; i++) {
+          s += "\t";
+        }
+        LOG_INFO("%s InsertNode", s.c_str());
+        next_->Print(pid_table, indent);
+      }
     protected:
       const KeyType key_;
       const ValueType value_;
@@ -270,6 +293,15 @@ namespace peloton {
         return value_;
       }
 
+      void Print(PIDTable& pid_table, int indent) const {
+        std::string s;
+        for (size_t i = 0; i < indent; i++) {
+          s += "\t";
+        }
+        LOG_INFO("%s DeleteNode", s.c_str());
+        next_->Print(pid_table, indent);
+      }
+      protected:
     protected:
       const KeyType key_;
       const ValueType value_;
@@ -298,6 +330,15 @@ namespace peloton {
       BWSplitNode(const size_type &slot_usage, const BWNode *next, const KeyType &key, const PID &right):
               BWSplitNode(slot_usage, next->GetChainLength()+1, next, key, right) { }
 
+      void Print(PIDTable& pid_table, int indent) const {
+        std::string s;
+        for (size_t i = 0; i < indent; i++) {
+          s += "\t";
+        }
+        LOG_INFO("%s SplitNode, right pid %lu", s.c_str(), right_);
+        next_->Print(pid_table, indent);
+      }
+      protected:
     protected:
       const KeyType key_;
       const PID right_;
@@ -343,6 +384,17 @@ namespace peloton {
       inline const PID &GetNextPID() const {
         return to_;
       }
+
+      void Print(PIDTable& pid_table, int indent) const {
+        std::string s;
+        for (size_t i = 0; i < indent; i++) {
+          s += "\t";
+        }
+        LOG_INFO("%s SplitEntry, to pid %lu", s.c_str(), to_);
+
+        next_->Print(pid_table, indent);
+      }
+      protected:
 
     protected:
       const KeyType low_key_, high_key_;
@@ -428,6 +480,7 @@ namespace peloton {
           // free up a new PID
           inline void free_PID(PID pid) {
             lock_.lock();
+            delete(pid_table_[pid]);
             pid_table_.erase(pid_table_.find(pid));
             lock_.unlock();
           }
@@ -589,6 +642,7 @@ namespace peloton {
       PID root_, first_leaf_;
       PIDTable pid_table_;
       PID null_;
+      friend class BWInnerNode<KeyType>;
     public :
       BWTree(IndexMetadata *indexMetadata): comparator_(indexMetadata), key_equality_checker_(indexMetadata) {
         // a BWtree has at least two nodes residing at two levels.
@@ -602,19 +656,60 @@ namespace peloton {
                                                                             std::vector<std::vector<ValueType>>(),
                                                                             PIDTable::PID_NULL, PIDTable::PID_NULL);
         first_leaf_ = pid_table_.allocate_PID(first_leaf_node);
-        LOG_INFO("PID of first_leaf is %lu", first_leaf_);
+        LOG_INFO("PID of first_leaf is %lu. address:%p", first_leaf_, first_leaf_node);
         const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf_}, PIDTable::PID_NULL,
                                                            PIDTable::PID_NULL,
                                                            std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
-        LOG_INFO("PID of root is %lu", root_);
+        LOG_INFO("PID of root is %lu. address:%p", root_, root_node);
         null_ = 0;
+      }
+
+      void PrintSelf(PID pid, const BWNode *node, int indent) {
+        node->Print(pid_table_, indent);
+        if(node->IfInnerNode()) {
+          std::vector<KeyType> keys;
+          std::vector<PID> children;
+          PID left, right;
+          CreateInnerNodeView(node, keys, children, left, right);
+          std::string s;
+          for (size_t i = 0; i < indent; i++) {
+            s += "\t";
+          }
+          LOG_DEBUG("%s Inner summary: size=%lu, self=%lu, left=%lu, right=%lu", s.c_str(), keys.size(), pid, left, right);
+          for(int i=0; i<children.size(); ++i)
+            PrintSelf(children[i], pid_table_.get(children[i]), indent+2);
+        }
+        else {
+          assert(!Duplicate);
+          std::vector<KeyType> keys;
+          std::vector<ValueType> values;
+          PID left, right;
+          CreateLeafNodeView(node, keys, values, left, right);
+          std::string s;
+          for (size_t i = 0; i < indent; i++) {
+            s += "\t";
+          }
+          LOG_DEBUG("%s Leaf summary: size=%lu, self=%lu, left=%lu, right=%lu", s.c_str(), keys.size(), pid, left, right);
+        }
       }
 
       inline bool InsertEntry(const KeyType &key, const ValueType &value) {
         std::vector<PID> path = {root_};
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
-        return InsertEntryUtil(key, value, path, version_number);
+        bool result = InsertEntryUtil(key, value, path, version_number);
+        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
+        LOG_DEBUG(" ");
+        LOG_DEBUG(" ");
+        LOG_DEBUG(" ");
+        PrintSelf(root_, pid_table_.get(root_), 0);
+        LOG_DEBUG(" ");
+        LOG_DEBUG(" ");
+        LOG_DEBUG(" ");
+        LOG_DEBUG("------------------------------------------------ print begin  --------------------------------------");
+
+        //LOG_DEBUG("+++++++++++++++++++============================= SBSBSBSBSBSB BWTREE ++++++++++++++++++===================");
+        return result;
       }
 
       inline bool DeleteEntry(const KeyType &key, const ValueType &value) {
@@ -624,13 +719,22 @@ namespace peloton {
       }
 
       void ScanKey(KeyType key, std::vector<ValueType> &ret) {
+        LOG_DEBUG("Entering ScanKey");
         ScanKeyUtil(root_, key, ret);
+        LOG_DEBUG("ret.size():%lu", ret.size());
+        LOG_DEBUG("Leaving ScanKey");
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) {
+        LOG_DEBUG("================================Entering ScanAllKeys");
         const BWNode *node_ptr = pid_table_.get(root_);
         PID next_pid;
+
+        // Print tree structure
+        PrintSelf(root_, pid_table_.get(root_), 0);
+
         while(!node_ptr->IfLeafNode()) {
+          LOG_DEBUG("note_ptr is inner node");
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
@@ -642,6 +746,7 @@ namespace peloton {
 
         // reach first leaf node
         // Ready to scan
+        LOG_DEBUG("ready to scan first leaf");
         while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
@@ -649,7 +754,6 @@ namespace peloton {
             std::vector<ValueType> values;
 
             ConstructConsolidatedLeafNodeInternal(node_ptr, keys, values, left, right);
-
             ret.insert(ret.end(), values.begin(), values.end());
           }
           else {
@@ -664,13 +768,16 @@ namespace peloton {
 
           // Assume node_ptr->GetRight() returns the most recent split node delta's right (aka new page
           // in that split), if any.
-          if(node_ptr->GetRight()!=null_) {
-            node_ptr = pid_table_.get(node_ptr->GetRight());
+          if (right != null_){
+//          if(node_ptr->GetRight()!=null_) {
+//            node_ptr = pid_table_.get(node_ptr->GetRight());
+            node_ptr = pid_table_.get(right);
           }
           else {
             node_ptr = NULL;
           }
         }
+        LOG_DEBUG("================================Leaving ScanAllKeys");
       }
 
     private:
@@ -745,6 +852,7 @@ namespace peloton {
                                      std::vector<PID> &children);
 
       void ScanKeyUtil(PID cur, KeyType key, std::vector<ValueType> &ret) {
+        LOG_DEBUG("Entering ScanKeyUtil");
         const BWNode *node_ptr = pid_table_.get(cur);
 
         if(node_ptr->IfLeafNode()) {
