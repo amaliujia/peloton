@@ -502,7 +502,8 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     InsertEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       while(true) {
         // first check if we have the up-to-date version number
@@ -612,7 +613,8 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
-    bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       LOG_INFO("DeleteEntryUtil --------------------");
       while(true) {
@@ -1083,8 +1085,7 @@ namespace peloton {
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     void
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
-    ConsolidateSplitEntryNode(
-      const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
+    ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
       assert(node->IfInnerNode());
       assert(keys.size()+1==children.size());
       const KeyType &low_key = node->GetLowKey();
@@ -1172,7 +1173,9 @@ namespace peloton {
     }
 
     template<typename KeyType>
-    void BWInnerNode<KeyType>::Print(PIDTable &, int indent) const {
+    void
+    BWInnerNode<KeyType>::
+    Print(PIDTable &, int indent) const {
       std::string s;
       for (size_t i = 0; i < indent; i++) {
         s += "\t";

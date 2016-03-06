@@ -4,7 +4,6 @@
 #include "gtest/gtest.h"
 #include "harness.h"
 
-#include "backend/index/garbage_collector.h"
 #include "backend/index/bwtree.h"
 #include "backend/index/dbg.h"
 
