@@ -7,7 +7,8 @@
 #include <cstdint>
 #include <pthread.h>
 
-#include "bwtree.h"
+#include "backend/index/bwtree.h"
+#include "backend/index/dbg.h"
 
 namespace peloton {
   namespace index {
@@ -139,6 +140,7 @@ namespace peloton {
       static GarbageCollector global_gc_;
 
       virtual ~GarbageCollector() {
+        dbg_msg("GarbageCollector::~GarbageCollector()", "");
         // stop epoch generation
         Stop();
         // TODO wait till all epochs are ready to be cleaned-up
@@ -207,7 +209,7 @@ namespace peloton {
       //void *Begin(void *);
       void ReclaimGarbage();
       void Stop() {
-        LOG_DEBUG("GarbageCollector::Stop()");
+        dbg_msg("GarbageCollector::Stop()", "");
         stopped_ = true;
         pthread_join(clean_thread_, NULL);
       }

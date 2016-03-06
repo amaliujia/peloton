@@ -71,6 +71,21 @@ namespace peloton {
       }
     }
 
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    void
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    SubmitGarbageNode(const BWNode *node) {
+      if(node->IfInnerNode()) {
+        std::vector<KeyType> keys_view;
+        std::vector<PID> children_view;
+        PID left_view, right_view;
+        CreateInnerNodeView(node, keys_view, children_view, left_view, right_view);
+        for(auto child = children_view.cbegin(); child!=children_view.end(); ++child)
+          SubmitGarbageNode(pid_table_.get(*(child)));
+      }
+      GarbageCollector::global_gc_.SubmitGarbage(node);
+    };
+
     /*
      * insert a split entry node at the parent of 'top' to finish the second step of split
      * path contains the pids all the way from the root down to 'top'
@@ -664,7 +679,7 @@ namespace peloton {
         delete new_node;
         return false;
       }
-      //TODO submit garbage
+      GarbageCollector::global_gc_.SubmitGarbage(node_ptr);
       return true;
     }
 
@@ -1094,7 +1109,67 @@ namespace peloton {
       }
     }
 
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    void
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    ScanKeyUtil(PID cur, const KeyType &key, std::vector<ValueType> &ret) {
+      //LOG_DEBUG("Entering ScanKeyUtil");
+      const BWNode *node_ptr = pid_table_.get(cur);
 
+      if(node_ptr->IfLeafNode()) {
+        //LOG_DEBUG("ScanKeyUtil reach leaf node PID=%lu", (unsigned long)cur);
+        if(!Duplicate) {
+          std::vector<KeyType> keys;
+          std::vector<ValueType> values;
+          PID left, right;
+          CreateLeafNodeView(node_ptr, keys, values, left, right);
+
+          // unique
+          auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+          if(position!=keys.end()&&key_equality_checker_(key, *position)) {
+            auto dist = std::distance(keys.begin(), position);
+            ret.push_back(values[dist]);
+          }
+        }
+        else {
+          std::vector<KeyType> keys;
+          std::vector<std::vector<ValueType>> values;
+          PID left, right;
+          CreateLeafNodeView(node_ptr, keys, values, left, right);
+          auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+          if(position!=keys.end()&&key_equality_checker_(key, *position)) {
+            auto dist = std::distance(keys.begin(), position);
+            ret.insert(ret.end(), values[dist].begin(), values[dist].end());
+          }
+        }
+      }
+      else {
+        //LOG_DEBUG("ScanKeyUtil reach inner node PID=%lu", (unsigned long)cur);
+        std::vector<KeyType> keys;
+        std::vector<PID> children;
+        PID left, right;
+        CreateInnerNodeView(node_ptr, keys, children, left, right);
+        /*
+         *  An iterator to the lower bound of val in the range.
+         *  If all the element in the range compare less than val, the function returns last.
+         *  I assume if the element is the smallest in the range, return begin
+         *  Otherwise returnl lowkey of keyspace [lowkey, highkey) in which current key is.
+         */
+        //TODO already done
+        //TODO evil
+        /*auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+        if(position==keys.begin()) {
+          ScanKeyUtil(children[0], key, ret);
+        }
+        else {
+          auto dist = std::distance(keys.begin(), position);
+          ScanKeyUtil(children[dist], key, ret);
+        }*/
+        auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
+        auto dist = std::distance(keys.begin(), position);
+        ScanKeyUtil(children[dist], key, ret);
+      }
+    }
 
     template<typename KeyType>
     void BWInnerNode<KeyType>::Print(PIDTable &, int indent) const {

@@ -20,6 +20,7 @@
 #include "backend/index/item_pointer_comparator.h"
 #include "backend/index/item_pointer_equality_checker.h"
 #include "backend/index/dbg.h"
+#include "backend/index/garbage_collector.h"
 
 #include <mutex>
 #include <boost/lockfree/stack.hpp>
@@ -651,6 +652,14 @@ namespace peloton {
         LOG_INFO("PID of root is %lu. address:%p", (unsigned long)root_, root_node);
       }
 
+      void SubmitGarbageNode(const BWNode *);
+
+      virtual ~BWTree() {
+        //garbage collect self
+        const BWNode *root_node = pid_table_.get(root_);
+        SubmitGarbageNode(root_node);
+      }
+
       void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {
         node->Print(pid_table_, indent);
         if(node->IfInnerNode()) {
@@ -681,9 +690,11 @@ namespace peloton {
       }
 
       inline bool InsertEntry(const KeyType &key, const ValueType &value) {
+        EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
         bool result = InsertEntryUtil(key, value, path, version_number);
+        GarbageCollector::global_gc_.Deregister(time);
         LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
         LOG_DEBUG(" ");
         //PrintSelf(root_, pid_table_.get(root_), 0);
@@ -694,24 +705,27 @@ namespace peloton {
       }
 
       inline bool DeleteEntry(const KeyType &key, const ValueType &value) {
+        EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
-        return DeleteEntryUtil(key, value, path, version_number);
+        bool result = DeleteEntryUtil(key, value, path, version_number);
+        GarbageCollector::global_gc_.Deregister(time);
+        return result;
       }
 
-      void ScanKey(KeyType key, std::vector<ValueType> &ret) {
+      void ScanKey(const KeyType &key, std::vector<ValueType> &ret) {
         //LOG_DEBUG("Entering ScanKey");
+        EpochTime time = GarbageCollector::global_gc_.Register();
         ScanKeyUtil(root_, key, ret);
+        GarbageCollector::global_gc_.Deregister(time);
         //LOG_DEBUG("ret.size():%lu", ret.size());
         //LOG_DEBUG("Leaving ScanKey");
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) {
+        EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
         const BWNode *node_ptr = pid_table_.get(next_pid);
-
-        // Print tree structure
-        //PrintSelf(root_, pid_table_.get(root_), 0);
 
         while(!node_ptr->IfLeafNode()) {
           std::vector<KeyType> keys;
@@ -755,6 +769,7 @@ namespace peloton {
             node_ptr = NULL;
           }
         }
+        GarbageCollector::global_gc_.Deregister(time);
       }
 
     private:

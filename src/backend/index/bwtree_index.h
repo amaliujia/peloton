@@ -42,7 +42,7 @@ class BWTreeIndex : public Index {
   public:
   BWTreeIndex(IndexMetadata *metadata);
 
-  ~BWTreeIndex();
+  virtual ~BWTreeIndex();
 
   bool InsertEntry(const storage::Tuple *key, const ItemPointer location);
 
@@ -73,11 +73,6 @@ class BWTreeIndex : public Index {
   // container
   MapTypeDuplicate container_duplicate;
   MapTypeUnique container_unique;
-
-  // synch helper
-  RWLock index_lock;
-
-  bool no_dup_;
 };
 
 }  // End index namespace
