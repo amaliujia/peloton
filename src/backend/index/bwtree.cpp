@@ -183,7 +183,7 @@ namespace peloton {
               std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
               std::vector<PID>(children_view.cbegin()+index, children_view.cend()),
               node_pid,
-              inner_node->GetRight(),
+              right_view,
               std::numeric_limits<VersionNumber>::min()
               );
       PID new_pid = pid_table_.allocate_PID(new_node);
@@ -227,7 +227,7 @@ namespace peloton {
                 std::vector<KeyType>(keys_view.cbegin()+index, keys_view.cend()),
                 std::vector<ValueType>(values_view.cbegin()+index, values_view.cend()),
                 node_pid,
-                leaf_node->GetRight()
+                right_view
         );
         PID new_pid = pid_table_.allocate_PID(new_node);
         const BWNode *split_node = new BWSplitNode<KeyType>(index, leaf_node, low_key, new_pid);
@@ -256,7 +256,7 @@ namespace peloton {
                 //todo:
                 std::vector<std::vector<ValueType>>(values_view.cbegin()+index, values_view.cend()),
                 node_pid,
-                leaf_node->GetRight()
+                right_view
         );
         PID new_pid = pid_table_.allocate_PID(new_node);
         const BWNode *split_node = new BWSplitNode<KeyType>(index, leaf_node, low_key, new_pid);
