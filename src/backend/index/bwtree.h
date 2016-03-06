@@ -747,6 +747,36 @@ namespace peloton {
        * The epochs are chained together as a latch-free singly-linked list
        * The garbage in a specific epoch is also chained together as a latch-free singly-linked list
        */
+    private:
+      Epoch * volatile head_;
+      volatile EpochTime timer_;
+      // the Epoch at which we stopped at in the last garbage collection iteration
+      Epoch *last_stopped_prev_;
+      volatile bool stopped_ = false;
+      // daemon thread to do garbage collection, timer incrementation
+      pthread_t clean_thread_;
+
+      GarbageCollector(): head_(nullptr), timer_(0), last_stopped_prev_(nullptr) {
+        // make sure there is at least one epoch
+        head_ = new Epoch(timer_++, head_);
+        // start epoch allocation thread
+        pthread_create(&clean_thread_, NULL, &Begin, this);
+
+      }
+      GarbageCollector(const GarbageCollector &) = delete;
+      GarbageCollector &operator=(const GarbageCollector &) = delete;
+
+      //void *Begin(void *);
+      void ReclaimGarbage();
+      void Stop() {
+        LOG_DEBUG("GarbageCollector::Stop()");
+        stopped_ = true;
+        pthread_join(clean_thread_, NULL);
+      }
+
+      // reclaim all the epochs in the list starts at "head"
+      static void ReclaimGarbageList(Epoch *head);
+
     public:
       // daemon gc thread
       friend void *Begin(void *arg);
@@ -755,7 +785,7 @@ namespace peloton {
       static GarbageCollector global_gc_;
 
       virtual ~GarbageCollector() {
-        dbg_msg("GarbageCollector::~GarbageCollector()");
+        LOG_DEBUG("GarbageCollector::~GarbageCollector()");
         // stop epoch generation
         Stop();
         // TODO wait till all epochs are ready to be cleaned-up
@@ -801,36 +831,6 @@ namespace peloton {
         // should not happen
         assert(0);
       }
-
-    private:
-      Epoch * volatile head_;
-      volatile EpochTime timer_;
-      // the Epoch at which we stopped at in the last garbage collection iteration
-      Epoch *last_stopped_prev_;
-      volatile bool stopped_ = false;
-      // daemon thread to do garbage collection, timer incrementation
-      pthread_t clean_thread_;
-
-      GarbageCollector(): head_(nullptr), timer_(0), last_stopped_prev_(nullptr) {
-        // make sure there is at least one epoch
-        head_ = new Epoch(timer_++, head_);
-        // start epoch allocation thread
-        pthread_create(&clean_thread_, NULL, &Begin, this);
-
-      }
-      GarbageCollector(const GarbageCollector &) = delete;
-      GarbageCollector &operator=(const GarbageCollector &) = delete;
-
-      //void *Begin(void *);
-      void ReclaimGarbage();
-      void Stop() {
-        dbg_msg("GarbageCollector::Stop()");
-        stopped_ = true;
-        pthread_join(clean_thread_, NULL);
-      }
-
-      // reclaim all the epochs in the list starts at "head"
-      static void ReclaimGarbageList(Epoch *head);
     };
 
 
@@ -854,6 +854,7 @@ namespace peloton {
       BWTree(IndexMetadata *indexMetadata): comparator_(indexMetadata), key_equality_checker_(indexMetadata) {
         // a BWtree has at least two nodes residing at two levels.
         // at initialization, one root node pointing to one leaf node
+        LOG_DEBUG("BWTree::BWTree()");
         const BWNode *first_leaf_node;
         if(!Duplicate)
           first_leaf_node = new BWLeafNode<KeyType, ValueType>(std::vector<KeyType>(), std::vector<ValueType>(),
@@ -863,12 +864,10 @@ namespace peloton {
                                                                             std::vector<std::vector<ValueType>>(),
                                                                             PIDTable::PID_NULL, PIDTable::PID_NULL);
         PID first_leaf = pid_table_.allocate_PID(first_leaf_node);
-        LOG_INFO("PID of first_leaf is %lu. address:%p", (unsigned long)first_leaf, first_leaf_node);
         const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf}, PIDTable::PID_NULL,
                                                            PIDTable::PID_NULL,
                                                            std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
-        LOG_INFO("PID of root is %lu. address:%p", (unsigned long)root_, root_node);
       }
 
       void SubmitGarbageNode(const BWNode *);
@@ -914,11 +913,11 @@ namespace peloton {
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
         bool result = InsertEntryUtil(key, value, path, version_number);
         GarbageCollector::global_gc_.Deregister(time);
-        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
-        LOG_DEBUG(" ");
+        //LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
+        //LOG_DEBUG(" ");
         //PrintSelf(root_, pid_table_.get(root_), 0);
-        LOG_DEBUG(" ");
-        LOG_DEBUG("------------------------------------------------ print end  --------------------------------------");
+        //LOG_DEBUG(" ");
+        //LOG_DEBUG("------------------------------------------------ print end  --------------------------------------");
 
         return result;
       }

@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-//#define TT
+#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
@@ -242,6 +242,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
+        dbg_msg("iteration %d done.", iter);
       }
 
       delete tuple_schema;
