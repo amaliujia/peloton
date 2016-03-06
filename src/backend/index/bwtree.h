@@ -19,6 +19,7 @@
 #include "backend/common/value.h"
 #include "backend/index/item_pointer_comparator.h"
 #include "backend/index/item_pointer_equality_checker.h"
+#include "backend/index/dbg.h"
 
 #include <mutex>
 #include <boost/lockfree/stack.hpp>
@@ -27,13 +28,6 @@
 #include <map>
 #include <set>
 #include <chrono>
-
-#define DEBUG 0
-#define dbg_msg(fmt, ...) \
-        do { if (DEBUG) { fprintf(stderr, "%d(): " fmt, \
-                                __LINE__, __VA_ARGS__); \
-                          fflush(stderr); } \
-        } while (0)
 
 namespace peloton {
   namespace index {

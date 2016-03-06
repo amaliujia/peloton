@@ -6,6 +6,7 @@
 
 #include "backend/common/logger.h"
 #include "backend/index/index_factory.h"
+#include "backend/index/dbg.h"
 #include "backend/storage/tuple.h"
 #include "backend/index/bwtree.h"
 
@@ -125,25 +126,25 @@ namespace peloton {
           if(i%100==0)
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        LOG_DEBUG("allocate thread %d allocation done.", no);
+        dbg_msg("allocate thread %d allocation done.", no);
 
         for(int i = 0; i<size_each; ++i) {
           EXPECT_EQ(table->get((*pids)[size_each*no+i]), (*addresses)[size_each*no+i]);
         }
 
-        LOG_DEBUG("allocate thread %d verification done.", no);
+        dbg_msg("allocate thread %d verification done.", no);
 
         for(int i = 0; i<size_each; ++i) {
           table->free_PID((*pids)[size_each*no+i]);
         }
 
-        LOG_DEBUG("allocate thread %d free done.", no);
+        dbg_msg("allocate thread %d free done.", no);
       }
         // odd free
       else {
         for(int i=0; i<size_each; ++i)
           table->free_PID((*pids)[size_each*no+i]);
-        LOG_DEBUG("free thread %d done.", no);
+        dbg_msg("free thread %d done.", no);
       }
     }
 #ifdef TT
@@ -199,7 +200,7 @@ namespace peloton {
                                              (*original_addresses)[size_each*no+i],
                                              (*to_addresses)[size_each*no+i]);
       }
-      LOG_DEBUG("CAS thread %d done.", no);
+      dbg_msg("CAS thread %d done.", no);
     }
 
 #ifdef TT
@@ -274,7 +275,7 @@ namespace peloton {
                                              (*original_addresses)[i],
                                              to_addresses[no][i]);
       }
-      LOG_DEBUG("concurrent CAS thread %d done.", no);
+      dbg_msg("concurrent CAS thread %d done.", no);
     }
 
 #ifdef TT

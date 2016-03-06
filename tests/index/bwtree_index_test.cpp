@@ -15,6 +15,7 @@
 
 #include "backend/common/logger.h"
 #include "backend/index/index_factory.h"
+#include "backend/index/dbg.h"
 #include "backend/storage/tuple.h"
 
 #include <string>
@@ -171,7 +172,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->InsertEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      LOG_DEBUG("insert thread %d done.", no);
+      dbg_msg("insert thread %d done.", no);
     }
 
     void DeleteFunction(std::atomic<std::uint_least8_t> *no_gen, index::Index *index, const size_t size_each,
@@ -183,7 +184,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->DeleteEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      LOG_DEBUG("delete thread %d done.", no);
+      dbg_msg("delete thread %d done.", no);
     }
 
 #ifdef TT

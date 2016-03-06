@@ -6,6 +6,7 @@
 
 #include "backend/index/garbage_collector.h"
 #include "backend/index/bwtree.h"
+#include "backend/index/dbg.h"
 
 #include <cstdlib>
 #include <ctime>
@@ -43,7 +44,7 @@ namespace peloton {
         }
         gc.Deregister(registered_time);
         //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-        LOG_DEBUG("BASIC_TEST iteration %d finished.", iter);
+        dbg_msg("BASIC_TEST iteration %d finished.", iter);
       }
     }
 
@@ -65,7 +66,7 @@ namespace peloton {
         gc.SubmitGarbage(new_garbage);
       }
       gc.Deregister(registered_time);
-      LOG_DEBUG("thread %d submit garbage done.", no);
+      dbg_msg("thread %d submit garbage done.", no);
     }
 
 #ifdef TT
@@ -79,7 +80,7 @@ namespace peloton {
       for(int iter = 0; iter<3; ++iter) {
         LaunchParallelTest(total, SubmitGarbage, &no_gen);
         //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-        LOG_DEBUG("CONCURRENT_SUBMIT_GARBAGE_TEST iteration %d finished.", iter);
+        dbg_msg("CONCURRENT_SUBMIT_GARBAGE_TEST iteration %d finished.", iter);
       }
     }
   }
