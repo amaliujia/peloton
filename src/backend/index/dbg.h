@@ -8,5 +8,6 @@
 #define dbg_msg(...) \
         do { if (P2DEBUG) { fprintf(stderr, "line %d: ", __LINE__); \
                             fprintf(stderr, __VA_ARGS__); \
+                            fprintf(stderr, "\n"); \
                             fflush(stderr); } \
         } while (0)
