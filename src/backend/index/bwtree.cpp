@@ -405,17 +405,12 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool need_expand) {
-      LOG_INFO("DeltaInsert");
       const BWNode *insert_node_ptr =
               new BWInsertNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0), key, value);
       if(!pid_table_.bool_compare_and_swap(cur, node_ptr, insert_node_ptr)) {
         delete insert_node_ptr;
-        LOG_INFO("Insert fail with pid %lu", cur);
-
         return false;
       }
-
-      LOG_INFO("Insert done with pid %lu, old:%p, new:%p", cur, node_ptr, insert_node_ptr);
       return true;
     }
 
@@ -426,7 +421,6 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool &exist_value) {
-      LOG_DEBUG("Entering DeltaDelete");
       if(!Duplicate) {
         std::vector<KeyType> keys_view;
         std::vector<ValueType> values_view;
@@ -437,11 +431,9 @@ namespace peloton {
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         if(!value_equality_checker_(value, *(values_view.begin()+dist))) {
-          LOG_DEBUG("Value equality check failed");
           exist_value = false;
           return false;
         }
-        LOG_DEBUG("Value equality check passed");
         exist_value = true;
         const BWNode *delete_node_ptr =
                 new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-1, key, value);
@@ -452,18 +444,15 @@ namespace peloton {
         return true;
       }
       else {
-        LOG_INFO("DeltaDelete ---- using pid %lu, addr %p", cur, node_ptr);
         std::vector<KeyType> keys_view;
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
-        LOG_INFO("keys_view.size():%lu, values_view.size():%lu", keys_view.size(), values_view[0].size());
         assert(keys_view.size() == values_view.size());
 
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
-        LOG_DEBUG("dist:%ld", dist);
         std::vector<ValueType> &value_vector = values_view[dist];
         //TODO
 
@@ -482,11 +471,9 @@ namespace peloton {
 //           !=value_vector.cend()) {
 
         if (iter == value_vector.end()){
-        LOG_DEBUG("Value equality check failed");
           exist_value = false;
           return false;
         }
-        LOG_DEBUG("Value equality check passed");
         exist_value = true;
         const BWNode *delete_node_ptr =
                 new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage()-(value_vector.size()==1?1:0), key, value);
@@ -841,7 +828,6 @@ namespace peloton {
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
         case NInsert: {
-          LOG_DEBUG("Find NInsert. address:%p", node_chain);
           ConsolidateInsertNode(static_cast<const BWInsertNode<KeyType, ValueType> *>(node_chain), keys, values);
           break;
         }
@@ -950,7 +936,6 @@ namespace peloton {
       else {
         values[dist].push_back(value);
       }
-      LOG_INFO("\t\t In insert delta, key size %lu, value size %lu", keys.size(), values.size());
     }
 
 
@@ -1117,14 +1102,12 @@ namespace peloton {
       for (size_t i = 0; i < indent; i++) {
         s += "\t";
       }
-      LOG_INFO("%s InnerNode: size;: %lu", s.c_str(), keys_.size());
-      /*
-      for (size_t i = 0; i < children_.size(); i++) {
-        pid_table.get(children_[i])->Print(pid_table, indent + 2);
-        LOG_INFO(" ");
-      }
-       */
+      LOG_INFO("%sInnerNode: size;: %lu", s.c_str(), keys_.size());
     }
+
+
+
+
 
 
 
