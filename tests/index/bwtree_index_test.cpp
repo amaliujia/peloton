@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-#define TT
+//#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
@@ -196,11 +196,11 @@ namespace peloton {
       // INDEX
       std::unique_ptr<index::Index> index(BuildIndex());
 
+      constexpr size_t size(2000);
       std::vector<std::pair<std::unique_ptr<storage::Tuple>, ItemPointer>> pairs;
       std::atomic<std::uint_least8_t> no_gen(0);
       std::vector<bool> result;
       result.reserve(size);
-      const size_t size(2000);
 
       for(int iter=0; iter<5; ++iter) {
         // initialize variables
