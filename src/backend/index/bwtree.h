@@ -33,7 +33,7 @@ namespace peloton {
     typedef std::uint_fast32_t PID;
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
-    constexpr int max_chain_len = 99;
+    constexpr int max_chain_len = 4;
     constexpr int max_node_size = 3;
     constexpr int min_node_size = max_node_size/2; // 3 / 2 = 1
     enum NodeType {
