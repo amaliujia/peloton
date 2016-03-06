@@ -121,10 +121,12 @@ namespace peloton {
 
       // left and right are not used or updated now
       inline const PID &GetLeft() const {
+        assert("BWNormal::GetLeft()"&&0);
         return left_;
       }
 
       inline const PID &GetRight() const {
+        assert("BWNormal::GetLeft()"&&0);
         return right_;
       }
 

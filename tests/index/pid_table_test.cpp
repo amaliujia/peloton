@@ -100,7 +100,7 @@ namespace peloton {
 
         LaunchParallelTest(total, Allocate, &no_gen, size_each, &addresses, &pids, &table);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
         // verify
         VerifyAndFree(table, addresses, pids);
@@ -178,7 +178,7 @@ namespace peloton {
 
         LaunchParallelTest(total, AllocateOrFreeAndTest, &no_gen, size_each, &addresses, &pids, &table);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
         no_gen = 0;
         addresses.clear();
@@ -238,7 +238,7 @@ namespace peloton {
                            &to_addresses, &success, &pids, &table);
 
         // wait finish
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
         // verify
         for(int i = 0; i<size; ++i) {
@@ -317,7 +317,7 @@ namespace peloton {
                            to_addresses, success, &pids, &table);
 
         // wait finish
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
         // verify
         for(int i = 0; i<size; ++i) {
