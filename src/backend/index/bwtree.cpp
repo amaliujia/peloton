@@ -810,16 +810,16 @@ namespace peloton {
       PID &right) {
       assert(Duplicate);
       assert(node_chain->IfLeafNode());
-      LOG_DEBUG("Current address:%p", node_chain);
+      //LOG_DEBUG("Current address:%p", node_chain);
       if(node_chain->GetType() == NLeaf) {
-        LOG_DEBUG("Current Node is Leaf");
+        //LOG_DEBUG("Current Node is Leaf");
         // arrive at bottom
         const BWLeafNode<KeyType, std::vector<ValueType>> *node = static_cast<const BWLeafNode<KeyType, std::vector<ValueType>> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
+        //LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 

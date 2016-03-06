@@ -74,8 +74,6 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanAllKeys(
   else
     container_duplicate.ScanAllKeys(result);
   return result;
-
-  return result;
 }
 
 /**
@@ -92,7 +90,6 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::ScanKey(
     container_unique.ScanKey(index_key, result);
   else
     container_duplicate.ScanKey(index_key, result);
-  LOG_DEBUG("Goodbye");
   return result;
 }
 

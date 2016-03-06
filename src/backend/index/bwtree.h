@@ -28,14 +28,21 @@
 #include <set>
 #include <chrono>
 
+#define DEBUG 0
+#define dbg_msg(fmt, ...) \
+        do { if (DEBUG) { fprintf(stderr, "%d(): " fmt, \
+                                __LINE__, __VA_ARGS__); \
+                          fflush(stderr); } \
+        } while (0)
+
 namespace peloton {
   namespace index {
     typedef std::uint_fast32_t PID;
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
-    constexpr int max_chain_len = 4;
-    constexpr int max_node_size = 3;
-    constexpr int min_node_size = max_node_size/2; // 3 / 2 = 1
+    constexpr int max_chain_len = 10;
+    constexpr int max_node_size = 20;
+    constexpr int min_node_size = max_node_size/2;
     enum NodeType {
       NInner = 0,
       NLeaf = 1,
@@ -198,7 +205,7 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_INFO("%sLeafNode, left %lu, right %lu, size %lu", s.c_str(), left_, right_, keys_.size());
+        LOG_DEBUG("%sLeafNode, left %lu, right %lu, size %lu", s.c_str(), left_, right_, keys_.size());
       }
     protected:
       const std::vector<KeyType> keys_;
@@ -257,7 +264,7 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_INFO("%sInsertNode", s.c_str());
+        LOG_DEBUG("%sInsertNode", s.c_str());
         next_->Print(pid_table, indent);
       }
     protected:
@@ -292,7 +299,7 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_INFO("%sDeleteNode", s.c_str());
+        LOG_DEBUG("%sDeleteNode", s.c_str());
         next_->Print(pid_table, indent);
       }
     protected:
@@ -328,7 +335,7 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_INFO("%sSplitNode, right pid %lu", s.c_str(), (unsigned long)right_);
+        LOG_DEBUG("%sSplitNode, right pid %lu", s.c_str(), (unsigned long)right_);
         next_->Print(pid_table, indent);
       }
       protected:
@@ -383,7 +390,7 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_INFO("%s SplitEntry, to pid %lu", s.c_str(), to_);
+        LOG_DEBUG("%s SplitEntry, to pid %lu", s.c_str(), to_);
 
         next_->Print(pid_table, indent);
       }
@@ -558,10 +565,7 @@ namespace peloton {
 
       // free up a new PID
       inline void free_PID(PID pid) {
-//        LOG_DEBUG("PIDTable::free(%lu)", pid);
         free_PIDs.push(pid);
-        // bool push_result = freePIDs_.push(pid);
-        // assert(push_result);
       }
 
       // allocate a new PID, use argument "address" as its initial address
@@ -570,7 +574,6 @@ namespace peloton {
         if(!free_PIDs.pop(result))
           result = allocate_new_PID(address);
         set(result, address);
-//        LOG_DEBUG("PIDTable::allocatePID(%p)=%lu", address, result);
         return result;
       }
 
@@ -624,7 +627,6 @@ namespace peloton {
         return (pid&second_level_mask)==0;
       }
     };
-
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
@@ -690,11 +692,7 @@ namespace peloton {
         bool result = InsertEntryUtil(key, value, path, version_number);
         LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
         LOG_DEBUG(" ");
-        LOG_DEBUG(" ");
-        LOG_DEBUG(" ");
-        PrintSelf(root_, pid_table_.get(root_), 0);
-        LOG_DEBUG(" ");
-        LOG_DEBUG(" ");
+        //PrintSelf(root_, pid_table_.get(root_), 0);
         LOG_DEBUG(" ");
         LOG_DEBUG("------------------------------------------------ print end  --------------------------------------");
 
@@ -708,10 +706,10 @@ namespace peloton {
       }
 
       void ScanKey(KeyType key, std::vector<ValueType> &ret) {
-        LOG_DEBUG("Entering ScanKey");
+        //LOG_DEBUG("Entering ScanKey");
         ScanKeyUtil(root_, key, ret);
-        LOG_DEBUG("ret.size():%lu", ret.size());
-        LOG_DEBUG("Leaving ScanKey");
+        //LOG_DEBUG("ret.size():%lu", ret.size());
+        //LOG_DEBUG("Leaving ScanKey");
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) {
@@ -719,10 +717,10 @@ namespace peloton {
         const BWNode *node_ptr = pid_table_.get(next_pid);
 
         // Print tree structure
-        PrintSelf(root_, pid_table_.get(root_), 0);
+        //PrintSelf(root_, pid_table_.get(root_), 0);
 
         while(!node_ptr->IfLeafNode()) {
-          LOG_DEBUG("ScanAllKeys, pass node PID=%lu", (unsigned long)next_pid);
+          //LOG_DEBUG("ScanAllKeys, pass node PID=%lu", (unsigned long)next_pid);
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
@@ -734,7 +732,7 @@ namespace peloton {
 
         // reach first leaf node
         // Ready to scan
-        LOG_DEBUG("ScanAllKeys, first leaf node PID=%lu", (unsigned long)next_pid);
+        //LOG_DEBUG("ScanAllKeys, first leaf node PID=%lu", (unsigned long)next_pid);
         while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
@@ -743,20 +741,20 @@ namespace peloton {
             CreateLeafNodeView(node_ptr, keys, values, left, right);
             const unsigned long temp = ret.size();
             ret.insert(ret.end(), values.begin(), values.end());
-            LOG_DEBUG("ScanAllKeys no dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu, ret size after=%lu",
-                      (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), temp, ret.size());
+            //LOG_DEBUG("ScanAllKeys no dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu, ret size after=%lu",
+            //          (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), temp, ret.size());
           }
           else {
             std::vector<KeyType> keys;
             std::vector<std::vector<ValueType>> values;
             CreateLeafNodeView(node_ptr, keys, values, left, right);
-            LOG_DEBUG("ScanAllKeys dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu",
-                      (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), ret.size());
+            //LOG_DEBUG("ScanAllKeys dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu",
+            //          (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), ret.size());
             for(const auto &v : values) {
               ret.insert(ret.end(), v.begin(), v.end());
-              LOG_DEBUG("ScanAllKeys dup, PID=%lu, values size of this key=%lu", (unsigned long)next_pid, v.size());
+              //LOG_DEBUG("ScanAllKeys dup, PID=%lu, values size of this key=%lu", (unsigned long)next_pid, v.size());
             }
-            LOG_DEBUG("ScanAllKeys dup, PID=%lu, ret size after=%lu", (unsigned long)next_pid, ret.size());
+            //LOG_DEBUG("ScanAllKeys dup, PID=%lu, ret size after=%lu", (unsigned long)next_pid, ret.size());
           }
 
           // Assume node_ptr->GetRight() returns the most recent split node delta's right (aka new page
@@ -768,7 +766,7 @@ namespace peloton {
             node_ptr = pid_table_.get(right);
           }
           else {
-            LOG_DEBUG("ScanAllKeys, reach end");
+            //LOG_DEBUG("ScanAllKeys, reach end");
             node_ptr = NULL;
           }
         }
@@ -846,11 +844,11 @@ namespace peloton {
                                      std::vector<PID> &children);
 
       void ScanKeyUtil(PID cur, const KeyType &key, std::vector<ValueType> &ret) {
-        LOG_DEBUG("Entering ScanKeyUtil");
+        //LOG_DEBUG("Entering ScanKeyUtil");
         const BWNode *node_ptr = pid_table_.get(cur);
 
         if(node_ptr->IfLeafNode()) {
-          LOG_DEBUG("ScanKeyUtil reach leaf node PID=%lu", (unsigned long)cur);
+          //LOG_DEBUG("ScanKeyUtil reach leaf node PID=%lu", (unsigned long)cur);
           if(!Duplicate) {
             std::vector<KeyType> keys;
             std::vector<ValueType> values;
@@ -877,7 +875,7 @@ namespace peloton {
           }
         }
         else {
-          LOG_DEBUG("ScanKeyUtil reach inner node PID=%lu", (unsigned long)cur);
+          //LOG_DEBUG("ScanKeyUtil reach inner node PID=%lu", (unsigned long)cur);
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
