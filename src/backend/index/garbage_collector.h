@@ -8,7 +8,6 @@
 #include <pthread.h>
 
 #include "bwtree.h"
-//#include "pid_table.h"
 
 namespace peloton {
   namespace index {
