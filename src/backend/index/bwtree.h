@@ -657,7 +657,7 @@ namespace peloton {
         LOG_INFO("PID of root is %lu. address:%p", (unsigned long)root_, root_node);
       }
 
-      void PrintSelf(PID pid, const BWNode *node, int indent) {
+      void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {
         node->Print(pid_table_, indent);
         if(node->IfInnerNode()) {
           std::vector<KeyType> keys;
@@ -720,7 +720,6 @@ namespace peloton {
         //PrintSelf(root_, pid_table_.get(root_), 0);
 
         while(!node_ptr->IfLeafNode()) {
-          //LOG_DEBUG("ScanAllKeys, pass node PID=%lu", (unsigned long)next_pid);
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
@@ -732,29 +731,22 @@ namespace peloton {
 
         // reach first leaf node
         // Ready to scan
-        //LOG_DEBUG("ScanAllKeys, first leaf node PID=%lu", (unsigned long)next_pid);
         while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
             std::vector<KeyType> keys;
             std::vector<ValueType> values;
             CreateLeafNodeView(node_ptr, keys, values, left, right);
-            const unsigned long temp = ret.size();
+            //const unsigned long temp = ret.size();
             ret.insert(ret.end(), values.begin(), values.end());
-            //LOG_DEBUG("ScanAllKeys no dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu, ret size after=%lu",
-            //          (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), temp, ret.size());
           }
           else {
             std::vector<KeyType> keys;
             std::vector<std::vector<ValueType>> values;
             CreateLeafNodeView(node_ptr, keys, values, left, right);
-            //LOG_DEBUG("ScanAllKeys dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu",
-            //          (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), ret.size());
             for(const auto &v : values) {
               ret.insert(ret.end(), v.begin(), v.end());
-              //LOG_DEBUG("ScanAllKeys dup, PID=%lu, values size of this key=%lu", (unsigned long)next_pid, v.size());
             }
-            //LOG_DEBUG("ScanAllKeys dup, PID=%lu, ret size after=%lu", (unsigned long)next_pid, ret.size());
           }
 
           // Assume node_ptr->GetRight() returns the most recent split node delta's right (aka new page
@@ -766,7 +758,6 @@ namespace peloton {
             node_ptr = pid_table_.get(right);
           }
           else {
-            //LOG_DEBUG("ScanAllKeys, reach end");
             node_ptr = NULL;
           }
         }
