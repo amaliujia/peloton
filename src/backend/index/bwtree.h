@@ -432,7 +432,7 @@ namespace peloton {
 
     typedef const BWNode *Address;
 
-    class PIDTable {
+//    class PIDTable {
         /*
          * class storing the mapping table between a PID and its corresponding address
          * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -440,7 +440,7 @@ namespace peloton {
          * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
          * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
          */
-    private:
+/*    private:
         std::unordered_map<PID, Address> pid_table_;
         std::mutex lock_;
         long long id;
@@ -499,9 +499,9 @@ namespace peloton {
           return true;
         }
     };
+*/
 
-
-//    class PIDTable {
+    class PIDTable {
       /*
        * class storing the mapping table between a PID and its corresponding address
        * the mapping table is organized as a two-level array, like a virtual memory table.
@@ -509,7 +509,7 @@ namespace peloton {
        * reclaimed PIDs are stored in a stack which will be given out first upon new allocations.
        * to achieve both latch-free and simple of implementation, this table can only reclaim PIDs but not space.
        */
-/*
+
     public:
       typedef std::atomic<PID> CounterType;
 
@@ -622,7 +622,7 @@ namespace peloton {
         return (pid&second_level_mask)==0;
       }
     };
-*/
+
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
@@ -645,12 +645,12 @@ namespace peloton {
                                                                             std::vector<std::vector<ValueType>>(),
                                                                             PIDTable::PID_NULL, PIDTable::PID_NULL);
         PID first_leaf = pid_table_.allocate_PID(first_leaf_node);
-        LOG_INFO("PID of first_leaf is %lu. address:%p", first_leaf, first_leaf_node);
+        LOG_INFO("PID of first_leaf is %lu. address:%p", (unsigned long)first_leaf, first_leaf_node);
         const BWNode *root_node = new BWInnerNode<KeyType>(std::vector<KeyType>(), {first_leaf}, PIDTable::PID_NULL,
                                                            PIDTable::PID_NULL,
                                                            std::numeric_limits<VersionNumber>::min());
         root_ = pid_table_.allocate_PID(root_node);
-        LOG_INFO("PID of root is %lu. address:%p", root_, root_node);
+        LOG_INFO("PID of root is %lu. address:%p", (unsigned long)root_, root_node);
       }
 
       void PrintSelf(PID pid, const BWNode *node, int indent) {
@@ -713,13 +713,14 @@ namespace peloton {
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) {
-        const BWNode *node_ptr = pid_table_.get(root_);
-        PID next_pid;
+        PID next_pid = root_;
+        const BWNode *node_ptr = pid_table_.get(next_pid);
 
         // Print tree structure
         PrintSelf(root_, pid_table_.get(root_), 0);
 
         while(!node_ptr->IfLeafNode()) {
+          LOG_DEBUG("ScanAllKeys, pass node PID=%lu", (unsigned long)next_pid);
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
@@ -731,33 +732,41 @@ namespace peloton {
 
         // reach first leaf node
         // Ready to scan
+        LOG_DEBUG("ScanAllKeys, first leaf node PID=%lu", (unsigned long)next_pid);
         while(node_ptr != NULL) {
           PID left, right;
           if(!Duplicate) {
             std::vector<KeyType> keys;
             std::vector<ValueType> values;
-
             CreateLeafNodeView(node_ptr, keys, values, left, right);
+            const unsigned long temp = ret.size();
             ret.insert(ret.end(), values.begin(), values.end());
+            LOG_DEBUG("ScanAllKeys no dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu, ret size after=%lu",
+                      (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), temp, ret.size());
           }
           else {
             std::vector<KeyType> keys;
             std::vector<std::vector<ValueType>> values;
             CreateLeafNodeView(node_ptr, keys, values, left, right);
-
+            LOG_DEBUG("ScanAllKeys dup, PID=%lu, node size=%lu, values size=%lu, ret size before=%lu",
+                      (unsigned long)next_pid, node_ptr->GetSlotUsage(), values.size(), ret.size());
             for(const auto &v : values) {
               ret.insert(ret.end(), v.begin(), v.end());
+              LOG_DEBUG("ScanAllKeys dup, PID=%lu, values size of this key=%lu", (unsigned long)next_pid, v.size());
             }
+            LOG_DEBUG("ScanAllKeys dup, PID=%lu, ret size after=%lu", (unsigned long)next_pid, ret.size());
           }
 
           // Assume node_ptr->GetRight() returns the most recent split node delta's right (aka new page
           // in that split), if any.
+          next_pid = right;
           if (right != PIDTable::PID_NULL){
 //          if(node_ptr->GetRight()!=null_) {
 //            node_ptr = pid_table_.get(node_ptr->GetRight());
             node_ptr = pid_table_.get(right);
           }
           else {
+            LOG_DEBUG("ScanAllKeys, reach end");
             node_ptr = NULL;
           }
         }
@@ -839,6 +848,7 @@ namespace peloton {
         const BWNode *node_ptr = pid_table_.get(cur);
 
         if(node_ptr->IfLeafNode()) {
+          LOG_DEBUG("ScanKeyUtil reach leaf node PID=%lu", (unsigned long)cur);
           if(!Duplicate) {
             std::vector<KeyType> keys;
             std::vector<ValueType> values;
@@ -865,6 +875,7 @@ namespace peloton {
           }
         }
         else {
+          LOG_DEBUG("ScanKeyUtil reach inner node PID=%lu", (unsigned long)cur);
           std::vector<KeyType> keys;
           std::vector<PID> children;
           PID left, right;
