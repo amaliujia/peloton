@@ -198,36 +198,51 @@ namespace peloton {
 
       std::vector<std::pair<std::unique_ptr<storage::Tuple>, ItemPointer>> pairs;
       std::atomic<std::uint_least8_t> no_gen(0);
-      const size_t size(2000);
-      GenerateKeyValues(pool, pairs, size, 1, 1, true);
       std::vector<bool> result;
       result.reserve(size);
-      for(size_t i=0; i<size; ++i) {
-        result.push_back(false);
-      }
-      std::vector<ItemPointer> locations;
-      LaunchParallelTest(1, InsertFunction, &no_gen, index.get(), size, &pairs, &result);
+      const size_t size(2000);
 
-      for(size_t i=0; i<size; ++i) {
-        EXPECT_TRUE(result[i]);
-        locations = index->ScanKey(pairs[i].first.get());
-        EXPECT_EQ(locations.size(), 1);
-      }
+      for(int iter=0; iter<5; ++iter) {
+        // initialize variables
+        GenerateKeyValues(pool, pairs, size, 1, 1, true);
+        for(size_t i = 0; i<size; ++i) {
+          result.push_back(false);
+        }
+        // try insertion
+        LaunchParallelTest(1, InsertFunction, &no_gen, index.get(), size, &pairs, &result);
 
-      locations = index->ScanAllKeys();
-      EXPECT_EQ(locations.size(), size);
+        // check insertion result
+        std::vector<ItemPointer> locations;
+        for(size_t i = 0; i<size; ++i) {
+          EXPECT_TRUE(result[i]);
+          locations = index->ScanKey(pairs[i].first.get());
+          EXPECT_EQ(locations.size(), 1);
+        }
 
-      no_gen = 0;
-      LaunchParallelTest(1, DeleteFunction, &no_gen, index.get(), size, &pairs, &result);
+        // check insertion result
+        locations = index->ScanAllKeys();
+        EXPECT_EQ(locations.size(), size);
 
-      for(size_t i=0; i<size; ++i) {
-        EXPECT_TRUE(result[i]);
-        locations = index->ScanKey(pairs[i].first.get());
+        // try deletion
+        no_gen = 0;
+        LaunchParallelTest(1, DeleteFunction, &no_gen, index.get(), size, &pairs, &result);
+
+        // check deletion result
+        for(size_t i = 0; i<size; ++i) {
+          EXPECT_TRUE(result[i]);
+          locations = index->ScanKey(pairs[i].first.get());
+          EXPECT_EQ(locations.size(), 0);
+        }
+
+        // check deletion result
+        locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
-      }
 
-      locations = index->ScanAllKeys();
-      EXPECT_EQ(locations.size(), 0);
+        // clear up
+        pairs.clear();
+        no_gen = 0;
+        result.clear();
+      }
 
       delete tuple_schema;
     }
