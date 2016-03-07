@@ -418,9 +418,11 @@ namespace peloton {
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
-    ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value, size_t &value_vector_size) {
+    ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value,
+                  size_t &value_vector_size, bool &right_track) {
       // assume node_ptr is the header of leaf node
       assert(node_ptr->IfLeafNode());
+      right_track = true;
       value_vector_size = 0;
       if(Duplicate) {
         std::vector<KeyType> keys_view;
@@ -428,13 +430,31 @@ namespace peloton {
         PID left, right;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
         auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
-        if(position==keys_view.end())
+        if(position==keys_view.end()) {
+          if(right==PIDTable::PID_NULL)
+            return false;
+          std::vector<KeyType> right_sibling_keys_view;
+          std::vector<std::vector<ValueType>> right_sibling_values_view;
+          PID right_sibling_left_view, right_sibling_right_view;
+          CreateLeafNodeView(pid_table_.get(right),
+                              right_sibling_keys_view, right_sibling_values_view,
+                              right_sibling_left_view, right_sibling_right_view);
+          if(right_sibling_keys_view.size()==0)
+            // key size = 0, cannot tell which one to go
+            dbg_msg("risky");
+          else if(comparator_(key, right_sibling_keys_view[0]))
+            // key lies in between two nodes cannot tell which one to go
+            dbg_msg("risky");
+          else {
+            right_track = false;
+          }
           return false;
+        }
         auto dist = std::distance(keys_view.begin(), position);
         const std::vector<ValueType> &value_vector = values_view[dist];
         value_vector_size = value_vector.size();
         assert(value_vector_size>0);
-        for(auto iter=value_vector.cbegin(); iter!=value_vector.cend(); ++iter)
+        for(auto iter=value_vector.begin(); iter!=value_vector.end(); ++iter)
           if(value_equality_checker_(*iter, value))
             return true;
         return false;
@@ -445,7 +465,27 @@ namespace peloton {
         PID left, right;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
         auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
-        if(position==keys_view.end()||comparator_(key, *position))
+        if(position==keys_view.end()) {
+          if(right==PIDTable::PID_NULL)
+            return false;
+          std::vector<KeyType> right_sibling_keys_view;
+          std::vector<ValueType> right_sibling_values_view;
+          PID right_sibling_left_view, right_sibling_right_view;
+          CreateLeafNodeView(pid_table_.get(right),
+                             right_sibling_keys_view, right_sibling_values_view,
+                             right_sibling_left_view, right_sibling_right_view);
+          if(right_sibling_keys_view.size()==0)
+            // key size = 0, cannot tell which one to go
+            dbg_msg("risky");
+          else if(comparator_(key, right_sibling_keys_view[0]))
+            // key lies in between two nodes cannot tell which one to go
+            dbg_msg("risky");
+          else {
+            right_track = false;
+          }
+          return false;
+        }
+        if(comparator_(key, *position))
           return false;
         value_vector_size = 1;
         auto dist = std::distance(keys_view.begin(), position);
@@ -563,8 +603,8 @@ namespace peloton {
     InsertEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       while(true) {
         // first check if we have the up-to-date version number
-        const PID &current = path.back();
         assert(path.size() == version_number.size());
+        const PID &current = path.back();
         const BWNode *node_ptr = pid_table_.get(current);
         if(node_ptr->GetVersionNumber() != version_number.back()) {
           if(path.size() == 1) {
@@ -633,17 +673,43 @@ namespace peloton {
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
           assert(keys_view.size() + 1 == children_view.size());
-          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
-          auto dist = std::distance(keys_view.cbegin(), position);
+          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+          if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
+            std::vector<KeyType> right_sibling_keys_view;
+            std::vector<PID> right_sibling_children_view;
+            PID right_sibling_left_view, right_sibling_right_view;
+            CreateInnerNodeView(pid_table_.get(right_view),
+                                right_sibling_keys_view, right_sibling_children_view,
+                                right_sibling_left_view, right_sibling_right_view);
+            if(right_sibling_keys_view.size()==0)
+              // key size = 0, cannot tell which one to go
+              dbg_msg("risky");
+            else if(comparator_(key, right_sibling_keys_view[0]))
+              // key lies in between two nodes cannot tell which one to go
+              dbg_msg("risky");
+            else {
+              if(path.size() == 1) {
+                version_number.pop_back();
+                version_number.push_back(node_ptr->GetVersionNumber());
+              }
+              else {
+                path.pop_back();
+                version_number.pop_back();
+              }
+              continue;
+            }
+          }
+          auto dist = std::distance(keys_view.begin(), position);
           PID next_pid = children_view[dist];
           path.push_back(next_pid);
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
-          //TODO evil check version number of this node again before go into the child
         }
         else {
           assert(node_ptr->IfLeafNode());
           size_t value_vector_size;
-          if(ExistKeyValue(node_ptr, key, value, value_vector_size)) {
+          bool right_track = true;
+          if(ExistKeyValue(node_ptr, key, value, value_vector_size, right_track)) {
+            assert(right_track);
             if(!Duplicate) {
               return false;
             }
@@ -653,6 +719,12 @@ namespace peloton {
             return true;
           }
           else {
+            if(!right_track) {
+              assert(path.size()>1);
+              path.pop_back();
+              version_number.pop_back();
+              continue;
+            }
             //assert(Duplicate||value_vector_size==0);
             if(!Duplicate&&value_vector_size>0)
               return false;
@@ -682,24 +754,50 @@ namespace peloton {
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
           assert(keys_view.size()+1==children_view.size());
-          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
+          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+          if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
+            std::vector<KeyType> right_sibling_keys_view;
+            std::vector<PID> right_sibling_children_view;
+            PID right_sibling_left_view, right_sibling_right_view;
+            CreateInnerNodeView(pid_table_.get(right_view),
+                                right_sibling_keys_view, right_sibling_children_view,
+                                right_sibling_left_view, right_sibling_right_view);
+            if(right_sibling_keys_view.size()==0)
+              // key size = 0, cannot tell which one to go
+              dbg_msg("risky");
+            else if(comparator_(key, right_sibling_keys_view[0]))
+              // key lies in between two nodes cannot tell which one to go
+              dbg_msg("risky");
+            else {
+              if(path.size() == 1) {
+                version_number.pop_back();
+                version_number.push_back(node_ptr->GetVersionNumber());
+              }
+              else {
+                path.pop_back();
+                version_number.pop_back();
+              }
+              continue;
+            }
+          }
           auto dist = std::distance(keys_view.cbegin(), position);
           PID next_pid = children_view[dist];
-          VersionNumber final_number = pid_table_.get(path.back())->GetVersionNumber();
-          if(final_number!=version_number.back()) {
-            version_number.pop_back();
-            version_number.push_back(final_number);
-            continue;
-          }
           path.push_back(next_pid);
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
           assert(node_ptr->IfLeafNode());
           size_t value_vector_size;
-          if(!ExistKeyValue(node_ptr, key, value, value_vector_size)) {
-            return false;
+          bool right_track = true;
+          if(!ExistKeyValue(node_ptr, key, value, value_vector_size, right_track)) {
+            if(right_track)
+              return false;
+            assert(path.size()>1);
+            path.pop_back();
+            version_number.pop_back();
+            continue;
           }
+          assert(right_track);
           bool result = DeltaDelete(current, node_ptr, key, value, value_vector_size==1);
           if(result) {
             return true;

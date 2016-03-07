@@ -1036,7 +1036,8 @@ namespace peloton {
 
       bool ExistKey(const BWNode *node_ptr, const KeyType &key);
 
-      bool ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value, size_t &value_vector_size);
+      bool ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value,
+                         size_t &value_vector_size, bool &right_track);
 
       void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values,
                               PID &left, PID &right);
