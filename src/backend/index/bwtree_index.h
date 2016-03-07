@@ -61,11 +61,13 @@ class BWTreeIndex : public Index {
 
   // TODO: Implement this
   bool Cleanup() {
+    dbg_msg("not implemented BWTreeIndex::Cleanup being called");
     return true;
   }
 
   // TODO: Implement this
   size_t GetMemoryFootprint() {
+    dbg_msg("not implemented BWTreeIndex::GetMemoryFootprint being called");
     return 0;
   }
 
