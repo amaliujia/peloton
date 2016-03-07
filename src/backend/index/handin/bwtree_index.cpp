@@ -62,6 +62,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
     __attribute__((unused)) const ScanDirectionType& scan_direction) {
   std::vector<ItemPointer> result;
   // Add your implementation here
+  dbg_msg("not implemented BWTreeIndex::Scan being called");
   return result;
 }
 

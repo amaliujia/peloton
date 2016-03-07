@@ -21,8 +21,6 @@
 #include "backend/common/types.h"
 #include "backend/index/index.h"
 #include "backend/index/bwtree.h"
-#include "backend/index/item_pointer_comparator.h"
-#include "backend/index/item_pointer_equality_checker.h"
 
 
 namespace peloton {
@@ -61,11 +59,13 @@ class BWTreeIndex : public Index {
 
   // TODO: Implement this
   bool Cleanup() {
+    dbg_msg("not implemented BWTreeIndex::Cleanup being called");
     return true;
   }
 
   // TODO: Implement this
   size_t GetMemoryFootprint() {
+    dbg_msg("not implemented BWTreeIndex::GetMemoryFootprint being called");
     return 0;
   }
 
