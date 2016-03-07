@@ -904,16 +904,30 @@ namespace peloton {
             PrintSelf(children[i], pid_table_.get(children[i]), indent+2);
         }
         else {
-          assert(!Duplicate);
-          std::vector<KeyType> keys;
-          std::vector<ValueType> values;
-          PID left, right;
-          CreateLeafNodeView(node, keys, values, left, right);
-          std::string s;
-          for (size_t i = 0; i < indent; i++) {
-            s += "\t";
+          if(!Duplicate) {
+            std::vector<KeyType> keys;
+            std::vector<ValueType> values;
+            PID left, right;
+            CreateLeafNodeView(node, keys, values, left, right);
+            std::string s;
+            for(size_t i = 0; i<indent; i++) {
+              s += "\t";
+            }
+            LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu", s.c_str(), keys.size(), pid, left,
+                      right);
           }
-          LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu", s.c_str(), keys.size(), pid, left, right);
+          else {
+            std::vector<KeyType> keys;
+            std::vector<std::vector<ValueType>> values;
+            PID left, right;
+            CreateLeafNodeView(node, keys, values, left, right);
+            std::string s;
+            for(size_t i = 0; i<indent; i++) {
+              s += "\t";
+            }
+            LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu", s.c_str(), keys.size(), pid, left,
+                      right);
+          }
         }
       }
 
