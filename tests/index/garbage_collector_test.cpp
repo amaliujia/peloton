@@ -5,7 +5,6 @@
 #include "harness.h"
 
 #include "backend/index/bwtree.h"
-#include "backend/index/dbg.h"
 
 #include <cstdlib>
 #include <ctime>
