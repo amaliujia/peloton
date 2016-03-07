@@ -785,7 +785,7 @@ namespace peloton {
       // singleton
       static GarbageCollector global_gc_;
 
-      virtual ~GarbageCollector() {
+      ~GarbageCollector() {
         LOG_DEBUG("GarbageCollector::~GarbageCollector()");
         // stop epoch generation
         Stop();
@@ -873,7 +873,7 @@ namespace peloton {
 
       void SubmitGarbageNode(const BWNode *);
 
-      virtual ~BWTree() {
+      ~BWTree() {
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
         const BWNode *root_node = pid_table_.get(root_);
