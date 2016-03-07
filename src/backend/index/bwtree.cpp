@@ -455,10 +455,8 @@ namespace peloton {
         const std::vector<ValueType> &value_vector = values_view[dist];
         value_vector_size = value_vector.size();
         assert(value_vector_size>0);
-        for(auto iter=value_vector.begin(); iter!=value_vector.end(); ++iter)
-          if(value_equality_checker_(*iter, value))
-            return true;
-        return false;
+        auto value_position = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
+        return value_position!=value_vector.end()&&value_equality_checker_(*value_position, value);
       }
       else {
         std::vector<KeyType> keys_view;
@@ -1093,7 +1091,9 @@ namespace peloton {
         values.insert(values.begin()+dist, {value});
       }
       else {
-        values[dist-1].push_back(value);
+        std::vector<ValueType> &value_vector = values[dist-1];
+        auto position = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
+        value_vector.insert(position, value);
       }
     }
 
@@ -1133,15 +1133,14 @@ namespace peloton {
       auto dist = std::distance(keys.begin(), position);
       std::vector<ValueType> &value_vector = values[dist];
 
-      auto item = value_vector.begin();
-      for(; item!=value_vector.end(); ++item)
-        if(value_equality_checker_(*item, value))
-          break;
-      assert(item!=value_vector.end());
-      value_vector.erase(item);
-      if(value_vector.size()==0) {
+      auto begin = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
+      auto end = std::upper_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
+      if(begin==value_vector.begin()&&end==value_vector.end()) {
         keys.erase(position);
         values.erase(values.begin()+dist);
+      }
+      else {
+        value_vector.erase(begin, end);
       }
     }
 
