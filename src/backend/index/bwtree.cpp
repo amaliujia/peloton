@@ -47,7 +47,7 @@ namespace peloton {
 
     void GarbageCollector::ReclaimGarbage() {
       //LOG_DEBUG("GarbageCollector::ReclaimGarbage()");
-      assert(head_!=nullptr&&head_->next_!=nullptr);
+      myassert(head_!=nullptr&&head_->next_!=nullptr);
       if(last_stopped_prev_==nullptr)
         last_stopped_prev_ = head_->next_;
 
@@ -66,7 +66,7 @@ namespace peloton {
     void GarbageCollector::ReclaimGarbageList(Epoch *head) {
       Epoch *next;
       while(head!=nullptr) {
-        assert(head->SafeToReclaim());
+        myassert(head->SafeToReclaim());
         next = head->next_;
         delete head;
         head = next;
@@ -81,16 +81,16 @@ namespace peloton {
     const BWNode *BWNode::GenerateRandomNodeChain(int length) {
       //LOG_DEBUG("BWNode::GenerateRandomNodeChain(%d)", length);
       srand(time(NULL));
-      assert(length>=0);
+      myassert(length>=0);
       if(length==0)
         return nullptr;
 
       const BWNode *head = GenerateRandomNode((NodeType)(rand()%2), nullptr);
-      assert(head->GetType()==NLeaf||head->GetType()==NInner);
+      myassert(head->GetType()==NLeaf||head->GetType()==NInner);
 
       while(--length>0) {
         head = GenerateRandomNode((NodeType)(rand()%4+2), head);
-        assert(head->GetType()==NInsert||head->GetType()==NDelete||
+        myassert(head->GetType()==NInsert||head->GetType()==NDelete||
                head->GetType()==NSplit||head->GetType()==NSplitEntry);
       }
 
@@ -100,25 +100,25 @@ namespace peloton {
     const BWNode *BWNode::GenerateRandomNode(NodeType type, const BWNode *next) {
       switch(type) {
         case NInner:
-          assert(next==nullptr);
+          myassert(next==nullptr);
           return new BWInnerNode<IntsKey<1>>(std::vector<IntsKey<1>>(),std::vector<PID>({PIDTable::PID_NULL}), PIDTable::PID_NULL, PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
         case NLeaf:
-          assert(next==nullptr);
+          myassert(next==nullptr);
           return new BWLeafNode<IntsKey<1>, ItemPointer>(std::vector<IntsKey<1>>(),std::vector<ItemPointer>(), PIDTable::PID_NULL, PIDTable::PID_NULL, std::numeric_limits<VersionNumber>::min());
         case NInsert:
-          assert(next!=nullptr);
+          myassert(next!=nullptr);
           return new BWInsertNode<IntsKey<1>, ItemPointer>(next, 1, IntsKey<1>(), ItemPointer());
         case NDelete:
-          assert(next!=nullptr);
+          myassert(next!=nullptr);
           return new BWDeleteNode<IntsKey<1>, ItemPointer>(next, 1, IntsKey<1>(), ItemPointer());
         case NSplit:
-          assert(next!=nullptr);
+          myassert(next!=nullptr);
           return new BWSplitNode<IntsKey<1>>(1, next, IntsKey<1>(), PIDTable::PID_NULL);
         case NSplitEntry:
-          assert(next!=nullptr);
+          myassert(next!=nullptr);
           return new BWSplitEntryNode<IntsKey<1>>(next, IntsKey<1>(), PIDTable::PID_NULL);
         default:
-          assert(0);
+          myassert(0);
           return nullptr;
       }
     }
@@ -153,8 +153,8 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     InsertSplitEntry(const BWNode *top, std::vector<PID> &path, std::vector<VersionNumber> &version_number){
-      assert(path.size()==version_number.size());
-      assert(top->GetType()==NSplit);
+      myassert(path.size()==version_number.size());
+      myassert(top->GetType()==NSplit);
       // get split information
       const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(top);
       const KeyType &low_key = split_ptr->GetSplitKey();
@@ -205,7 +205,7 @@ namespace peloton {
         }
       }
       else {
-        assert(path.back()==root_);
+        myassert(path.back()==root_);
         const BWNode *old_root = pid_table_.get(root_);
         VersionNumber old_root_version = old_root->GetVersionNumber();
         // allocate a new pid for the original root node
@@ -235,17 +235,17 @@ namespace peloton {
     const BWNode *
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     SplitInnerNode(const BWNode *inner_node, const PID &node_pid) {
-      assert(inner_node->IfInnerNode());
+      myassert(inner_node->IfInnerNode());
       std::vector<KeyType> keys_view;
       std::vector<PID> children_view;
       PID left_view, right_view;
       CreateInnerNodeView(inner_node, keys_view, children_view, left_view, right_view);
-      assert(keys_view.size() + 1 == children_view.size());
-      assert(keys_view.size() >= max_node_size);
+      myassert(keys_view.size() + 1 == children_view.size());
+      myassert(keys_view.size() >= max_node_size);
 
       auto index = keys_view.size()/2;
       // long enough
-      assert(index>0);
+      myassert(index>0);
       //TODO already done
       //TODO evil keys_view[index-1]?
       //const KeyType &low_key = keys_view[index];
@@ -281,14 +281,14 @@ namespace peloton {
     const BWNode *
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     SplitLeafNode(const BWNode *leaf_node, const PID &node_pid) {
-      assert(leaf_node->IfLeafNode());
+      myassert(leaf_node->IfLeafNode());
       if(!Duplicate) {
         std::vector<KeyType> keys_view;
         std::vector<ValueType> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(leaf_node, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size()==values_view.size());
-        assert(keys_view.size()>=max_node_size);
+        myassert(keys_view.size()==values_view.size());
+        myassert(keys_view.size()>=max_node_size);
 
         // find the split position, and get the low key
         auto index = keys_view.size()/2;
@@ -318,8 +318,8 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(leaf_node, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size()==values_view.size());
-        assert(keys_view.size()>=max_node_size);
+        myassert(keys_view.size()==values_view.size());
+        myassert(keys_view.size()>=max_node_size);
 
         auto index = keys_view.size()/2;
         const KeyType &low_key = keys_view[index];
@@ -373,7 +373,7 @@ namespace peloton {
       // if we need to help others finish the second step of split
       if(node_ptr->GetType()==NSplit) {
         bool result = InsertSplitEntry(node_ptr, path, version_number);
-        assert(path.size()==version_number.size());
+        myassert(path.size()==version_number.size());
         // if failed, rollback to the parent node
         if(!result) {
           if(path.size()>1) {
@@ -405,7 +405,7 @@ namespace peloton {
           return false;
         // the same as helping others to finish the second step of split
         bool result = InsertSplitEntry(node_ptr, path, version_number);
-        assert(path.size()==version_number.size());
+        myassert(path.size()==version_number.size());
         if(!result) {
           if(path.size()>1) {
             path.pop_back();
@@ -476,7 +476,7 @@ namespace peloton {
     ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value,
                   size_t &value_vector_size, bool &right_track) {
       // assume node_ptr is the header of leaf node
-      assert(node_ptr->IfLeafNode());
+      myassert(node_ptr->IfLeafNode());
       right_track = true;
       value_vector_size = 0;
       if(Duplicate) {
@@ -511,7 +511,7 @@ namespace peloton {
         auto dist = std::distance(keys_view.begin(), position);
         const std::vector<ValueType> &value_vector = values_view[dist];
         value_vector_size = value_vector.size();
-        assert(value_vector_size>0);
+        myassert(value_vector_size>0);
         auto value_position = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
         return value_position!=value_vector.end()&&value_equality_checker_(*value_position, value);
       }
@@ -580,9 +580,9 @@ namespace peloton {
         std::vector<ValueType> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size()==values_view.size());
+        myassert(keys_view.size()==values_view.size());
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
-        assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
+        myassert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         if(!value_equality_checker_(value, *(values_view.begin()+dist))) {
           exist_value = false;
@@ -602,10 +602,10 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
-        assert(keys_view.size() == values_view.size());
+        myassert(keys_view.size() == values_view.size());
 
         auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
-        assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
+        myassert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         std::vector<ValueType> &value_vector = values_view[dist];
         //TODO
@@ -662,7 +662,7 @@ namespace peloton {
     InsertEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       while(true) {
         // first check if we have the up-to-date version number
-        assert(path.size() == version_number.size());
+        myassert(path.size() == version_number.size());
         const PID &current = path.back();
         const BWNode *node_ptr = pid_table_.get(current);
         if(node_ptr->GetVersionNumber() != version_number.back()) {
@@ -682,7 +682,7 @@ namespace peloton {
         /* moved to CheckStatus(), leave here for code review
         if(node_ptr->GetType()==NSplit) {
           bool result = InsertSplitEntry(node_ptr, path, version_number);
-          assert(path.size()==version_number.size());
+          myassert(path.size()==version_number.size());
           if(!result) {
             if(path.size()>1) {
               path.pop_back();
@@ -709,7 +709,7 @@ namespace peloton {
           if(node_ptr==nullptr)
             continue;
           bool result = InsertSplitEntry(node_ptr, path, version_number);
-          assert(path.size()==version_number.size());
+          myassert(path.size()==version_number.size());
           if(!result) {
             if(path.size()>1) {
               path.pop_back();
@@ -731,7 +731,7 @@ namespace peloton {
           std::vector<PID> children_view;
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
-          assert(keys_view.size() + 1 == children_view.size());
+          myassert(keys_view.size() + 1 == children_view.size());
           auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
           if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
             std::vector<KeyType> right_sibling_keys_view;
@@ -767,11 +767,11 @@ namespace peloton {
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
-          assert(node_ptr->IfLeafNode());
+          myassert(node_ptr->IfLeafNode());
           size_t value_vector_size;
           bool right_track = true;
           if(ExistKeyValue(node_ptr, key, value, value_vector_size, right_track)) {
-            assert(right_track);
+            myassert(right_track);
             if(!Duplicate) {
               return false;
             }
@@ -782,12 +782,12 @@ namespace peloton {
           }
           else {
             if(!right_track) {
-              assert(path.size()>1);
+              myassert(path.size()>1);
               path.pop_back();
               version_number.pop_back();
               continue;
             }
-            //assert(Duplicate||value_vector_size==0);
+            //myassert(Duplicate||value_vector_size==0);
             if(!Duplicate&&value_vector_size>0)
               return false;
             if(!DeltaInsert(current, node_ptr, key, value, value_vector_size==0)) {
@@ -804,7 +804,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
       while(true) {
-        assert(path.size() == version_number.size());
+        myassert(path.size() == version_number.size());
         const PID &current = path.back();
         const BWNode *node_ptr = pid_table_.get(current);
         if(!CheckStatus(node_ptr, key, path, version_number))
@@ -815,7 +815,7 @@ namespace peloton {
           std::vector<PID> children_view;
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
-          assert(keys_view.size()+1==children_view.size());
+          myassert(keys_view.size()+1==children_view.size());
           auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
           if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
             std::vector<KeyType> right_sibling_keys_view;
@@ -851,18 +851,18 @@ namespace peloton {
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
-          assert(node_ptr->IfLeafNode());
+          myassert(node_ptr->IfLeafNode());
           size_t value_vector_size;
           bool right_track = true;
           if(!ExistKeyValue(node_ptr, key, value, value_vector_size, right_track)) {
             if(right_track)
               return false;
-            assert(path.size()>1);
+            myassert(path.size()>1);
             path.pop_back();
             version_number.pop_back();
             continue;
           }
-          assert(right_track);
+          myassert(right_track);
           bool result = DeltaDelete(current, node_ptr, key, value, value_vector_size==1);
           if(result) {
             return true;
@@ -901,7 +901,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConstructConsolidatedInnerNode(
       const BWNode *node_chain) {
-      assert(node_chain!=NULL);
+      myassert(node_chain!=NULL);
       std::vector<KeyType> keys;
       std::vector<PID> children;
       PID left, right;
@@ -944,7 +944,7 @@ namespace peloton {
                        std::vector<KeyType> &keys,
                        std::vector<ValueType> &values,
                        PID &left, PID &right) {
-      assert(!Duplicate);
+      myassert(!Duplicate);
       //LOG_DEBUG("============================Entering construct consolidated Leaf node internal");
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
       //LOG_DEBUG("============================Leaving construct consolidated Leaf node internal");
@@ -960,7 +960,7 @@ namespace peloton {
                        std::vector<KeyType> &keys,
                        std::vector<std::vector<ValueType>> &values,
                        PID &left, PID &right) {
-      assert(Duplicate);
+      myassert(Duplicate);
       //LOG_INFO("CreateLeafNodeView allow Duplicate (Call ConstructConsolidatedLeafNodeInternal recursively) --");
       ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
     };
@@ -988,8 +988,8 @@ namespace peloton {
     ConstructConsolidatedLeafNodeInternal(
       const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values, PID &left,
       PID &right) {
-      assert(!Duplicate);
-      assert(node_chain->IfLeafNode());
+      myassert(!Duplicate);
+      myassert(node_chain->IfLeafNode());
       if(node_chain->GetType()==NLeaf) {
         // arrive at bottom
         const BWLeafNode<KeyType, ValueType> *node = static_cast<const BWLeafNode<KeyType, ValueType> *>(node_chain);
@@ -1001,7 +1001,7 @@ namespace peloton {
       }
 
       // still at delta chain
-      assert(node_chain->GetNext()!=NULL);
+      myassert(node_chain->GetNext()!=NULL);
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
         case NInsert:
@@ -1014,14 +1014,14 @@ namespace peloton {
           ConsolidateSplitNode(static_cast<const BWSplitNode<KeyType> *>(node_chain), keys, values, right);
           break;
         case NMerge:
-          assert(0);
+          myassert(0);
           break;
         case NRemove:
-          assert(0);
+          myassert(0);
           break;
         default:
           // fault
-          assert(0);
+          myassert(0);
       }
     }
 
@@ -1031,8 +1031,8 @@ namespace peloton {
     ConstructConsolidatedLeafNodeInternal(
       const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values, PID &left,
       PID &right) {
-      assert(Duplicate);
-      assert(node_chain->IfLeafNode());
+      myassert(Duplicate);
+      myassert(node_chain->IfLeafNode());
       if(node_chain->GetType() == NLeaf) {
         // arrive at bottom
         const BWLeafNode<KeyType, std::vector<ValueType>> *node = static_cast<const BWLeafNode<KeyType, std::vector<ValueType>> *>(node_chain);
@@ -1044,7 +1044,7 @@ namespace peloton {
       }
 
       // still at delta chain
-      assert(node_chain->GetNext() != NULL);
+      myassert(node_chain->GetNext() != NULL);
       ConstructConsolidatedLeafNodeInternal(node_chain->GetNext(), keys, values, left, right);
       switch(node_chain->GetType()) {
         case NInsert: {
@@ -1061,16 +1061,16 @@ namespace peloton {
 
         }
         case NMerge: {
-          assert(0);
+          myassert(0);
           break;
         }
         case NRemove: {
-          assert(0);
+          myassert(0);
           break;
         }
         default:
           // fault
-          assert(0);
+          myassert(0);
       }
     }
 
@@ -1079,7 +1079,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConstructConsolidatedInnerNodeInternal(
       const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<PID> &children, PID &left, PID &right) {
-      assert(node_chain->IfInnerNode());
+      myassert(node_chain->IfInnerNode());
       if(node_chain->GetType()==NInner) {
         // arrive at bottom
         const BWInnerNode<KeyType> *node = static_cast<const BWInnerNode<KeyType> *>(node_chain);
@@ -1091,7 +1091,7 @@ namespace peloton {
       }
 
       // still at delta chain
-      assert(node_chain->GetNext()!=NULL);
+      myassert(node_chain->GetNext()!=NULL);
       ConstructConsolidatedInnerNodeInternal(node_chain->GetNext(), keys, children, left, right);
       switch(node_chain->GetType()) {
         case NSplit:
@@ -1102,17 +1102,17 @@ namespace peloton {
           break;
         case NMerge:
           // not implemented
-          assert(0);
+          myassert(0);
           break;
         case NRemove:
-          assert(0);
+          myassert(0);
           break;
         case NMergeEntry:
-          assert(0);
+          myassert(0);
           break;
         default:
           // fault
-          assert(0);
+          myassert(0);
       }
     }
 
@@ -1123,13 +1123,13 @@ namespace peloton {
       const BWInsertNode<KeyType, ValueType> *node,
       std::vector<KeyType> &keys,
       std::vector<ValueType> &values) {
-      assert(!Duplicate);
-      assert(keys.size()==values.size());
+      myassert(!Duplicate);
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
       auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
       // check for non-existence
-      assert(position==keys.begin()||!key_equality_checker_(key, *(position-1)));
+      myassert(position==keys.begin()||!key_equality_checker_(key, *(position-1)));
       auto dist = std::distance(keys.begin(), position);
       keys.insert(position, key);
       values.insert(values.begin()+dist, value);
@@ -1143,8 +1143,8 @@ namespace peloton {
       const BWInsertNode<KeyType, ValueType> *node,
       std::vector<KeyType> &keys,
       std::vector<std::vector<ValueType>> &values) {
-      assert(Duplicate);
-      assert(keys.size()==values.size());
+      myassert(Duplicate);
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
       auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
@@ -1165,17 +1165,17 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConsolidateDeleteNode(
       const BWDeleteNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<ValueType> &values) {
-      assert(!Duplicate);
-      assert(keys.size()==values.size());
+      myassert(!Duplicate);
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       // check for both existence and uniqueness
-      assert(position!=keys.end()&&
+      myassert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
              (position+1==keys.end()||!key_equality_checker_(key, *(position+1)))&&
              (position==keys.begin()||!key_equality_checker_(key, *(position-1))));
       auto dist = std::distance(keys.begin(), position);
-      assert(value_equality_checker_(values[dist], node->GetValue()));
+      myassert(value_equality_checker_(values[dist], node->GetValue()));
       keys.erase(position);
       values.erase(values.begin()+dist);
     }
@@ -1185,13 +1185,13 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConsolidateDeleteNode(
       const BWDeleteNode<KeyType, ValueType> *node, std::vector<KeyType> &keys, std::vector<std::vector<ValueType>> &values) {
-      assert(Duplicate);
-      assert(keys.size()==values.size());
+      myassert(Duplicate);
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
       auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       // check for existence
-      assert(position!=keys.end()&&
+      myassert(position!=keys.end()&&
              key_equality_checker_(key, *position));
       auto dist = std::distance(keys.begin(), position);
       std::vector<ValueType> &value_vector = values[dist];
@@ -1215,13 +1215,13 @@ namespace peloton {
       std::vector<KeyType> &keys,
       std::vector<ValueType> &values,
       PID &right) {
-      assert(!Duplicate);
-      assert(node->IfLeafNode());
-      assert(keys.size()==values.size());
+      myassert(!Duplicate);
+      myassert(node->IfLeafNode());
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
       auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       // check for both existence and uniqueness
-      assert(position!=keys.end()&&
+      myassert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
              (position+1==keys.end()||!key_equality_checker_(key, *(position+1)))&&
              (position==keys.begin()||!key_equality_checker_(key, *(position-1))));
@@ -1229,7 +1229,7 @@ namespace peloton {
       keys.erase(position, keys.end());
       values.erase(values.begin()+dist, values.end());
       right = node->GetRightPID();
-      assert(!Duplicate);
+      myassert(!Duplicate);
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
@@ -1240,13 +1240,13 @@ namespace peloton {
       std::vector<KeyType> &keys,
       std::vector<std::vector<ValueType>> &values,
       PID &right) {
-      assert(Duplicate);
-      assert(node->IfLeafNode());
-      assert(keys.size()==values.size());
+      myassert(Duplicate);
+      myassert(node->IfLeafNode());
+      myassert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
       auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       // check for both existence and uniqueness
-      assert(position!=keys.end()&&
+      myassert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
              (position+1==keys.end()||!key_equality_checker_(key, *(position+1)))&&
              (position==keys.begin()||!key_equality_checker_(key, *(position-1))));
@@ -1264,12 +1264,12 @@ namespace peloton {
       std::vector<KeyType> &keys,
       std::vector<PID> &children,
       PID &right) {
-      assert(node->IfInnerNode());
-      assert(keys.size()+1==children.size());
+      myassert(node->IfInnerNode());
+      myassert(keys.size()+1==children.size());
       const KeyType &key = node->GetSplitKey();
       auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
       // check for both existence and uniqueness
-      assert(position!=keys.begin()&&
+      myassert(position!=keys.begin()&&
              position!=keys.end()&&
              key_equality_checker_(key, *position)&&
              (position+1==keys.end()||!key_equality_checker_(key, *(position+1)))&&
@@ -1288,15 +1288,15 @@ namespace peloton {
     void
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ConsolidateSplitEntryNode(const BWSplitEntryNode<KeyType> *node, std::vector<KeyType> &keys, std::vector<PID> &children) {
-      assert(node->IfInnerNode());
-      assert(keys.size()+1==children.size());
+      myassert(node->IfInnerNode());
+      myassert(keys.size()+1==children.size());
       const KeyType &low_key = node->GetLowKey();
       if(node->HasHighKey()) {
         const KeyType &high_key = node->GetHightKey();
         PID new_page = node->GetNextPID();
         auto position = std::lower_bound(keys.begin(), keys.end(), high_key, comparator_);
         // check for both existence and uniqueness
-        assert(position!=keys.end()&&
+        myassert(position!=keys.end()&&
                key_equality_checker_(high_key, *position)&&
                (position+1==keys.end()||!key_equality_checker_(high_key, *(position+1)))&&
                (position==keys.begin()||!key_equality_checker_(high_key, *(position-1))));
@@ -1305,7 +1305,7 @@ namespace peloton {
         children.insert(children.begin()+dist+1, new_page);
       }
       else {
-        assert(keys.empty()||comparator_(keys.back(), low_key));
+        myassert(keys.empty()||comparator_(keys.back(), low_key));
         PID new_page = node->GetNextPID();
         keys.push_back(low_key);
         children.push_back(new_page);

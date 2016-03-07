@@ -32,7 +32,12 @@
                             fprintf(stderr, __VA_ARGS__); \
                             fprintf(stderr, "\n"); \
                             fflush(stderr); } \
-        } while (0)
+        } while(0)
+
+#define myassert(e) \
+        do { if(!(e)) { dbg_msg("assertion failed"); } \
+              assert(e); \
+        } while(0)
 
 namespace peloton {
   namespace index {
@@ -240,12 +245,12 @@ namespace peloton {
       }
 
       const PID &GetLeft() const {
-        assert("BWDelta::GetLeft()"&&0);
+        myassert("BWDelta::GetLeft()"&&0);
         return next_->GetLeft();
       }
 
       const PID &GetRight() const {
-        assert("BWDelta::GetRight()"&&0);
+        myassert("BWDelta::GetRight()"&&0);
         return next_->GetRight();
       }
 
@@ -564,7 +569,7 @@ namespace peloton {
         for(PID i = 0; i<num_slots; ++i) {
           free(first_level_table_[i]);
         }
-        assert(counter==counter_);
+        myassert(counter==counter_);
       }
 
       // get the address corresponding to the pid
@@ -662,7 +667,7 @@ namespace peloton {
       GarbageNode(const BWNode *g, GarbageNode *next): next_(next), garbage_(g) { }
       ~GarbageNode() {
         const BWNode *head = garbage_;
-        assert(head!=nullptr);
+        myassert(head!=nullptr);
         while(head!=nullptr) {
           const BWNode *next = head->GetNext();
           delete head;
@@ -686,7 +691,7 @@ namespace peloton {
        */
     public:
       PIDNode(PID pid, PIDNode *next): next_(next), pid_(pid) {}
-      ~PIDNode() { /*(PIDTable::get_table()).free_PID(pid_);*/ assert(0); }
+      ~PIDNode() { /*(PIDTable::get_table()).free_PID(pid_);*/ myassert(0); }
       // next PIDNode in the list
       PIDNode *next_;
       inline void SetNext(PIDNode *next) { next_ = next; }
@@ -705,7 +710,7 @@ namespace peloton {
       Epoch(EpochTime time, Epoch *next): next_(next), registered_number_(0), epoch_time_(time) {}
 
       ~Epoch() {
-        assert(SafeToReclaim());
+        myassert(SafeToReclaim());
         // delete all garbage nodes, which will
         // delete the actual garbage in their destructor
         const GarbageNode *now = head_;
@@ -821,7 +826,7 @@ namespace peloton {
         // force delete every garbage now
         Epoch *next;
         while(head_!=nullptr) {
-          assert(head_->SafeToReclaim());
+          myassert(head_->SafeToReclaim());
           next = head_->next_;
           delete head_;
           head_ = next;
@@ -859,7 +864,7 @@ namespace peloton {
           }
         }
         // should not happen
-        assert(0);
+        myassert(0);
       }
     };
 
@@ -1007,7 +1012,7 @@ namespace peloton {
           std::vector<PID> children;
           PID left, right;
           CreateInnerNodeView(node_ptr, keys, children, left, right);
-          assert(children.size() != 0);
+          myassert(children.size() != 0);
           next_pid = children[0];
           node_ptr = pid_table_.get(next_pid);
         }
