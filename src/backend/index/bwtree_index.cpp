@@ -25,12 +25,12 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     : Index(metadata),
       container_duplicate(metadata),
       container_unique(metadata) {
-  LOG_DEBUG("BWTreeIndex::BWTreeIndex()");
+  dbg_msg("BWTreeIndex::BWTreeIndex() unique=%s", HasUniqueKeys()?"true":"false");
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex() {
-  LOG_DEBUG("BWTreeIndex::~BWTreeIndex()");
+  dbg_msg("BWTreeIndex::~BWTreeIndex() unique=%s", HasUniqueKeys()?"true":"false");
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>

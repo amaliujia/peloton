@@ -1155,8 +1155,8 @@ namespace peloton {
       }
       else {
         std::vector<ValueType> &value_vector = values[dist-1];
-        auto position = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
-        value_vector.insert(position, value);
+        auto value_position = std::upper_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
+        value_vector.insert(value_position, value);
       }
     }
 
