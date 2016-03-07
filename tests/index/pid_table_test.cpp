@@ -6,7 +6,6 @@
 
 #include "backend/common/logger.h"
 #include "backend/index/index_factory.h"
-#include "backend/index/dbg.h"
 #include "backend/storage/tuple.h"
 #include "backend/index/bwtree.h"
 
