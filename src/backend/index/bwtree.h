@@ -56,17 +56,17 @@ namespace peloton {
       static const BWNode *GenerateRandomNodeChain(int length);
       static const BWNode *GenerateRandomNode(NodeType type, const BWNode *next);
 
-      virtual NodeType GetType() const { assert(0); return NInner; };//= 0;
+      virtual NodeType GetType() const = 0;
 
-      virtual const BWNode *GetNext() const { assert(0); return nullptr; };//= 0;
+      virtual const BWNode *GetNext() const { return nullptr; };//= 0;
 
       inline const VersionNumber &GetVersionNumber() const { return version_number_; }
 
-      virtual const PID &GetLeft() const { assert(0); return p1; };//= 0;
+      virtual const PID &GetLeft() const = 0;
 
-      virtual const PID &GetRight() const { assert(0); return p1; };//= 0;
+      virtual const PID &GetRight() const = 0;
 
-      virtual void Print(PIDTable & , int indent) const = 0;
+      virtual void Print(PIDTable &, int indent) const = 0;
 
       inline bool IfLeafNode() const {
         return if_leaf_;
@@ -99,7 +99,6 @@ namespace peloton {
       const size_type chain_length_;
       const bool if_leaf_;
       const VersionNumber version_number_;
-      PID p1(0);
       BWNode(const size_type &slot_usage, const size_type &chain_length, bool if_leaf,
              const VersionNumber &version_number):
               slot_usage_(slot_usage), chain_length_(chain_length), if_leaf_(if_leaf),
@@ -642,6 +641,7 @@ namespace peloton {
           delete head;
           head = next;
         }
+        next_ = nullptr;
       }
       // next garbage node in this garbage list
       GarbageNode *next_;
@@ -697,6 +697,7 @@ namespace peloton {
           delete pid_now;
           pid_now = pid_next;
         }
+        next_ = nullptr;
       }
 
       // try to atomically submit a garbage node, return the submission result
