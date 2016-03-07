@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-//#define TT
+#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
@@ -251,7 +251,7 @@ namespace peloton {
 #ifdef TT
     TEST(IndexTests, SingleThreadUniqueKeyTest) {
 #else
-    void main2() {
+    void main3() {
 #endif
       auto pool = TestingHarness::GetInstance().GetTestingPool();
       // INDEX
@@ -319,7 +319,7 @@ namespace peloton {
 #ifdef TT
     TEST(IndexTests, MultipleThreadTest) {
 #else
-    void main3() {
+    void main4() {
 #endif
       auto pool = TestingHarness::GetInstance().GetTestingPool();
       // INDEX
