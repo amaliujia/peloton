@@ -780,7 +780,7 @@ namespace peloton {
               continue;
             }
           }
-          auto dist = std::distance(keys_view.cbegin(), position);
+          auto dist = std::distance(keys_view.begin(), position);
           PID next_pid = children_view[dist];
           path.push_back(next_pid);
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
