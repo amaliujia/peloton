@@ -876,6 +876,8 @@ namespace peloton {
       void SubmitGarbageNode(const BWNode *);
 
       ~BWTree() {
+        // wait for other garbage collection to finish
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         EpochTime time = GarbageCollector::global_gc_.Register();
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
@@ -883,8 +885,6 @@ namespace peloton {
         //SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
-        // wait for garbage collection to finish
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       }
 
       void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {
