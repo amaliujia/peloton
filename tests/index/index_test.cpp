@@ -162,8 +162,9 @@ void InsertTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
     index->InsertEntry(key2.get(), item1);
     index->InsertEntry(key3.get(), item1);
     index->InsertEntry(key4.get(), item1);
-  }
 
+  }
+    LOG_DEBUG("InsertTest() done.");
 }
 
 // DELETE HELPER FUNCTION
@@ -216,7 +217,7 @@ void DeleteTest(index::Index *index, VarlenPool *pool, size_t scale_factor){
     index->DeleteEntry(key3.get(), item1);
     index->DeleteEntry(key4.get(), item1);
   }
-
+    LOG_DEBUG("DeleteTest() done.");
 }
 
 TEST(IndexTests, DeleteTest) {
