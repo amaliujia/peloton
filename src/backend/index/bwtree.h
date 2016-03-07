@@ -879,7 +879,7 @@ namespace peloton {
         EpochTime time = GarbageCollector::global_gc_.Register();
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
-        const BWNode *root_node = pid_table_.get(root_);
+        //const BWNode *root_node = pid_table_.get(root_);
         //SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
