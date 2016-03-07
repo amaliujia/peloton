@@ -71,7 +71,7 @@ namespace peloton {
       tuple_schema = new catalog::Schema(columns);
 
       // Build index metadata
-      const bool unique_keys = false;
+      const bool unique_keys = true;
 
       index::IndexMetadata *index_metadata = new index::IndexMetadata(
               "test_index", 125, index_type, INDEX_CONSTRAINT_TYPE_DEFAULT,

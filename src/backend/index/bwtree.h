@@ -557,6 +557,7 @@ namespace peloton {
 
       // free up a new PID
       inline void free_PID(PID pid) {
+        set(pid, nullptr);
         free_PIDs.push(pid);
       }
 
@@ -883,6 +884,7 @@ namespace peloton {
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
         const BWNode *root_node = pid_table_.get(root_);
+        pid_table_.free_PID(root_);
         SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);

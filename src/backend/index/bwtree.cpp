@@ -15,9 +15,6 @@
 #include "backend/index/index_key.h"
 #include "backend/storage/tuple.h"
 
-//#include "backend/index/pid_table.h"
-#include "bwtree.h"
-
 #include <ctime>
 #include <cstdlib>
 #include <limits>
@@ -80,11 +77,14 @@ namespace peloton {
         std::vector<PID> children_view;
         PID left_view, right_view;
         CreateInnerNodeView(node, keys_view, children_view, left_view, right_view);
-        for(auto child = children_view.cbegin(); child!=children_view.end(); ++child)
-          SubmitGarbageNode(pid_table_.get(*(child)));
+        for(auto child = children_view.cbegin(); child!=children_view.end(); ++child) {
+          const BWNode *child_node = pid_table_.get(*(child));
+          pid_table_.free_PID(*(child));
+          SubmitGarbageNode(child_node);
+        }
       }
       GarbageCollector::global_gc_.SubmitGarbage(node);
-    };
+    }
 
     /*
      * insert a split entry node at the parent of 'top' to finish the second step of split
@@ -831,7 +831,6 @@ namespace peloton {
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        //LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 
@@ -868,16 +867,13 @@ namespace peloton {
       PID &right) {
       assert(Duplicate);
       assert(node_chain->IfLeafNode());
-      //LOG_DEBUG("Current address:%p", node_chain);
       if(node_chain->GetType() == NLeaf) {
-        //LOG_DEBUG("Current Node is Leaf");
         // arrive at bottom
         const BWLeafNode<KeyType, std::vector<ValueType>> *node = static_cast<const BWLeafNode<KeyType, std::vector<ValueType>> *>(node_chain);
         keys = node->GetKeys();
         values = node->GetValues();
         left = node->GetLeft();
         right = node->GetRight();
-        //LOG_INFO("\t\t In leaf, key size %lu, value size %lu, left %lu, right %lu", keys.size(), values.size(), left, right);
         return;
       }
 
