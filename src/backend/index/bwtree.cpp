@@ -1093,7 +1093,7 @@ namespace peloton {
         values.insert(values.begin()+dist, {value});
       }
       else {
-        values[dist].push_back(value);
+        values[dist-1].push_back(value);
       }
     }
 
