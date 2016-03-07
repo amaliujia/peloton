@@ -1031,12 +1031,11 @@ namespace peloton {
              key_equality_checker_(key, *position));
       auto dist = std::distance(keys.begin(), position);
       std::vector<ValueType> &value_vector = values[dist];
-      //TODO
 
-
-      const ValueEqualityChecker &eqchecker = value_equality_checker_;
-      auto item = std::find_if(value_vector.begin(), value_vector.end(),
-                               [&eqchecker, &value](ValueType v) { return eqchecker(value, v); });
+      auto item = value_vector.begin();
+      for(; item!=value_vector.end(); ++item)
+        if(value_equality_checker_(*item, value))
+          break;
       assert(item!=value_vector.end());
       value_vector.erase(item);
       if(value_vector.size()==0) {

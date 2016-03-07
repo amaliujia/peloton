@@ -878,11 +878,12 @@ namespace peloton {
       ~BWTree() {
         // wait for other garbage collection to finish
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        PrintSelf(root_, pid_table_.get(root_), 0);
         EpochTime time = GarbageCollector::global_gc_.Register();
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
-        //const BWNode *root_node = pid_table_.get(root_);
-        //SubmitGarbageNode(root_node);
+        const BWNode *root_node = pid_table_.get(root_);
+        SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
       }
