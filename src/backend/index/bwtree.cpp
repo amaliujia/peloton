@@ -72,6 +72,8 @@ namespace peloton {
     void
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     SubmitGarbageNode(const BWNode *node) {
+      if(node==nullptr)
+        return ;
       if(node->IfInnerNode()) {
         std::vector<KeyType> keys_view;
         std::vector<PID> children_view;
@@ -412,7 +414,7 @@ namespace peloton {
         node_ptr = (static_cast<const BWDeltaNode *>(node_ptr))->GetNext();
       } while(true);
     }
-    
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
@@ -651,8 +653,10 @@ namespace peloton {
             return true;
           }
           else {
-            assert(Duplicate||value_vector_size==0);
-            if(!DeltaInsert(current, node_ptr, key, value, !Duplicate||value_vector_size==0)) {
+            //assert(Duplicate||value_vector_size==0);
+            if(!Duplicate&&value_vector_size>0)
+              return false;
+            if(!DeltaInsert(current, node_ptr, key, value, value_vector_size==0)) {
               continue;
             }
             return true;
