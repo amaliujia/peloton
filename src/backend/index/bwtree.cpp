@@ -412,8 +412,7 @@ namespace peloton {
         node_ptr = (static_cast<const BWDeltaNode *>(node_ptr))->GetNext();
       } while(true);
     }
-
-
+    
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
@@ -444,7 +443,7 @@ namespace peloton {
         PID left, right;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
         auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
-        if(position==keys_view.end())
+        if(position==keys_view.end()||comparator_(key, *position))
           return false;
         value_vector_size = 1;
         auto dist = std::distance(keys_view.begin(), position);
