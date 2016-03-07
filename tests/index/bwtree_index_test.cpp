@@ -202,7 +202,7 @@ namespace peloton {
       std::vector<bool> result;
       result.reserve(size);
 
-      for(int iter=0; iter<1; ++iter) {
+      for(int iter=0; iter<5; ++iter) {
         // initialize variables
         GenerateKeyValues(pool, pairs, size, 1, 1, true);
         for(size_t i = 0; i<size; ++i) {

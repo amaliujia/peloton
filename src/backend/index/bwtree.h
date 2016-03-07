@@ -58,7 +58,7 @@ namespace peloton {
 
       virtual NodeType GetType() const = 0;
 
-      virtual const BWNode *GetNext() const { return nullptr; };//= 0;
+      virtual const BWNode *GetNext() const = 0;
 
       inline const VersionNumber &GetVersionNumber() const { return version_number_; }
 
@@ -883,6 +883,8 @@ namespace peloton {
         SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
+        // wait for garbage collection to finish
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       }
 
       void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {
