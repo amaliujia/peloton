@@ -722,7 +722,7 @@ namespace peloton {
         delete new_node;
         return false;
       }
-      //GarbageCollector::global_gc_.SubmitGarbage(node_ptr);
+      GarbageCollector::global_gc_.SubmitGarbage(node_ptr);
       return true;
     }
 
