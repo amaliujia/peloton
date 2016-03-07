@@ -876,11 +876,13 @@ namespace peloton {
       void SubmitGarbageNode(const BWNode *);
 
       ~BWTree() {
+        EpochTime time = GarbageCollector::global_gc_.Register();
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
         const BWNode *root_node = pid_table_.get(root_);
         SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
+        GarbageCollector::global_gc_.Deregister(time);
       }
 
       void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {
