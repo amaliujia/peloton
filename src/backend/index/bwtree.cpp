@@ -446,6 +446,7 @@ namespace peloton {
             // key lies in between two nodes cannot tell which one to go
             dbg_msg("risky");
           else {
+            dbg_msg("real catch");
             right_track = false;
           }
           return false;
@@ -481,6 +482,7 @@ namespace peloton {
             // key lies in between two nodes cannot tell which one to go
             dbg_msg("risky");
           else {
+            dbg_msg("real catch");
             right_track = false;
           }
           return false;
@@ -688,6 +690,7 @@ namespace peloton {
               // key lies in between two nodes cannot tell which one to go
               dbg_msg("risky");
             else {
+              dbg_msg("real catch");
               if(path.size() == 1) {
                 version_number.pop_back();
                 version_number.push_back(node_ptr->GetVersionNumber());
@@ -769,6 +772,7 @@ namespace peloton {
               // key lies in between two nodes cannot tell which one to go
               dbg_msg("risky");
             else {
+              dbg_msg("real catch");
               if(path.size() == 1) {
                 version_number.pop_back();
                 version_number.push_back(node_ptr->GetVersionNumber());

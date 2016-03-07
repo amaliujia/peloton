@@ -6,7 +6,7 @@
 
 #define P2DEBUG 1
 #define dbg_msg(...) \
-        do { if (P2DEBUG) { fprintf(stderr, "line %d: ", __LINE__); \
+        do { if (P2DEBUG) { fprintf(stderr, "%s line %d: ", __FILE__, __LINE__); \
                             fprintf(stderr, __VA_ARGS__); \
                             fprintf(stderr, "\n"); \
                             fflush(stderr); } \
