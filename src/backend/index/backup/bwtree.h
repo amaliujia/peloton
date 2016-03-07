@@ -17,6 +17,9 @@
 #include "backend/common/types.h"
 #include "backend/index/index.h"
 #include "backend/common/value.h"
+#include "backend/index/item_pointer_comparator.h"
+#include "backend/index/item_pointer_equality_checker.h"
+#include "backend/index/dbg.h"
 
 #include <mutex>
 #include <boost/lockfree/stack.hpp>
@@ -26,37 +29,8 @@
 #include <set>
 #include <chrono>
 
-#define P2DEBUG 1
-#define dbg_msg(...) \
-        do { if (P2DEBUG) { fprintf(stderr, "%s line %d: ", __FILE__, __LINE__); \
-                            fprintf(stderr, __VA_ARGS__); \
-                            fprintf(stderr, "\n"); \
-                            fflush(stderr); } \
-        } while (0)
-
 namespace peloton {
   namespace index {
-
-    struct ItemPointerComparator {
-      inline bool operator()(const ItemPointer &lhs, const ItemPointer &rhs) {
-        return (lhs.block<rhs.block)||
-          ((lhs.block==rhs.block)&&(lhs.offset<rhs.offset));
-      }
-    };
-
-
-
-
-
-    struct ItemPointerEqualityChecker {
-      inline bool operator()(const ItemPointer &lhs, const ItemPointer &rhs) const {
-        return lhs.block==rhs.block&&lhs.offset==rhs.offset;
-      }
-    };
-
-
-
-
     typedef std::uint_fast32_t PID;
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;

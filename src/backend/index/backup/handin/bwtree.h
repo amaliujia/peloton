@@ -964,12 +964,12 @@ namespace peloton {
         std::vector<PID> path = {root_};
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
         bool result = InsertEntryUtil(key, value, path, version_number);
+//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert print begin  ++++++++++++++++++++++++++++++++++++++");
+//        LOG_DEBUG(" ");
+//        PrintSelf(root_, pid_table_.get(root_), 0);
+//        LOG_DEBUG(" ");
+//        LOG_DEBUG("------------------------------------------------ insert print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
-        //LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ print begin  ++++++++++++++++++++++++++++++++++++++");
-        //LOG_DEBUG(" ");
-        //PrintSelf(root_, pid_table_.get(root_), 0);
-        //LOG_DEBUG(" ");
-        //LOG_DEBUG("------------------------------------------------ print end  --------------------------------------");
 
         return result;
       }
@@ -979,6 +979,11 @@ namespace peloton {
         std::vector<PID> path = {root_};
         std::vector<VersionNumber> version_number = {pid_table_.get(root_)->GetVersionNumber()};
         bool result = DeleteEntryUtil(key, value, path, version_number);
+//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete print begin  ++++++++++++++++++++++++++++++++++++++");
+//        LOG_DEBUG(" ");
+//        PrintSelf(root_, pid_table_.get(root_), 0);
+//        LOG_DEBUG(" ");
+//        LOG_DEBUG("------------------------------------------------ delete print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
         return result;
       }
