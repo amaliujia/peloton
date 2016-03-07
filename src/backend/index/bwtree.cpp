@@ -616,12 +616,10 @@ namespace peloton {
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value, std::vector<PID> &path, std::vector<VersionNumber> &version_number) {
-      LOG_INFO("DeleteEntryUtil --------------------");
       while(true) {
         assert(path.size() == version_number.size());
         const PID &current = path.back();
         const BWNode *node_ptr = pid_table_.get(current);
-        LOG_INFO("DeleteEntryUtil -- using pid %lu, addr %p", current, node_ptr);
         if(!CheckStatus(node_ptr, key, path, version_number))
           continue;
 
@@ -644,17 +642,13 @@ namespace peloton {
           version_number.push_back(pid_table_.get(next_pid)->GetVersionNumber());
         }
         else {
-          LOG_DEBUG("Find Leaf");
           assert(node_ptr->IfLeafNode());
           if(!ExistKey(node_ptr, key)) {
-            LOG_DEBUG("NOT EXIST KEY");
             return false;
           }
-          LOG_DEBUG("EXIST KEY");
           bool exist_value;
           bool result = DeltaDelete(current, node_ptr, key, value, exist_value);
           if(result) {
-            LOG_DEBUG("Install Delta Delete succeed");
             return true;
           }
           if(!exist_value) {
@@ -1180,7 +1174,7 @@ namespace peloton {
       for (size_t i = 0; i < indent; i++) {
         s += "\t";
       }
-      LOG_INFO("%sInnerNode: size;: %lu", s.c_str(), keys_.size());
+      LOG_DEBUG("%sInnerNode: size;: %lu", s.c_str(), keys_.size());
     }
 
 

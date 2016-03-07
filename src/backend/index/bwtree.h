@@ -536,7 +536,6 @@ namespace peloton {
       ~PIDTable() {
         PID counter = counter_;
         PID num_slots = ((counter&first_level_mask)>>second_level_bits)+1+1;
-        LOG_DEBUG("counter=%lu, table[%lu][%lu], num_slots=%lu", counter, (counter&first_level_mask)>>second_level_bits, counter&second_level_mask, num_slots);
         for(PID i = 0; i<num_slots; ++i) {
           free(first_level_table_[i]);
         }
@@ -757,6 +756,7 @@ namespace peloton {
       pthread_t clean_thread_;
 
       GarbageCollector(): head_(nullptr), timer_(0), last_stopped_prev_(nullptr) {
+        LOG_DEBUG("GarbageCollector::GarbageCollector()");
         // make sure there is at least one epoch
         head_ = new Epoch(timer_++, head_);
         // start epoch allocation thread
@@ -772,6 +772,7 @@ namespace peloton {
         LOG_DEBUG("GarbageCollector::Stop()");
         stopped_ = true;
         pthread_join(clean_thread_, NULL);
+        LOG_DEBUG("finish GarbageCollector::Stop()");
       }
 
       // reclaim all the epochs in the list starts at "head"
@@ -873,9 +874,11 @@ namespace peloton {
       void SubmitGarbageNode(const BWNode *);
 
       virtual ~BWTree() {
+        LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
         const BWNode *root_node = pid_table_.get(root_);
         SubmitGarbageNode(root_node);
+        LOG_DEBUG("finish BWTree::~BWTree()");
       }
 
       void PrintSelf(__attribute__((unused)) PID pid, const BWNode *node, int indent) {

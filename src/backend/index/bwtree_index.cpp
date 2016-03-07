@@ -24,10 +24,13 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::BWTreeIndex(
     IndexMetadata *metadata)
     : Index(metadata),
       container_duplicate(metadata),
-      container_unique(metadata) { }
+      container_unique(metadata) {
+  LOG_DEBUG("BWTreeIndex::BWTreeIndex()");
+}
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
 BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::~BWTreeIndex() {
+  LOG_DEBUG("BWTreeIndex::~BWTreeIndex()");
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker>
