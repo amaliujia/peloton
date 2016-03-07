@@ -247,5 +247,69 @@ namespace peloton {
 
       delete tuple_schema;
     }
+#ifdef TT
+    TEST(IndexTests, MultipleThreadTest) {
+#else
+    void main3() {
+#endif
+      auto pool = TestingHarness::GetInstance().GetTestingPool();
+      // INDEX
+      std::unique_ptr<index::Index> index(BuildIndex());
+
+      constexpr size_t size(2000);
+      constexpr size_t thread_number(4);
+      constexpr size_t size_each(size/thread_number);
+
+      std::vector<std::pair<std::unique_ptr<storage::Tuple>, ItemPointer>> pairs;
+      std::atomic<std::uint_least8_t> no_gen(0);
+      std::vector<bool> result;
+      result.reserve(size);
+
+      for(int iter=0; iter<1; ++iter) {
+        // initialize variables
+        GenerateKeyValues(pool, pairs, size, 1, 1, true);
+        for(size_t i = 0; i<size; ++i) {
+          result.push_back(false);
+        }
+        // try insertion
+        LaunchParallelTest(thread_number, InsertFunction, &no_gen, index.get(), size_each, &pairs, &result);
+
+        // check insertion result
+        std::vector<ItemPointer> locations;
+        for(size_t i = 0; i<size; ++i) {
+          EXPECT_TRUE(result[i]);
+          locations = index->ScanKey(pairs[i].first.get());
+          EXPECT_EQ(locations.size(), 1);
+        }
+
+        // check insertion result
+        locations = index->ScanAllKeys();
+        EXPECT_EQ(locations.size(), size);
+
+        // try deletion
+        no_gen = 0;
+        LaunchParallelTest(thread_number, DeleteFunction, &no_gen, index.get(), size_each, &pairs, &result);
+
+        // check deletion result
+        for(size_t i = 0; i<size; ++i) {
+          EXPECT_TRUE(result[i]);
+          locations = index->ScanKey(pairs[i].first.get());
+          EXPECT_EQ(locations.size(), 0);
+        }
+
+        // check deletion result
+        locations = index->ScanAllKeys();
+        EXPECT_EQ(locations.size(), 0);
+
+        // clear up
+        pairs.clear();
+        no_gen = 0;
+        result.clear();
+        dbg_msg("iteration %d done.", iter);
+      }
+
+      delete tuple_schema;
+    }
+
   }  // End test namespace
 }  // End peloton namespace
