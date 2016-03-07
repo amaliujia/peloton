@@ -413,6 +413,45 @@ namespace peloton {
       } while(true);
     }
 
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value, size_t &value_vector_size) {
+      // assume node_ptr is the header of leaf node
+      assert(node_ptr->IfLeafNode());
+      value_vector_size = 0;
+      if(Duplicate) {
+        std::vector<KeyType> keys_view;
+        std::vector<std::vector<ValueType>> values_view;
+        PID left, right;
+        CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        if(position==keys_view.end())
+          return false;
+        auto dist = std::distance(keys_view.begin(), position);
+        const std::vector<ValueType> &value_vector = values_view[dist];
+        value_vector_size = value_vector.size();
+        assert(value_vector_size>0);
+        for(auto iter=value_vector.cbegin(); iter!=value_vector.cend(); ++iter)
+          if(value_equality_checker_(*iter, value))
+            return true;
+        return false;
+      }
+      else {
+        std::vector<KeyType> keys_view;
+        std::vector<ValueType> values_view;
+        PID left, right;
+        CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        if(position==keys_view.end())
+          return false;
+        value_vector_size = 1;
+        auto dist = std::distance(keys_view.begin(), position);
+        return value_equality_checker_(values_view[dist], value);
+      }
+    }
+
     /*
      * try to insert an insertion delta node on top
      */
@@ -501,6 +540,22 @@ namespace peloton {
       }
     }
 
+    /*
+     * try to insert a delete delta node on top of node_ptr
+     */
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value, bool need_shrink) {
+      const BWNode *delete_node_ptr =
+              new BWDeleteNode<KeyType, ValueType>(node_ptr, node_ptr->GetSlotUsage() - (need_shrink ? 1 : 0), key, value);
+      if(!pid_table_.bool_compare_and_swap(cur, node_ptr, delete_node_ptr)) {
+        delete delete_node_ptr;
+        return false;
+      }
+      return true;
+    }
+
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     bool
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
@@ -586,26 +641,21 @@ namespace peloton {
         }
         else {
           assert(node_ptr->IfLeafNode());
-          if(ExistKey(node_ptr, key)) {
+          size_t value_vector_size;
+          if(ExistKeyValue(node_ptr, key, value, value_vector_size)) {
             if(!Duplicate) {
               return false;
-//              LOG_INFO("Key Exist && No Duplicate, return false");
             }
-//            LOG_INFO("Key Exist && Allow Duplicate, Insert DeltaInsert");
             if(!DeltaInsert(current, node_ptr, key, value, false)) {
-//              LOG_INFO("Insert DeltaInsert failed, retry");
               continue;
             }
-//            LOG_INFO("Insert DeltaInsert succeed");
             return true;
           }
           else {
-//            LOG_INFO("Key NOT Exist, Insert DeltaInsert");
-            if(!DeltaInsert(current, node_ptr, key, value, true)) {
-//              LOG_INFO("Insert DeltaInsert failed, retry");
+            assert(Duplicate||value_vector_size==0);
+            if(!DeltaInsert(current, node_ptr, key, value, !Duplicate||value_vector_size==0)) {
               continue;
             }
-//            LOG_INFO("Insert DeltaInsert succeed");
             return true;
           }
         }
@@ -643,16 +693,13 @@ namespace peloton {
         }
         else {
           assert(node_ptr->IfLeafNode());
-          if(!ExistKey(node_ptr, key)) {
+          size_t value_vector_size;
+          if(!ExistKeyValue(node_ptr, key, value, value_vector_size)) {
             return false;
           }
-          bool exist_value;
-          bool result = DeltaDelete(current, node_ptr, key, value, exist_value);
+          bool result = DeltaDelete(current, node_ptr, key, value, value_vector_size==1);
           if(result) {
             return true;
-          }
-          if(!exist_value) {
-            return false;
           }
           continue;
         }
@@ -675,7 +722,7 @@ namespace peloton {
         delete new_node;
         return false;
       }
-      GarbageCollector::global_gc_.SubmitGarbage(node_ptr);
+      //GarbageCollector::global_gc_.SubmitGarbage(node_ptr);
       return true;
     }
 

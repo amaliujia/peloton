@@ -880,7 +880,7 @@ namespace peloton {
         LOG_DEBUG("BWTree::~BWTree()");
         //garbage collect self
         const BWNode *root_node = pid_table_.get(root_);
-        SubmitGarbageNode(root_node);
+        //SubmitGarbageNode(root_node);
         LOG_DEBUG("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
         // wait for garbage collection to finish
@@ -1019,6 +1019,8 @@ namespace peloton {
 
       bool ExistKey(const BWNode *node_ptr, const KeyType &key);
 
+      bool ExistKeyValue(const BWNode *node_ptr, const KeyType &key, const ValueType &value, size_t &value_vector_size);
+
       void CreateLeafNodeView(const BWNode *node_chain, std::vector<KeyType> &keys, std::vector<ValueType> &values,
                               PID &left, PID &right);
 
@@ -1077,6 +1079,9 @@ namespace peloton {
 
       bool DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value,
                        bool &exist_value);
+
+      bool DeltaDelete(const PID &cur, const BWNode *node_ptr, const KeyType &key, const ValueType &value,
+                       bool need_shrink);
     };
   }  // End index namespace
 }  // End peloton namespace
