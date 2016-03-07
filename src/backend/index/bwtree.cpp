@@ -494,12 +494,14 @@ namespace peloton {
           CreateLeafNodeView(pid_table_.get(right),
                               right_sibling_keys_view, right_sibling_values_view,
                               right_sibling_left_view, right_sibling_right_view);
-          if(right_sibling_keys_view.size()==0)
+          if(right_sibling_keys_view.size()==0) {
             // key size = 0, cannot tell which one to go
-            dbg_msg("risky");
-          else if(comparator_(key, right_sibling_keys_view[0]))
+            //dbg_msg("risky");
+          }
+          else if(comparator_(key, right_sibling_keys_view[0])) {
             // key lies in between two nodes cannot tell which one to go
-            dbg_msg("risky");
+            //dbg_msg("risky");
+          }
           else {
             dbg_msg("real catch");
             right_track = false;
@@ -528,12 +530,14 @@ namespace peloton {
           CreateLeafNodeView(pid_table_.get(right),
                              right_sibling_keys_view, right_sibling_values_view,
                              right_sibling_left_view, right_sibling_right_view);
-          if(right_sibling_keys_view.size()==0)
+          if(right_sibling_keys_view.size()==0) {
             // key size = 0, cannot tell which one to go
-            dbg_msg("risky");
-          else if(comparator_(key, right_sibling_keys_view[0]))
+            //dbg_msg("risky");
+          }
+          else if(comparator_(key, right_sibling_keys_view[0])) {
             // key lies in between two nodes cannot tell which one to go
-            dbg_msg("risky");
+            //dbg_msg("risky");
+          }
           else {
             dbg_msg("real catch");
             right_track = false;
@@ -736,12 +740,14 @@ namespace peloton {
             CreateInnerNodeView(pid_table_.get(right_view),
                                 right_sibling_keys_view, right_sibling_children_view,
                                 right_sibling_left_view, right_sibling_right_view);
-            if(right_sibling_keys_view.size()==0)
+            if(right_sibling_keys_view.size()==0) {
               // key size = 0, cannot tell which one to go
-              dbg_msg("risky");
-            else if(comparator_(key, right_sibling_keys_view[0]))
+              //dbg_msg("risky");
+            }
+            else if(comparator_(key, right_sibling_keys_view[0])) {
               // key lies in between two nodes cannot tell which one to go
-              dbg_msg("risky");
+              //dbg_msg("risky");
+            }
             else {
               dbg_msg("real catch");
               if(path.size() == 1) {
@@ -818,12 +824,14 @@ namespace peloton {
             CreateInnerNodeView(pid_table_.get(right_view),
                                 right_sibling_keys_view, right_sibling_children_view,
                                 right_sibling_left_view, right_sibling_right_view);
-            if(right_sibling_keys_view.size()==0)
+            if(right_sibling_keys_view.size()==0) {
               // key size = 0, cannot tell which one to go
-              dbg_msg("risky");
-            else if(comparator_(key, right_sibling_keys_view[0]))
+              //dbg_msg("risky");
+            }
+            else if(comparator_(key, right_sibling_keys_view[0])) {
               // key lies in between two nodes cannot tell which one to go
-              dbg_msg("risky");
+              //dbg_msg("risky");
+            }
             else {
               dbg_msg("real catch");
               if(path.size() == 1) {
