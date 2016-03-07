@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-#define TT
+//#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
@@ -286,6 +286,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), size);
 
         // check unique constraint
+        no_gen = 0;
         LaunchParallelTest(1, InsertFunction, &no_gen, index.get(), size, &pairs, &result);
         for(size_t i = 0; i<size; ++i) {
           EXPECT_FALSE(result[i]);
