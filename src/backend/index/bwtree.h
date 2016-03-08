@@ -578,6 +578,10 @@ namespace peloton {
         return to_;
       }
 
+      inline const bool HasToHighKey() const {
+        return has_to_high_key_;
+      }
+
       inline const KeyType &GetToLowKey() const {
         return to_low_key_;
       }

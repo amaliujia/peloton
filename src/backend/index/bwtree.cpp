@@ -1075,7 +1075,7 @@ namespace peloton {
       myassert(node->IfInnerNode());
       myassert(keys->size()+1==children->size());
       const KeyType &to_low_key = node->GetToLowKey();
-      if(node->HasHighKey()) {
+      if(node->HasToHighKey()) {
         const KeyType &to_high_key = node->GetToHighKey();
         const PID &to = node->GetTo();
         auto position = std::lower_bound(keys->begin(), keys->end(), to_high_key, comparator_);
