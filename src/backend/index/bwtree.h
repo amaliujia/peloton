@@ -88,8 +88,7 @@ namespace peloton {
     public:
       virtual NodeType GetType() const = 0;
       virtual const BWBaseNode *GetNext() const = 0;
-      virtual void Print(PIDTable &, int indent) const = 0;
-      virtual ~BaseNode() { }
+      virtual ~BWBaseNode() { }
     };
 
     template<typename KeyType, typename KeyComparator>
@@ -102,11 +101,11 @@ namespace peloton {
 
       virtual const BWNode<KeyType, KeyComparator> *GetNext() const = 0;
 
-      virtual const PID &GetLeft() const = delete;
+      //virtual const PID &GetLeft() const = delete;
 
-      virtual const PID &GetRight() const = delete;
+      //virtual const PID &GetRight() const = delete;
 
-      virtual void Print(PIDTable &, int indent) const = 0;
+      virtual void Print(PIDTable<KeyType, KeyComparator> &, int indent) const = 0;
 
       inline bool IfLeafNode() const {
         return if_leaf_;
@@ -211,9 +210,9 @@ namespace peloton {
         return nullptr;
       };
 
-      const PID &GetLeft() const { return left_; }
+      inline const PID &GetLeft() const { return left_; }
 
-      const PID &GetRight() const { return right_; }
+      inline const PID &GetRight() const { return right_; }
 
     protected:
       BWNormalNode(const size_type &slot_usage, const size_type &chain_length, bool if_leaf,
@@ -306,7 +305,7 @@ namespace peloton {
         return children_;
       }
 
-      void Print(PIDTable&, int indent) const;
+      void Print(PIDTable<KeyType, KeyComparator>&, int indent) const;
 
     protected:
       const std::vector<KeyType> keys_;
@@ -360,12 +359,15 @@ namespace peloton {
         return NLeaf;
       }
 
-      void Print(PIDTable &, int indent) const {
+      void Print(PIDTable<KeyType, KeyComparator> &, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_DEBUG("%sLeafNode, left %lu, right %lu, size %lu", s.c_str(), left_, right_, keys_.size());
+        LOG_DEBUG("%sLeafNode, left %lu, right %lu, size %lu", s.c_str(),
+                  BWNormalNode<KeyType, KeyComparator>::left_,
+                  BWNormalNode<KeyType, KeyComparator>::right_,
+                  keys_.size());
       }
     protected:
       const std::vector<KeyType> keys_;
@@ -382,7 +384,7 @@ namespace peloton {
       }
 
     protected:
-      const BWNode *next_;
+      const BWNode<KeyType, KeyComparator> *next_;
 
       BWDeltaNode(const size_type &slot_usage, const size_type &chain_length, const BWNode<KeyType, KeyComparator> *next,
                   const PID &left, const PID &right,
@@ -424,13 +426,13 @@ namespace peloton {
         return value_;
       }
 
-      void Print(PIDTable &pid_table, int indent) const {
+      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
         LOG_DEBUG("%sInsertNode", s.c_str());
-        next_->Print(pid_table, indent);
+        BWDeltaNode<KeyType, KeyComparator>::next_->Print(pid_table, indent);
       }
 
     protected:
@@ -472,13 +474,13 @@ namespace peloton {
         return value_;
       }
 
-      void Print(PIDTable &pid_table, int indent) const {
+      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
         LOG_DEBUG("%sDeleteNode", s.c_str());
-        next_->Print(pid_table, indent);
+        BWDeltaNode<KeyType, KeyComparator>::next_->Print(pid_table, indent);
       }
     protected:
       const KeyType key_;
@@ -500,25 +502,26 @@ namespace peloton {
         return split_to_;
       }
 
-      BWSplitNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, 
+      BWSplitNode(const size_type &slot_usage, const size_type &chain_length,
+                  const BWNode<KeyType, KeyComparator> *next,
                   const PID &left, const PID &right, 
                   const KeyType &split_key, const PID &split_to):
               BWDeltaNode<KeyType, KeyComparator>(slot_usage, chain_length, next, left, right,
                                                   next->GetLowKey(), split_key, next->HasLowKey(), true),
-              split_key_(split_key), split_to_(split_to) { assert(right==split_key); }
+              split_key_(split_key), split_to_(split_to) { assert(right==split_to); }
 
       BWSplitNode(const BWNode<KeyType, KeyComparator> *next, const size_type &slot_usage,
                   const PID &left, const PID &right,
                   const KeyType &split_key, const PID &split_to):
               BWSplitNode(slot_usage, next->GetChainLength()+1, next, left, right, split_key, split_to) { }
 
-      void Print(PIDTable &pid_table, int indent) const {
+      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
         LOG_DEBUG("%sSplitNode, split to pid %lu", s.c_str(), (unsigned long) split_to_);
-        next_->Print(pid_table, indent);
+        BWDeltaNode<KeyType, KeyComparator>::next_->Print(pid_table, indent);
       }
     protected:
       // actually same as high_key_
@@ -585,14 +588,14 @@ namespace peloton {
         return to_high_key_;
       }
 
-      void Print(PIDTable &pid_table, int indent) const {
+      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
         LOG_DEBUG("%sSplitEntry, to pid %lu", s.c_str(), to_);
 
-        next_->Print(pid_table, indent);
+        BWDeltaNode<KeyType, KeyComparator>::next_->Print(pid_table, indent);
       }
 
     protected:

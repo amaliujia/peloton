@@ -17,6 +17,7 @@
 #include "backend/index/index_factory.h"
 #include "backend/storage/tuple.h"
 #include "backend/index/bwtree.h"
+#include "backend/common/types.h"
 
 #include <string>
 #include <cstdlib>
@@ -32,6 +33,7 @@ namespace peloton {
 //===--------------------------------------------------------------------===//
 // Index Tests
 //===--------------------------------------------------------------------===//
+
 // for IDE formatting, since IDE cant recognize when we use TEST(...)
 #define TT
 
@@ -39,8 +41,8 @@ namespace peloton {
 
 
 
-    void VerifyAndFree(index::PIDTable &table,
-                       const std::vector<index::Address> &addresses,
+    void VerifyAndFree(index::PIDTable<IntsKey<1>, IntsComparator<1>> &table,
+                       const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> &addresses,
                        const std::vector<index::PID> &pids) {
       assert(addresses.size()==pids.size());
       // verify

@@ -283,7 +283,7 @@ namespace peloton {
                   true, leaf_node->HasHighKey());
         PID new_pid = pid_table_.allocate_PID(new_node);
         const BWNode<KeyType, KeyComparator> *split_node =
-                new BWSplitNode<KeyType>(
+                new BWSplitNode<KeyType, KeyComparator>(
                         leaf_node, index,
                         left_view, new_pid,
                         split_key, new_pid);
@@ -1148,7 +1148,7 @@ namespace peloton {
     template<typename KeyType, typename KeyComparator>
     void
     BWInnerNode<KeyType, KeyComparator>::
-    Print(PIDTable &, int indent) const {
+    Print(PIDTable<KeyType, KeyComparator> &, int indent) const {
       std::string s;
       for (size_t i = 0; i < indent; i++) {
         s += "\t";
