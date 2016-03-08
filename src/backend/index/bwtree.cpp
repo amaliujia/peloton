@@ -340,7 +340,7 @@ namespace peloton {
         else {
           myassert(node_ptr->IfLeafNode());
           myassert(path.size()>1);
-          size_t value_vector_size;
+          size_t value_vector_size = 0;
           if(ExistKeyValue(node_ptr, key, value, value_vector_size)) {
             if(!Duplicate) {
               return false;

@@ -1001,7 +1001,8 @@ namespace peloton {
     public :
       BWTree(IndexMetadata *indexMetadata):
               comparator_(indexMetadata),
-              key_equality_checker_(indexMetadata) {
+              key_equality_checker_(indexMetadata),
+              root_version_number_(0) {
         // a BWtree has at least two nodes residing at two levels.
         // at initialization, one root node pointing to one leaf node
         LOG_DEBUG("BWTree::BWTree()");
