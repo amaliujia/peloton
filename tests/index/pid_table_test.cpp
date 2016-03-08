@@ -266,7 +266,7 @@ namespace peloton {
                         const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *to_addresses,
                         std::vector<bool> *success,
                         std::vector<index::PID> *pids,
-                        index::PIDTable *table) {
+                        index::PIDTable<IntsKey<1>, IntsComparator<1>> *table) {
       auto no = (*no_gen)++;
       for(int i = 0; i<size; ++i) {
         success[no][i] =
@@ -303,10 +303,10 @@ namespace peloton {
       for(int iter=0; iter<5; ++iter) {
         // initialize
         for(int i = 0; i<size; ++i) {
-          original_addresses.push_back((index::Address) (unsigned long) rand());
+          original_addresses.push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address) (unsigned long) rand());
           pids.push_back(table.allocate_PID(original_addresses[i]));
           for(int j=0; j<total; ++j) {
-            to_addresses[j].push_back((index::Address) (unsigned long) rand());
+            to_addresses[j].push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address) (unsigned long) rand());
             success[j].push_back(false);
           }
         }

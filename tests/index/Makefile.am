@@ -5,10 +5,10 @@
 ######################################################################
 
 check_PROGRAMS += \
-                pid_table_test \
                 garbage_collector_test \
                 bwtree_index_test \
-                index_test
+                index_test \
+                pid_table_test
 
 
 index_test_SOURCES = index/index_test.cpp \
