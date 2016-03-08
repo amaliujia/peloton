@@ -321,11 +321,11 @@ namespace peloton {
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
-        LOG_DEBUG("InsertEntryUtil while loop(%lu).", (unsigned long)current);
+        //LOG_DEBUG("InsertEntryUtil while loop(%lu).", (unsigned long)current);
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
         if(!node_ptr->IfInRange(key, comparator_)) {
           myassert(path.size()>1);
-          LOG_DEBUG("pid %lu is a wrong node.", (unsigned long)path.back());
+          //LOG_DEBUG("pid %lu is a wrong node.", (unsigned long)path.back());
           path.pop_back();
           continue;
         }
