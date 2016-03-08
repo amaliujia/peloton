@@ -145,12 +145,10 @@ namespace peloton {
       }
 
       inline const KeyType &GetLowKey() const {
-        assert(HasLowKey());
         return low_key_;
       }
 
       inline const KeyType &GetHighKey() const {
-        assert(HasHighKey());
         return high_key_;
       }
 
