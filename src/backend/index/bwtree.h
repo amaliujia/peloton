@@ -129,7 +129,7 @@ namespace peloton {
 
       inline bool IfInRange(const KeyType &key, const KeyComparator key_comparator_) const {
         return (!has_low_key_||!key_comparator_(key, low_key_))&&
-                (!has_high_key_|!key_comparator_(key, high_key_));
+                (!has_high_key_||key_comparator_(key, high_key_));
       }
 
       inline size_type GetSlotUsage() const { return slot_usage_; }
@@ -1094,11 +1094,11 @@ namespace peloton {
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         bool result = InsertEntryUtil(key, value, path, root_version_number_);
-        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert print begin  ++++++++++++++++++++++++++++++++++++++");
-        LOG_DEBUG(" ");
-        PrintSelf(root_, pid_table_.get(root_), 0);
-        LOG_DEBUG(" ");
-        LOG_DEBUG("------------------------------------------------ insert print end  --------------------------------------");
+//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert print begin  ++++++++++++++++++++++++++++++++++++++");
+//        LOG_DEBUG(" ");
+//        PrintSelf(root_, pid_table_.get(root_), 0);
+//        LOG_DEBUG(" ");
+//        LOG_DEBUG("------------------------------------------------ insert print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
 
         return result;
@@ -1108,11 +1108,11 @@ namespace peloton {
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         bool result = DeleteEntryUtil(key, value, path, root_version_number_);
-        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete print begin  ++++++++++++++++++++++++++++++++++++++");
-        LOG_DEBUG(" ");
-        PrintSelf(root_, pid_table_.get(root_), 0);
-        LOG_DEBUG(" ");
-        LOG_DEBUG("------------------------------------------------ delete print end  --------------------------------------");
+//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete print begin  ++++++++++++++++++++++++++++++++++++++");
+//        LOG_DEBUG(" ");
+//        PrintSelf(root_, pid_table_.get(root_), 0);
+//        LOG_DEBUG(" ");
+//        LOG_DEBUG("------------------------------------------------ delete print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
         return result;
       }
