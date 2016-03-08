@@ -329,7 +329,7 @@ namespace peloton {
         }
         if(path.size()==1&&root_version_number!=root_version_number_)
           root_version_number = root_version_number_;
-        // If current is split node
+
         if(!CheckStatus(node_ptr, key, path, root_version_number))
           continue;
 

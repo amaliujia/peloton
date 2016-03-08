@@ -1094,11 +1094,11 @@ namespace peloton {
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         bool result = InsertEntryUtil(key, value, path, root_version_number_);
-//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert print begin  ++++++++++++++++++++++++++++++++++++++");
-//        LOG_DEBUG(" ");
-//        PrintSelf(root_, pid_table_.get(root_), 0);
-//        LOG_DEBUG(" ");
-//        LOG_DEBUG("------------------------------------------------ insert print end  --------------------------------------");
+        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert print begin  ++++++++++++++++++++++++++++++++++++++");
+        LOG_DEBUG(" ");
+        PrintSelf(root_, pid_table_.get(root_), 0);
+        LOG_DEBUG(" ");
+        LOG_DEBUG("------------------------------------------------ insert print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
 
         return result;
@@ -1108,11 +1108,11 @@ namespace peloton {
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         bool result = DeleteEntryUtil(key, value, path, root_version_number_);
-//        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete print begin  ++++++++++++++++++++++++++++++++++++++");
-//        LOG_DEBUG(" ");
-//        PrintSelf(root_, pid_table_.get(root_), 0);
-//        LOG_DEBUG(" ");
-//        LOG_DEBUG("------------------------------------------------ delete print end  --------------------------------------");
+        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete print begin  ++++++++++++++++++++++++++++++++++++++");
+        LOG_DEBUG(" ");
+        PrintSelf(root_, pid_table_.get(root_), 0);
+        LOG_DEBUG(" ");
+        LOG_DEBUG("------------------------------------------------ delete print end  --------------------------------------");
         GarbageCollector::global_gc_.Deregister(time);
         return result;
       }
