@@ -8,6 +8,8 @@
 #include "backend/index/index_factory.h"
 #include "backend/storage/tuple.h"
 #include "backend/index/bwtree.h"
+#include "backend/common/types.h"
+#include "backend/index/index_key.h"
 
 #include <cstdlib>
 #include <ctime>

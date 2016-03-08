@@ -5,6 +5,9 @@
 #include "harness.h"
 
 #include "backend/index/bwtree.h"
+#include "backend/common/types.h"
+#include "backend/index/index_key.h"
+#include "backend/storage/tuple.h"
 
 #include <cstdlib>
 #include <ctime>
@@ -27,7 +30,7 @@ namespace peloton {
 
       index::GarbageCollector &gc = index::GarbageCollector::global_gc_;
       srand(time(NULL));
-      const index::BWNode *new_garbage;
+      const index::BWBaseNode *new_garbage;
       for(int iter = 0; iter<3; ++iter) {
         index::EpochTime registered_time = gc.Register();
         for(int i = 0; i<size; ++i) {
@@ -37,7 +40,7 @@ namespace peloton {
             registered_time = gc.Register();
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
           }
-          new_garbage = index::BWNode::GenerateRandomNodeChain((rand()%max_length)+1);
+          new_garbage = index::BWNode<IntsKey<1>, IntsComparator<1>>::GenerateRandomNodeChain((rand()%max_length)+1);
           gc.SubmitGarbage(new_garbage);
         }
         gc.Deregister(registered_time);
@@ -53,14 +56,14 @@ namespace peloton {
       int no = (*no_gen)++;
       index::GarbageCollector &gc = index::GarbageCollector::global_gc_;
       index::EpochTime registered_time = gc.Register();
-      const index::BWNode *new_garbage;
+      const index::BWBaseNode *new_garbage;
       for(int i = 0; i<size; ++i) {
         if(i%100==0) {
           gc.Deregister(registered_time);
           std::this_thread::sleep_for(std::chrono::milliseconds(rand()%max_duration));
           registered_time = gc.Register();
         }
-        new_garbage = index::BWNode::GenerateRandomNodeChain((rand()%max_length)+1);
+        new_garbage = index::BWNode<IntsKey<1>, IntsComparator<1>>::GenerateRandomNodeChain((rand()%max_length)+1);
         gc.SubmitGarbage(new_garbage);
       }
       gc.Deregister(registered_time);
