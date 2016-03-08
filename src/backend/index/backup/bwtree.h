@@ -308,17 +308,17 @@ namespace peloton {
       }
 
       inline const KeyType &GetSplitKey() const {
-        return key_;
+        return split_key_;
       }
 
-      inline const PID &GetRightPID() const {
-        return right_;
+      inline const PID &GetSplitTo() const {
+        return split_to_;
       }
 
       BWSplitNode(const size_type &slot_usage, const size_type &chain_length, const BWNode *next, const KeyType &key,
                   const PID &right):
-              BWDeltaNode(slot_usage, chain_length, next, (VersionNumber) (next->GetVersionNumber()+1)), key_(key),
-              right_(right) { }
+              BWDeltaNode(slot_usage, chain_length, next, (VersionNumber) (next->GetVersionNumber()+1)), split_key_(key),
+              split_to_(right) { }
 
       BWSplitNode(const size_type &slot_usage, const BWNode *next, const KeyType &key, const PID &right):
               BWSplitNode(slot_usage, next->GetChainLength()+1, next, key, right) { }
@@ -328,13 +328,13 @@ namespace peloton {
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
         }
-        LOG_DEBUG("%sSplitNode, right pid %lu", s.c_str(), (unsigned long)right_);
+        LOG_DEBUG("%sSplitNode, right pid %lu", s.c_str(), (unsigned long) split_to_);
         next_->Print(pid_table, indent);
       }
       protected:
     protected:
-      const KeyType key_;
-      const PID right_;
+      const KeyType split_key_;
+      const PID split_to_;
     };
 
     template<typename KeyType>
@@ -374,7 +374,7 @@ namespace peloton {
         return has_high_key_;
       }
 
-      inline const PID &GetNextPID() const {
+      inline const PID &GetTo() const {
         return to_;
       }
 

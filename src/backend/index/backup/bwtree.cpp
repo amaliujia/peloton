@@ -103,7 +103,7 @@ namespace peloton {
       // get split information
       const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(top);
       const KeyType &low_key = split_ptr->GetSplitKey();
-      const PID &right_pid = split_ptr->GetRightPID();
+      const PID &right_pid = split_ptr->GetSplitTo();
 
 
       //TODO evil first need to check the version number of parent
@@ -1173,7 +1173,7 @@ namespace peloton {
       auto dist = std::distance(keys.begin(), position);
       keys.erase(position, keys.end());
       values.erase(values.begin()+dist, values.end());
-      right = node->GetRightPID();
+      right = node->GetSplitTo();
       assert(!Duplicate);
     }
 
@@ -1198,7 +1198,7 @@ namespace peloton {
       auto dist = std::distance(keys.begin(), position);
       keys.erase(position, keys.end());
       values.erase(values.begin()+dist, values.end());
-      right = node->GetRightPID();
+      right = node->GetSplitTo();
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
@@ -1226,7 +1226,7 @@ namespace peloton {
       keys.erase(position, keys.end());
       //children.erase(children.begin()+dist, children.end());
       children.erase(children.begin()+dist+1, children.end());
-      right = node->GetRightPID();
+      right = node->GetSplitTo();
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
@@ -1238,7 +1238,7 @@ namespace peloton {
       const KeyType &low_key = node->GetLowKey();
       if(node->HasHighKey()) {
         const KeyType &high_key = node->GetHightKey();
-        PID new_page = node->GetNextPID();
+        PID new_page = node->GetTo();
         auto position = std::lower_bound(keys.begin(), keys.end(), high_key, comparator_);
         // check for both existence and uniqueness
         assert(position!=keys.end()&&
@@ -1251,7 +1251,7 @@ namespace peloton {
       }
       else {
         assert(keys.empty()||comparator_(keys.back(), low_key));
-        PID new_page = node->GetNextPID();
+        PID new_page = node->GetTo();
         keys.push_back(low_key);
         children.push_back(new_page);
       }
