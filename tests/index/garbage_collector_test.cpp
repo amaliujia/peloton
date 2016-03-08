@@ -20,6 +20,9 @@
 
 namespace peloton {
   namespace test {
+    template
+    class index::BWNode<index::IntsKey<1>, index::IntsComparator<1>>;
+
 #ifdef TT
     TEST(GarbageCollectorTest, BasicTest) {
 #else
