@@ -5,9 +5,9 @@
 ######################################################################
 
 check_PROGRAMS += \
-                garbage_collector_test \
                 bwtree_index_test \
                 index_test \
+                garbage_collector_test \
                 pid_table_test
 
 
