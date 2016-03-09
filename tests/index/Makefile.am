@@ -6,19 +6,18 @@
 
 check_PROGRAMS += \
                 bwtree_index_test \
-                index_test #\
-                #garbage_collector_test \
-                #pid_table_test
-
+                index_test \
+                garbage_collector_test \
+                pid_table_test
 
 index_test_SOURCES = index/index_test.cpp \
                      harness.cpp
 
-#pid_table_test_SOURCES = index/pid_table_test.cpp \
-#                         harness.cpp
+pid_table_test_SOURCES = index/pid_table_test.cpp \
+                         harness.cpp
 
-#garbage_collector_test_SOURCES = index/garbage_collector_test.cpp \
-#                                 harness.cpp
+garbage_collector_test_SOURCES = index/garbage_collector_test.cpp \
+                                 harness.cpp
 
 bwtree_index_test_SOURCES = index/bwtree_index_test.cpp \
                             harness.cpp

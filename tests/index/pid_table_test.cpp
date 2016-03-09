@@ -18,13 +18,13 @@
 #include <iostream>
 #include <chrono>
 
-//#define TT
+#define TT
 
 namespace peloton {
   namespace test {
 
-    void VerifyAndFree(index::PIDTable<IntsKey<1>, IntsComparator<1>> &table,
-                       const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> &addresses,
+    void VerifyAndFree(index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> &table,
+                       const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> &addresses,
                        const std::vector<index::PID> &pids) {
       assert(addresses.size()==pids.size());
       // verify
@@ -43,8 +43,8 @@ namespace peloton {
 #endif
       static constexpr int N = 4097;
       // PIDTable
-      index::PIDTable<IntsKey<1>, IntsComparator<1>> table;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> addresses;
+      index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> table;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> addresses;
       std::vector<index::PID> pids;
       srand(time(NULL));
       addresses.reserve(N);
@@ -53,7 +53,7 @@ namespace peloton {
       for(int iter = 0; iter<4; ++iter) {
         // allocate
         for(int i = 0; i<N; ++i) {
-          addresses.push_back((index::Address)(unsigned long) rand());
+          addresses.push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address)(unsigned long) rand());
           pids.push_back(table.allocate_PID(addresses[i]));
         }
         // verify
@@ -65,9 +65,9 @@ namespace peloton {
 
     // Allocate helper function
     void Allocate(std::atomic<std::uint_least8_t> *no_gen, int size_each,
-                  const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *addresses,
+                  const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *addresses,
                   std::vector<index::PID> *pids,
-                  index::PIDTable<IntsKey<1>, IntsComparator<1>> *table) {
+                  index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> *table) {
       //assert(addresses.size()>=size&&pids.size()>=size);
       int no = (*no_gen)++;
       for(int i = 0; i<size_each; ++i) {
@@ -88,16 +88,16 @@ namespace peloton {
       static constexpr int size_each = size/total;
       std::atomic<std::uint_least8_t> no_gen(0);
       // PIDTable
-      index::PIDTable<IntsKey<1>, IntsComparator<1>> table;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> addresses;
+      index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> table;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> addresses;
       std::vector<index::PID> pids;
       srand(time(NULL));
       addresses.reserve(size);
       pids.reserve(size);
       for(int iter=0; iter<5; ++iter) {
         for(int i = 0; i<size; ++i) {
-          addresses.push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address)(unsigned long) rand());
-          pids.push_back(index::PIDTable::PID_NULL);
+          addresses.push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address)(unsigned long) rand());
+          pids.push_back(index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::PID_NULL);
         }
 
         LaunchParallelTest(total, Allocate, &no_gen, size_each, &addresses, &pids, &table);
@@ -115,9 +115,9 @@ namespace peloton {
 
     void AllocateOrFreeAndTest(std::atomic<std::uint_least8_t> *no_gen,
                                int size_each,
-                               const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *addresses,
+                               const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *addresses,
                                std::vector<index::PID> *pids,
-                               index::PIDTable<IntsKey<1>, IntsComparator<1>> *table) {
+                               index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> *table) {
       //assert(addresses.size()>=size&&pids.size()>=size);
       auto no = (*no_gen)++;
       // even allocate
@@ -158,8 +158,8 @@ namespace peloton {
       static constexpr int size_each = size/total;
       std::atomic<std::uint_least8_t> no_gen(0);
       // PIDTable
-      index::PIDTable<IntsKey<1>, IntsComparator<1>> table;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> addresses;
+      index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> table;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> addresses;
       std::vector<index::PID> pids;
       srand(time(NULL));
       addresses.reserve(size);
@@ -167,8 +167,8 @@ namespace peloton {
 
       for(int iter=0; iter<5; ++iter) {
         for(int i = 0; i<size; ++i) {
-          addresses.push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address)(unsigned long) rand());
-          pids.push_back(index::PIDTable::PID_NULL);
+          addresses.push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address)(unsigned long) rand());
+          pids.push_back(index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::PID_NULL);
         }
 
         for(int i = 0; i<total; ++i) {
@@ -189,11 +189,11 @@ namespace peloton {
     }
 
     void CompareAndSwap(std::atomic<std::uint_least8_t> *no_gen, int size_each,
-                        const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *original_addresses,
-                        const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *to_addresses,
+                        const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *original_addresses,
+                        const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *to_addresses,
                         std::vector<bool> *success,
                         std::vector<index::PID> *pids,
-                        index::PIDTable<IntsKey<1>, IntsComparator<1>> *table) {
+                        index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> *table) {
       auto no = (*no_gen)++;
       for(int i = 0; i<size_each; ++i) {
         (*success)[size_each*no+i] =
@@ -214,9 +214,9 @@ namespace peloton {
       static constexpr int size_each = size/total;
       std::atomic<std::uint_least8_t> no_gen(0);
       // PIDTable
-      index::PIDTable<IntsKey<1>, IntsComparator<1>> table;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> original_addresses;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> to_addresses;
+      index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> table;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> original_addresses;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> to_addresses;
       std::vector<index::PID> pids;
       std::vector<bool> success;
 
@@ -228,7 +228,7 @@ namespace peloton {
       for(int iter=0; iter<5; ++iter) {
         // initialize
         for(int i = 0; i<size; ++i) {
-          original_addresses.push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address) (unsigned long) rand());
+          original_addresses.push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address) (unsigned long) rand());
           to_addresses.push_back(nullptr);
           pids.push_back(table.allocate_PID(original_addresses[i]));
           success.push_back(false);
@@ -264,11 +264,11 @@ namespace peloton {
     }
 
     void ConcurrentCompareAndSwap(std::atomic<std::uint_least8_t> *no_gen, int size,
-                        const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *original_addresses,
-                        const std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> *to_addresses,
+                        const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *original_addresses,
+                        const std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> *to_addresses,
                         std::vector<bool> *success,
                         std::vector<index::PID> *pids,
-                        index::PIDTable<IntsKey<1>, IntsComparator<1>> *table) {
+                        index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> *table) {
       auto no = (*no_gen)++;
       for(int i = 0; i<size; ++i) {
         success[no][i] =
@@ -288,9 +288,9 @@ namespace peloton {
       static constexpr int total = 4;
       std::atomic<std::uint_least8_t> no_gen(0);
       // PIDTable
-      index::PIDTable<IntsKey<1>, IntsComparator<1>> table;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> original_addresses;
-      std::vector<index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address> to_addresses[total];
+      index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>> table;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> original_addresses;
+      std::vector<index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address> to_addresses[total];
       std::vector<index::PID> pids;
       std::vector<bool> success[total];
 
@@ -305,10 +305,10 @@ namespace peloton {
       for(int iter=0; iter<5; ++iter) {
         // initialize
         for(int i = 0; i<size; ++i) {
-          original_addresses.push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address) (unsigned long) rand());
+          original_addresses.push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address) (unsigned long) rand());
           pids.push_back(table.allocate_PID(original_addresses[i]));
           for(int j=0; j<total; ++j) {
-            to_addresses[j].push_back((index::PIDTable<IntsKey<1>, IntsComparator<1>>::Address) (unsigned long) rand());
+            to_addresses[j].push_back((index::PIDTable<index::IntsKey<1>, index::IntsComparator<1>>::Address) (unsigned long) rand());
             success[j].push_back(false);
           }
         }

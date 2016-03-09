@@ -223,6 +223,9 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        size_t memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
+
         // try deletion
         no_gen = 0;
         LaunchParallelTest(1, DeleteFunction, &no_gen, index.get(), size, &pairs, &result);
@@ -237,6 +240,9 @@ namespace peloton {
         // check deletion result
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
+
+        memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 
         // clear up
         pairs.clear();
@@ -285,12 +291,18 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        size_t memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after first insertion: %lu", (unsigned long)memory_footprint);
+
         // check unique constraint
         no_gen = 0;
         LaunchParallelTest(1, InsertFunction, &no_gen, index.get(), size, &pairs, &result);
         for(size_t i = 0; i<size; ++i) {
           EXPECT_FALSE(result[i]);
         }
+
+        memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after second insertion: %lu", (unsigned long)memory_footprint);
 
         // try deletion
         no_gen = 0;
@@ -306,6 +318,9 @@ namespace peloton {
         // check deletion result
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
+
+        memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 
         // clear up
         pairs.clear();
@@ -356,6 +371,9 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        size_t memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
+
         // try deletion
         no_gen = 0;
         LaunchParallelTest(thread_number, DeleteFunction, &no_gen, index.get(), size_each, &pairs, &result);
@@ -370,6 +388,9 @@ namespace peloton {
         // check deletion result
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
+
+        memory_footprint = index->GetMemoryFootprint();
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 
         // clear up
         pairs.clear();

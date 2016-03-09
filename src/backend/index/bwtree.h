@@ -17,6 +17,7 @@
 #include "backend/common/types.h"
 #include "backend/index/index.h"
 #include "backend/common/value.h"
+#include "backend/index/index_key.h"
 
 #include <mutex>
 #include <boost/lockfree/stack.hpp>
@@ -86,8 +87,10 @@ namespace peloton {
 
     class BWBaseNode {
     public:
+      static const BWBaseNode *GenerateRandomNodeChain(int length);
       virtual NodeType GetType() const = 0;
       virtual const BWBaseNode *GetNext() const = 0;
+      virtual size_t GetMemoryFootprint() const = 0;
       virtual ~BWBaseNode() { }
     };
 
@@ -105,7 +108,7 @@ namespace peloton {
 
       //virtual const PID &GetRight() const = delete;
 
-      virtual void Print(PIDTable<KeyType, KeyComparator> &, int indent) const = 0;
+      virtual void Print(const PIDTable<KeyType, KeyComparator> &, int indent) const = 0;
 
       inline bool IfLeafNode() const {
         return if_leaf_;
@@ -150,6 +153,12 @@ namespace peloton {
 
       inline const KeyType &GetHighKey() const {
         return high_key_;
+      }
+
+      virtual size_t GetMemoryFootprint() const {
+        return sizeof(slot_usage_)+sizeof(chain_length_)+sizeof(if_leaf_)+
+               sizeof(has_low_key_)+sizeof(has_high_key_)+
+               sizeof(low_key_)+sizeof(high_key_);
       }
 
       virtual ~BWNode() { };
@@ -211,6 +220,11 @@ namespace peloton {
       inline const PID &GetLeft() const { return left_; }
 
       inline const PID &GetRight() const { return right_; }
+
+      virtual size_t GetMemoryFootprint() const {
+        return BWNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+                sizeof(left_)+sizeof(right_);
+      }
 
     protected:
       BWNormalNode(const size_type &slot_usage, const size_type &chain_length, bool if_leaf,
@@ -303,7 +317,14 @@ namespace peloton {
         return children_;
       }
 
-      void Print(PIDTable<KeyType, KeyComparator>&, int indent) const;
+      virtual size_t GetMemoryFootprint() const {
+        myassert(keys_.size()+1==children_.size());
+        return BWNormalNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+                sizeof(keys_)+sizeof(children_)+
+                sizeof(KeyType)*keys_.size()+sizeof(PID)*children_.size();
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator>&, int indent) const;
 
     protected:
       const std::vector<KeyType> keys_;
@@ -357,7 +378,15 @@ namespace peloton {
         return NLeaf;
       }
 
-      void Print(PIDTable<KeyType, KeyComparator> &, int indent) const {
+      virtual size_t GetMemoryFootprint() const {
+        myassert(keys_.size()==values_.size());
+        // not true for duplicate values
+        return BWNormalNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+                sizeof(keys_)+sizeof(values_)+
+                (sizeof(KeyType)+sizeof(ValueType))*keys_.size();
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator> &, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
@@ -381,6 +410,10 @@ namespace peloton {
         return next_;
       }
 
+      virtual size_t GetMemoryFootprint() const {
+        return BWNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+               next_->GetMemoryFootprint()+sizeof(next_);
+      }
     protected:
       const BWNode<KeyType, KeyComparator> *next_;
 
@@ -424,7 +457,12 @@ namespace peloton {
         return value_;
       }
 
-      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
+      virtual size_t GetMemoryFootprint() const {
+        return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+               sizeof(key_)+sizeof(value_);
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
@@ -472,7 +510,12 @@ namespace peloton {
         return value_;
       }
 
-      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
+      virtual size_t GetMemoryFootprint() const {
+        return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+               sizeof(key_)+sizeof(value_);
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
@@ -513,7 +556,12 @@ namespace peloton {
                   const KeyType &split_key, const PID &split_to):
               BWSplitNode(slot_usage, next->GetChainLength()+1, next, left, right, split_key, split_to) { }
 
-      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
+      virtual size_t GetMemoryFootprint() const {
+        return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+               sizeof(split_key_)+sizeof(split_to_);
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
@@ -590,7 +638,12 @@ namespace peloton {
         return to_high_key_;
       }
 
-      void Print(PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
+      virtual size_t GetMemoryFootprint() const {
+        return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint()+
+               sizeof(has_to_high_key_)+sizeof(to_low_key_)+sizeof(to_high_key_)+sizeof(to_);
+      }
+
+      void Print(const PIDTable<KeyType, KeyComparator> &pid_table, int indent) const {
         std::string s;
         for (size_t i = 0; i < indent; i++) {
           s += "\t";
@@ -671,7 +724,6 @@ namespace peloton {
     public:
       // NULL for PID
       static const PID PID_NULL;
-      //static constexpr PID PID_ROOT = 0;
 
       PIDTable(): counter_(0), free_PIDs(256) {
         first_level_table_[0] = (Address *) malloc(sizeof(Address)*second_level_slots);
@@ -766,6 +818,8 @@ namespace peloton {
       }
     };
 
+    template<typename KeyType, typename KeyComparator>
+    const PID PIDTable<KeyType, KeyComparator>::PID_NULL = std::numeric_limits<PID>::max();
 
 
 
@@ -1049,9 +1103,13 @@ namespace peloton {
         GarbageCollector::global_gc_.Deregister(time);
       }
 
+      inline size_t GetMemoryFootprint() const {
+        return GetMemoryFootprint(root_);
+      }
+
       void PrintSelf(__attribute__((unused)) PID pid,
                      const BWNode<KeyType, KeyComparator> *node,
-                     int indent) {
+                     int indent) const {
         node->Print(pid_table_, indent);
         if(node->IfInnerNode()) {
           std::vector<KeyType> keys;
@@ -1121,16 +1179,14 @@ namespace peloton {
         return result;
       }
 
-      void ScanKey(const KeyType &key, std::vector<ValueType> &ret) {
-        //LOG_DEBUG("Entering ScanKey");
+      void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
         EpochTime time = GarbageCollector::global_gc_.Register();
-        ScanKeyUtil(root_, key, ret);
+        std::vector<PID> path = {root_};
+        ScanKeyUtil(key, result, path, root_version_number_);
         GarbageCollector::global_gc_.Deregister(time);
-        //LOG_DEBUG("ret.size():%lu", ret.size());
-        //LOG_DEBUG("Leaving ScanKey");
       }
 
-      void ScanAllKeys(std::vector<ValueType> &ret) {
+      void ScanAllKeys(std::vector<ValueType> &ret) const {
         EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
@@ -1181,6 +1237,8 @@ namespace peloton {
       }
 
     private:
+      size_t GetMemoryFootprint(const PID &node_pid) const;
+
       bool CheckStatus(const BWNode<KeyType, KeyComparator> *node, const KeyType &key,
                        std::vector<PID> &path, const VersionNumber &root_version_number);
 
@@ -1190,92 +1248,120 @@ namespace peloton {
       bool DeleteEntryUtil(const KeyType &key, const ValueType &value,
                            std::vector<PID> &path, VersionNumber root_version_number);
 
-      const BWNode<KeyType, KeyComparator> *
-              Split(const BWNode<KeyType, KeyComparator> *node_ptr, const PID &node_pid);
+      void ScanKeyUtil(const KeyType &key,
+                       std::vector<ValueType> &result,
+                       std::vector<PID> &path,
+                       VersionNumber root_version_number);
 
       const BWNode<KeyType, KeyComparator> *
-              SplitInnerNode(const BWNode<KeyType, KeyComparator> *leaf_node, const PID &node_pid);
+              Split(const BWNode<KeyType, KeyComparator> *node_ptr,
+                    const PID &node_pid);
 
       const BWNode<KeyType, KeyComparator> *
-              SplitLeafNode(const BWNode<KeyType, KeyComparator> *leaf_node, const PID &node_pid);
+              SplitInnerNode(const BWNode<KeyType, KeyComparator> *leaf_node,
+                             const PID &node_pid);
 
-      bool InsertSplitEntry(const BWNode<KeyType, KeyComparator> *top, const KeyType &key,
-                            std::vector<PID> &path, const VersionNumber &root_version_number);
+      const BWNode<KeyType, KeyComparator> *
+              SplitLeafNode(const BWNode<KeyType, KeyComparator> *leaf_node,
+                            const PID &node_pid);
+
+      bool InsertSplitEntry(const BWNode<KeyType, KeyComparator> *top,
+                            const KeyType &key,
+                            std::vector<PID> &path,
+                            const VersionNumber &root_version_number);
 
       bool ExistKeyValue(const BWNode<KeyType, KeyComparator> *node_ptr,
                          const KeyType &key, const ValueType &value,
-                         size_t &value_vector_size);
+                         size_t &value_vector_size) const;
 
-      PID FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key);
+      PID FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr,
+                          const KeyType &key) const;
 
-      void CreateLeafNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
-                              std::vector<KeyType> *keys, std::vector<ValueType> *values,
-                              PID *left, PID *right);
+      inline void CreateLeafNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
+                              std::vector<KeyType> *keys,
+                              std::vector<ValueType> *values,
+                              PID *left, PID *right) const {
+        myassert(!Duplicate);
+        ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
+      }
 
-      void CreateLeafNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
-                              std::vector<KeyType> *keys, std::vector<std::vector<ValueType>> *values,
-                              PID *left, PID *right);
+      inline void CreateLeafNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
+                              std::vector<KeyType> *keys,
+                              std::vector<std::vector<ValueType>> *values,
+                              PID *left, PID *right) const {
+        myassert(Duplicate);
+        ConstructConsolidatedLeafNodeInternal(node_chain, keys, values, left, right);
+      }
 
-      void CreateInnerNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
-                               std::vector<KeyType> *keys, std::vector<PID> *children,
-                               PID *left, PID *right);
+      inline void CreateInnerNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
+                               std::vector<KeyType> *keys,
+                               std::vector<PID> *children,
+                               PID *left, PID *right) const {
+        ConstructConsolidatedInnerNodeInternal(node_chain, keys, children, left, right);
+      }
 
-      bool Consolidate(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr);
+      bool Consolidate(const PID &cur,
+                       const BWNode<KeyType, KeyComparator> *node_ptr);
 
       const BWNode<KeyType, KeyComparator> *
-              ConstructConsolidatedInnerNode(const BWNode<KeyType, KeyComparator> *node_chain);
+              ConstructConsolidatedInnerNode(const BWNode<KeyType, KeyComparator> *node_chain) const;
 
       const BWNode<KeyType, KeyComparator> *
-              ConstructConsolidatedLeafNode(const BWNode<KeyType, KeyComparator> *node_chain);
+              ConstructConsolidatedLeafNode(const BWNode<KeyType, KeyComparator> *node_chain) const;
 
       void ConstructConsolidatedLeafNodeInternal(
               const BWNode<KeyType, KeyComparator> *node_chain,
               std::vector<KeyType> *keys, std::vector<ValueType> *values,
-              PID *left, PID *right);
+              PID *left, PID *right) const;
 
       void ConstructConsolidatedLeafNodeInternal(
               const BWNode<KeyType, KeyComparator> *node_chain,
               std::vector<KeyType> *keys, std::vector<std::vector<ValueType>> *values,
-              PID *left, PID *right);
+              PID *left, PID *right) const;
 
       void ConstructConsolidatedInnerNodeInternal(
               const BWNode<KeyType, KeyComparator> *node_chain,
               std::vector<KeyType> *keys, std::vector<PID> *children,
-              PID *left, PID *right);
+              PID *left, PID *right) const;
 
       void ConsolidateInsertNode(
               const BWInsertNode<KeyType, KeyComparator, ValueType> *node,
-              std::vector<KeyType> *keys, std::vector<ValueType> *values);
+              std::vector<KeyType> *keys, std::vector<ValueType> *values) const;
 
       void ConsolidateInsertNode(
               const BWInsertNode<KeyType, KeyComparator, ValueType> *node,
-              std::vector<KeyType> *keys, std::vector<std::vector<ValueType>> *values);
+              std::vector<KeyType> *keys,
+              std::vector<std::vector<ValueType>> *values) const;
 
       void ConsolidateDeleteNode(
               const BWDeleteNode<KeyType, KeyComparator, ValueType> *node,
-              std::vector<KeyType> *keys, std::vector<ValueType> *values);
+              std::vector<KeyType> *keys,
+              std::vector<ValueType> *values) const;
 
       void ConsolidateDeleteNode(
               const BWDeleteNode<KeyType, KeyComparator, ValueType> *node,
-              std::vector<KeyType> *keys, std::vector<std::vector<ValueType>> *values);
+              std::vector<KeyType> *keys,
+              std::vector<std::vector<ValueType>> *values) const;
 
       void ConsolidateSplitNode(
               const BWSplitNode<KeyType, KeyComparator> *node,
-              std::vector<KeyType> *keys, std::vector<ValueType> *values, PID *right);
+              std::vector<KeyType> *keys,
+              std::vector<ValueType> *values, PID *right) const;
 
       void ConsolidateSplitNode(
               const BWSplitNode<KeyType, KeyComparator> *node,
-              std::vector<KeyType> *keys, std::vector<std::vector<ValueType>> *values, PID *right);
+              std::vector<KeyType> *keys,
+              std::vector<std::vector<ValueType>> *values, PID *right) const;
 
       void ConsolidateSplitNode(
               const BWSplitNode<KeyType, KeyComparator> *node,
-              std::vector<KeyType> *keys, std::vector<PID> *children, PID *right);
+              std::vector<KeyType> *keys,
+              std::vector<PID> *children, PID *right) const;
 
       void ConsolidateSplitEntryNode(
               const BWSplitEntryNode<KeyType, KeyComparator> *node,
-              std::vector<KeyType> *keys, std::vector<PID> *children);
-
-      void ScanKeyUtil(const PID &cur, const KeyType &key, std::vector<ValueType> &ret);
+              std::vector<KeyType> *keys,
+              std::vector<PID> *children) const;
 
       bool DeltaInsert(const PID &cur,
                        const BWNode<KeyType, KeyComparator> *node_ptr,

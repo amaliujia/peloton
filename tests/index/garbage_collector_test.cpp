@@ -20,8 +20,6 @@
 
 namespace peloton {
   namespace test {
-    template
-    class index::BWNode<index::IntsKey<1>, index::IntsComparator<1>>;
 
 #ifdef TT
     TEST(GarbageCollectorTest, BasicTest) {
@@ -43,7 +41,7 @@ namespace peloton {
             registered_time = gc.Register();
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
           }
-          new_garbage = index::BWNode<index::IntsKey<1>, index::IntsComparator<1>>::GenerateRandomNodeChain((rand()%max_length)+1);
+          new_garbage = index::BWBaseNode::GenerateRandomNodeChain((rand()%max_length)+1);
           gc.SubmitGarbage(new_garbage);
         }
         gc.Deregister(registered_time);
@@ -66,7 +64,7 @@ namespace peloton {
           std::this_thread::sleep_for(std::chrono::milliseconds(rand()%max_duration));
           registered_time = gc.Register();
         }
-        new_garbage = index::BWNode<index::IntsKey<1>, index::IntsComparator<1>>::GenerateRandomNodeChain((rand()%max_length)+1);
+        new_garbage = index::BWBaseNode::GenerateRandomNodeChain((rand()%max_length)+1);
         gc.SubmitGarbage(new_garbage);
       }
       gc.Deregister(registered_time);

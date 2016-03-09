@@ -57,20 +57,23 @@ class BWTreeIndex : public Index {
 
   std::string GetTypeName() const;
 
-  // TODO: Implement this
   bool Cleanup() {
     dbg_msg("not implemented BWTreeIndex::Cleanup being called");
     return true;
   }
 
-  // TODO: Implement this
   size_t GetMemoryFootprint() {
     dbg_msg("not implemented BWTreeIndex::GetMemoryFootprint being called");
-    return 0;
+    // for now, only count memory occupied by BWTree
+    return container_unique.GetMemoryFootprint() + container_duplicate.GetMemoryFootprint();
   }
 
  protected:
   // container
+  // since the duplicate is given at run time, there is no way to know it at compile time
+  // we can either use a unified type that can handle both unique and duplicate key scenarios
+  // or create two types of BWTree and use only one at run time
+  // we choose latter because the structures are different and it won't take too much space to have an empty BWTree
   MapTypeDuplicate container_duplicate;
   MapTypeUnique container_unique;
 };
