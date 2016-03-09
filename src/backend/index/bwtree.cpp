@@ -901,7 +901,7 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
   ConstructConsolidatedInnerNodeInternal(node_chain, &keys, &children, &left,
                                          &right);
   return new BWInnerNode<KeyType, KeyComparator>(
-      keys, children, left, right, node_chain->GetLowKey(),
+      std::move(keys), std::move(children), left, right, node_chain->GetLowKey(),
       node_chain->GetHighKey(), node_chain->HasLowKey(),
       node_chain->HasHighKey());
 }
@@ -926,7 +926,7 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
     ConstructConsolidatedLeafNodeInternal(node_chain, &keys, &values, &left,
                                           &right);
     return new BWLeafNode<KeyType, KeyComparator, ValueType>(
-        keys, values, left, right, node_chain->GetLowKey(),
+        std::move(keys), std::move(values), left, right, node_chain->GetLowKey(),
         node_chain->GetHighKey(), node_chain->HasLowKey(),
         node_chain->HasHighKey());
   } else {
@@ -936,7 +936,7 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
     ConstructConsolidatedLeafNodeInternal(node_chain, &keys, &values, &left,
                                           &right);
     return new BWLeafNode<KeyType, KeyComparator, std::vector<ValueType>>(
-        keys, values, left, right, node_chain->GetLowKey(),
+        std::move(keys), std::move(values), left, right, node_chain->GetLowKey(),
         node_chain->GetHighKey(), node_chain->HasLowKey(),
         node_chain->HasHighKey());
   }

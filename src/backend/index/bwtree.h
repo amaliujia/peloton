@@ -344,8 +344,8 @@ class BWInnerNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
-  BWInnerNode(const std::vector<KeyType> &keys,
-              const std::vector<PID> &children, const PID &left,
+  BWInnerNode(std::vector<KeyType> &&keys,
+              std::vector<PID> &&children, const PID &left,
               const PID &right, const KeyType &low_key, const KeyType &high_key,
               const bool &has_low_key, const bool &has_high_key)
       : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
@@ -416,8 +416,8 @@ class BWLeafNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
-  BWLeafNode(const std::vector<KeyType> &keys,
-             const std::vector<ValueType> &values, const PID &left,
+  BWLeafNode(std::vector<KeyType> &&keys,
+             std::vector<ValueType> &&values, const PID &left,
              const PID &right, const KeyType &low_key, const KeyType &high_key,
              const bool &has_low_key, const bool &has_high_key)
       : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
