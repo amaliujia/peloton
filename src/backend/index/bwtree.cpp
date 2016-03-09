@@ -627,6 +627,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     FirstLeafNode() const {
       // assume we already registered
+      LOG_TRACE("enter");
       PID next_pid = root_;
       const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
       while(!node_ptr->IfLeafNode()) {
@@ -638,6 +639,7 @@ namespace peloton {
         next_pid = children[0];
         node_ptr = pid_table_.get(next_pid);
       }
+      LOG_TRACE("leave");
       return node_ptr;
     }
 
@@ -645,6 +647,7 @@ namespace peloton {
     const BWNode<KeyType, KeyComparator> *
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     FindLeafNode(const KeyType &key) {
+      LOG_TRACE("enter");
       // assume we already registered
       std::vector<PID> path = {root_};
       VersionNumber root_version_number = root_version_number_;
@@ -669,6 +672,7 @@ namespace peloton {
           path.push_back(next_pid);
         }
         else {
+          LOG_TRACE("leave");
           return node_ptr;
         }
       }

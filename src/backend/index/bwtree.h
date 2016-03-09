@@ -1419,6 +1419,7 @@ namespace peloton {
           else
             break;
         }
+        delete iterator;
         /*
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
