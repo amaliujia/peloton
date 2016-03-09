@@ -209,54 +209,54 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
   return true;
 }
 
-  template <typename KeyType, typename ValueType, class KeyComparator,
+template <typename KeyType, typename ValueType, class KeyComparator,
           class KeyEqualityChecker, class ValueComparator,
           class ValueEqualityChecker, bool Duplicate>
-  void
-  BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
-          ValueComparator, ValueEqualityChecker,
-          Duplicate>::PrintSelf(__attribute__((unused)) PID pid,
-                 const BWNode<KeyType, KeyComparator> *node, int indent) const {
-    node->Print(pid_table_, indent);
-    if (node->IfInnerNode()) {
+void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
+            ValueComparator, ValueEqualityChecker,
+            Duplicate>::PrintSelf(__attribute__((unused)) PID pid,
+                                  const BWNode<KeyType, KeyComparator> *node,
+                                  int indent) const {
+  node->Print(pid_table_, indent);
+  if (node->IfInnerNode()) {
+    std::vector<KeyType> keys;
+    std::vector<PID> children;
+    PID left, right;
+    CreateInnerNodeView(node, &keys, &children, &left, &right);
+    std::string s;
+    for (size_t i = 0; i < indent; i++) {
+      s += "\t";
+    }
+    LOG_DEBUG("%sInner summary: size=%lu, self=%lu, left=%lu, right=%lu",
+              s.c_str(), keys.size(), pid, left, right);
+    for (int i = 0; i < children.size(); ++i)
+      PrintSelf(children[i], pid_table_.get(children[i]), indent + 2);
+  } else {
+    if (!Duplicate) {
       std::vector<KeyType> keys;
-      std::vector<PID> children;
+      std::vector<ValueType> values;
       PID left, right;
-      CreateInnerNodeView(node, &keys, &children, &left, &right);
+      CreateLeafNodeView(node, &keys, &values, &left, &right);
       std::string s;
       for (size_t i = 0; i < indent; i++) {
         s += "\t";
       }
-      LOG_DEBUG("%sInner summary: size=%lu, self=%lu, left=%lu, right=%lu",
+      LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
                 s.c_str(), keys.size(), pid, left, right);
-      for (int i = 0; i < children.size(); ++i)
-        PrintSelf(children[i], pid_table_.get(children[i]), indent + 2);
     } else {
-      if (!Duplicate) {
-        std::vector<KeyType> keys;
-        std::vector<ValueType> values;
-        PID left, right;
-        CreateLeafNodeView(node, &keys, &values, &left, &right);
-        std::string s;
-        for (size_t i = 0; i < indent; i++) {
-          s += "\t";
-        }
-        LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
-                  s.c_str(), keys.size(), pid, left, right);
-      } else {
-        std::vector<KeyType> keys;
-        std::vector<std::vector<ValueType>> values;
-        PID left, right;
-        CreateLeafNodeView(node, &keys, &values, &left, &right);
-        std::string s;
-        for (size_t i = 0; i < indent; i++) {
-          s += "\t";
-        }
-        LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
-                  s.c_str(), keys.size(), pid, left, right);
+      std::vector<KeyType> keys;
+      std::vector<std::vector<ValueType>> values;
+      PID left, right;
+      CreateLeafNodeView(node, &keys, &values, &left, &right);
+      std::string s;
+      for (size_t i = 0; i < indent; i++) {
+        s += "\t";
       }
+      LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
+                s.c_str(), keys.size(), pid, left, right);
     }
   }
+}
 template <typename KeyType, typename ValueType, class KeyComparator,
           class KeyEqualityChecker, class ValueComparator,
           class ValueEqualityChecker, bool Duplicate>
@@ -438,7 +438,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       size_t value_vector_size = 0;
       if (ExistKeyValue(node_ptr, key, value, value_vector_size)) {
         if (!Duplicate) {
-          result =  false;
+          result = false;
           break;
         }
         if (!DeltaInsert(current, node_ptr, key, value, false)) {
@@ -470,8 +470,7 @@ template <typename KeyType, typename ValueType, class KeyComparator,
 bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
             ValueComparator, ValueEqualityChecker,
             Duplicate>::DeleteEntry(const KeyType &key,
-                                        const ValueType &value) {
-
+                                    const ValueType &value) {
   EpochTime time = GarbageCollector::global_gc_.Register();
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
@@ -519,7 +518,7 @@ template <typename KeyType, typename ValueType, class KeyComparator,
 void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
             ValueComparator, ValueEqualityChecker,
             Duplicate>::ScanKey(const KeyType &key,
-                                    std::vector<ValueType> &result) {
+                                std::vector<ValueType> &result) {
   EpochTime time = GarbageCollector::global_gc_.Register();
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
@@ -636,14 +635,12 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       if (path.size() > 1) {
         path.pop_back();
       }
-      // LOG_TRACE("CheckStatus() Overflow");
       return false;
     }
     // always retry
-    // LOG_TRACE("CheckStatus() Overflow");
     return false;
   }
-  // LOG_TRACE("CheckStatus() Return True");
+
   return true;
 };
 
@@ -662,72 +659,87 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
   myassert(node_ptr->IfInRange(key, key_comparator_));
   value_vector_size = 0;
   int count = 0;
-  while(true) {
-    myassert(count>=0);
-    switch(node_ptr->GetType()) {
+  while (true) {
+    myassert(count >= 0);
+    switch (node_ptr->GetType()) {
       case NLeaf: {
-        if(Duplicate) {
-          const BWLeafNode<KeyType, KeyComparator, std::vector<ValueType>> *leaf_node =
-                  static_cast<const BWLeafNode<KeyType, KeyComparator, std::vector<ValueType>> *>(node_ptr);
+        if (Duplicate) {
+          const BWLeafNode<KeyType, KeyComparator,
+                           std::vector<ValueType>> *leaf_node =
+              static_cast<const BWLeafNode<KeyType, KeyComparator,
+                                           std::vector<ValueType>> *>(node_ptr);
           const std::vector<KeyType> &keys = leaf_node->GetKeys();
-          const std::vector<std::vector<ValueType>> &values = leaf_node->GetValues();
-          myassert(keys.size()==values.size());
+          const std::vector<std::vector<ValueType>> &values =
+              leaf_node->GetValues();
+          myassert(keys.size() == values.size());
+          // find the key
           auto position = std::lower_bound(keys.cbegin(), keys.cend(), key,
                                            key_comparator_);
-          if(position!=keys.cend()&&key_equality_checker_(key, *position)) {
+          if (position != keys.cend() &&
+              key_equality_checker_(key, *position)) {
+            // if the key exists
             auto dist = std::distance(keys.cbegin(), position);
-            myassert(values[dist].size()!=0);
+            myassert(values[dist].size() != 0);
             value_vector_size += values[dist].size();
-            if(count==0) {
+            if (count == 0) {
+              // if we haven't found the corresponding value with this key
               const std::vector<ValueType> &value_vector = values[dist];
-              auto value_position = std::lower_bound(
-                      value_vector.cbegin(), value_vector.cend(), value, value_comparator_);
-              return (value_position!=value_vector.cend())&&
+              auto value_position =
+                  std::lower_bound(value_vector.cbegin(), value_vector.cend(),
+                                   value, value_comparator_);
+              return (value_position != value_vector.cend()) &&
                      value_equality_checker_(*value_position, value);
             }
           }
-        }
-        else {
+        } else {
           const BWLeafNode<KeyType, KeyComparator, ValueType> *leaf_node =
-                  static_cast<const BWLeafNode<KeyType, KeyComparator, ValueType> *>(node_ptr);
+              static_cast<
+                  const BWLeafNode<KeyType, KeyComparator, ValueType> *>(
+                  node_ptr);
           const std::vector<KeyType> &keys = leaf_node->GetKeys();
           const std::vector<ValueType> &values = leaf_node->GetValues();
-          myassert(keys.size()==values.size());
+          myassert(keys.size() == values.size());
           auto position = std::lower_bound(keys.cbegin(), keys.cend(), key,
                                            key_comparator_);
-          if(position!=keys.cend()&&key_equality_checker_(key, *position)) {
+          if (position != keys.cend() &&
+              key_equality_checker_(key, *position)) {
             ++value_vector_size;
-            if(count==0)
-              return value_equality_checker_(value, values[std::distance(keys.cbegin(), position)]);
+            if (count == 0)
+              return value_equality_checker_(
+                  value, values[std::distance(keys.cbegin(), position)]);
           }
         }
-        return count>0;
+        return count > 0;
       }
       case NInsert: {
         const BWInsertNode<KeyType, KeyComparator, ValueType> *insert_node =
-                static_cast<const BWInsertNode<KeyType, KeyComparator, ValueType> *>(node_ptr);
-        if(key_equality_checker_(key, insert_node->GetKey())) {
+            static_cast<
+                const BWInsertNode<KeyType, KeyComparator, ValueType> *>(
+                node_ptr);
+        if (key_equality_checker_(key, insert_node->GetKey())) {
           ++value_vector_size;
-          if(value_equality_checker_(value, insert_node->GetValue()))
-            ++count;
+          if (value_equality_checker_(value, insert_node->GetValue())) ++count;
         }
         node_ptr = node_ptr->GetNext();
         break;
       }
       case NDelete: {
         const BWDeleteNode<KeyType, KeyComparator, ValueType> *delete_node =
-                static_cast<const BWDeleteNode<KeyType, KeyComparator, ValueType> *>(node_ptr);
-        if(key_equality_checker_(key, delete_node->GetKey())) {
+            static_cast<
+                const BWDeleteNode<KeyType, KeyComparator, ValueType> *>(
+                node_ptr);
+        if (key_equality_checker_(key, delete_node->GetKey())) {
           --value_vector_size;
-          if(value_equality_checker_(value, delete_node->GetValue()))
-            --count;
+          if (value_equality_checker_(value, delete_node->GetValue())) --count;
         }
         node_ptr = node_ptr->GetNext();
         break;
       }
       case NSplit:
-        myassert(!key_comparator_(static_cast<const BWSplitNode<KeyType, KeyComparator> *>(node_ptr)->GetSplitKey(),
-                                  key));
+        myassert(!key_comparator_(
+                     static_cast<const BWSplitNode<KeyType, KeyComparator> *>(
+                         node_ptr)->GetSplitKey(),
+                     key));
         node_ptr = node_ptr->GetNext();
         break;
       default:
@@ -742,27 +754,29 @@ template <typename KeyType, typename ValueType, class KeyComparator,
           class ValueEqualityChecker, bool Duplicate>
 PID BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
            ValueComparator, ValueEqualityChecker,
-           Duplicate>::FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr,
+           Duplicate>::FindNextNodePID(const BWNode<KeyType, KeyComparator> *
+                                           node_ptr,
                                        const KeyType &key) const {
   // LOG_TRACE("FindNextNodePID()");
   myassert(node_ptr->IfInRange(key, key_comparator_));
-  while(true) {
-    switch(node_ptr->GetType()) {
+  while (true) {
+    switch (node_ptr->GetType()) {
       case NInner: {
         const BWInnerNode<KeyType, KeyComparator> *inner_node =
-                static_cast<const BWInnerNode<KeyType, KeyComparator> *>(node_ptr);
+            static_cast<const BWInnerNode<KeyType, KeyComparator> *>(node_ptr);
         const std::vector<KeyType> &keys = inner_node->GetKeys();
         const std::vector<PID> &children = inner_node->GetChildren();
-        myassert(keys.size()+1==children.size());
-        auto position = std::upper_bound(keys.cbegin(), keys.cend(), key,
-                                         key_comparator_);
+        myassert(keys.size() + 1 == children.size());
+        auto position =
+            std::upper_bound(keys.cbegin(), keys.cend(), key, key_comparator_);
         auto dist = std::distance(keys.cbegin(), position);
         return children[dist];
       }
       case NSplitEntry: {
         const BWSplitEntryNode<KeyType, KeyComparator> *split_entry_node =
-                static_cast<const BWSplitEntryNode<KeyType, KeyComparator> *>(node_ptr);
-        if(split_entry_node->IfInToRange(key, key_comparator_))
+            static_cast<const BWSplitEntryNode<KeyType, KeyComparator> *>(
+                node_ptr);
+        if (split_entry_node->IfInToRange(key, key_comparator_))
           return split_entry_node->GetTo();
         // otherwise get the next too
         node_ptr = node_ptr->GetNext();
@@ -806,7 +820,6 @@ template <typename KeyType, typename ValueType, class KeyComparator,
 const BWNode<KeyType, KeyComparator> *
 BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
        ValueEqualityChecker, Duplicate>::FindLeafNode(const KeyType &key) {
-  // LOG_TRACE("enter");
   // assume we already registered
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
@@ -835,6 +848,82 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
   }
 }
 
+template <typename KeyType, typename ValueType, class KeyComparator,
+          class KeyEqualityChecker, class ValueComparator,
+          class ValueEqualityChecker, bool Duplicate>
+bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
+            ValueComparator, ValueEqualityChecker, Duplicate>::
+    FindOrInsertSplitEntry(const KeyType &split_key, const PID &split_to,
+                           const BWNode<KeyType, KeyComparator> *parent_node,
+                           const PID &pid) {
+  myassert(parent_node->IfInRange(key, key_comparator_));
+  const BWNode<KeyType, KeyComparator> *node = parent_node;
+  bool has_high_key = false;
+  KeyType high_key;
+  while (true) {
+    switch (node->GetType()) {
+      case NInner: {
+        const BWInnerNode<KeyType, KeyComparator> *inner_node =
+            static_cast<const BWInnerNode<KeyType, KeyComparator> *>(node);
+        std::vector<KeyType> keys = inner_node->GetKeys();
+        auto position = std::upper_bound(keys.cbegin(), keys.cend(), split_key,
+                                         key_comparator_);
+        if (position != keys.cbegin() &&
+            key_equality_checker_(split_key, *(position - 1)))
+          // some one else has inserted the split entry node
+          return true;
+        if (position != keys.cend()) {  // find a high key
+          if (!has_high_key) {
+            has_high_key = true;
+            high_key = *position;
+          } else if (key_comparator_(*position, high_key))
+            high_key = *position;
+        }
+        // try to insert the split entry
+        const BWNode<KeyType, KeyComparator> *split_entry;
+        if (has_high_key)
+          split_entry = new BWSplitEntryNode<KeyType, KeyComparator>(
+              parent_node, split_key, high_key, split_to);
+        else
+          split_entry = new BWSplitEntryNode<KeyType, KeyComparator>(
+              parent_node, split_key, split_to);
+        if (pid_table_.bool_compare_and_swap(pid, parent_node, split_entry))
+          return true;
+        // fail, clean up
+        delete split_entry;
+        return false;
+      }
+      case NSplit: {
+        myassert(!key_comparator_(
+                     static_cast<const BWSplitNode<KeyType, KeyComparator> *>(
+                         node_ptr)->GetSplitKey(),
+                     key));
+        node = node->GetNext();
+        break;
+      }
+      case NSplitEntry: {
+        const BWSplitEntryNode<KeyType, KeyComparator> *split_entry_node =
+            static_cast<const BWSplitEntryNode<KeyType, KeyComparator> *>(node);
+        if (key_equality_checker_(split_key, split_entry_node->GetToLowKey()))
+          // some one else has inserted the split entry node
+          return true;
+        if (key_comparator_(split_key, split_entry_node->GetToLowKey())) {
+          // find a high key
+          if (!has_high_key) {
+            has_high_key = true;
+            high_key = split_entry_node->GetToLowKey();
+          } else if (key_comparator_(split_entry_node->GetToLowKey(), high_key))
+            high_key = split_entry_node->GetToLowKey();
+        }
+        node = node->GetNext();
+        break;
+      }
+      default:
+        // should not happen
+        myassert(0);
+    }
+  }
+}
 /*
  * insert a split entry node at the parent of 'top' to finish the second step of
  * split
@@ -865,35 +954,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       if ((path.size() == 2 && root_version_number != root_version_number_) ||
           !parent_node->IfInRange(key, key_comparator_))
         return false;
-
-      // try to find the high key
-      std::vector<KeyType> keys_view;
-      std::vector<PID> children_view;
-      PID left_view, right_view;
-      CreateInnerNodeView(parent_node, &keys_view, &children_view, &left_view,
-                          &right_view);
-
-      auto position = std::upper_bound(keys_view.begin(), keys_view.end(),
-                                       split_key, key_comparator_);
-
-      // then check if this split entry has been inserted by others
-      if (position != keys_view.begin() &&
-          key_equality_checker_(split_key, *(position - 1)))
-        return true;
-
-      // try to insert the split entry
-      const BWNode<KeyType, KeyComparator> *split_entry;
-      if (position != keys_view.end())
-        split_entry = new BWSplitEntryNode<KeyType, KeyComparator>(
-            parent_node, split_key, *position, to);
-      else
-        split_entry = new BWSplitEntryNode<KeyType, KeyComparator>(
-            parent_node, split_key, to);
-      if (pid_table_.bool_compare_and_swap(pid, parent_node, split_entry))
-        return true;
-
-      // fail, clean up, retry
-      delete split_entry;
+      if (FindOrInsertSplitEntry(split_key, to, parent_node, pid)) return true;
     }
   } else {
     myassert(path.back() == root_);
@@ -1006,9 +1067,9 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
   ConstructConsolidatedInnerNodeInternal(node_chain, &keys, &children, &left,
                                          &right);
   return new BWInnerNode<KeyType, KeyComparator>(
-      std::move(keys), std::move(children), left, right, node_chain->GetLowKey(),
-      node_chain->GetHighKey(), node_chain->HasLowKey(),
-      node_chain->HasHighKey());
+      std::move(keys), std::move(children), left, right,
+      node_chain->GetLowKey(), node_chain->GetHighKey(),
+      node_chain->HasLowKey(), node_chain->HasHighKey());
 }
 
 /*
@@ -1031,9 +1092,9 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
     ConstructConsolidatedLeafNodeInternal(node_chain, &keys, &values, &left,
                                           &right);
     return new BWLeafNode<KeyType, KeyComparator, ValueType>(
-        std::move(keys), std::move(values), left, right, node_chain->GetLowKey(),
-        node_chain->GetHighKey(), node_chain->HasLowKey(),
-        node_chain->HasHighKey());
+        std::move(keys), std::move(values), left, right,
+        node_chain->GetLowKey(), node_chain->GetHighKey(),
+        node_chain->HasLowKey(), node_chain->HasHighKey());
   } else {
     std::vector<KeyType> keys;
     std::vector<std::vector<ValueType>> values;
@@ -1041,9 +1102,9 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
     ConstructConsolidatedLeafNodeInternal(node_chain, &keys, &values, &left,
                                           &right);
     return new BWLeafNode<KeyType, KeyComparator, std::vector<ValueType>>(
-        std::move(keys), std::move(values), left, right, node_chain->GetLowKey(),
-        node_chain->GetHighKey(), node_chain->HasLowKey(),
-        node_chain->HasHighKey());
+        std::move(keys), std::move(values), left, right,
+        node_chain->GetLowKey(), node_chain->GetHighKey(),
+        node_chain->HasLowKey(), node_chain->HasHighKey());
   }
 }
 

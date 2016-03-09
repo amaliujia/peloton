@@ -349,22 +349,23 @@ class BWInnerNode : public BWNormalNode<KeyType, KeyComparator> {
               const std::vector<PID> &children, const PID &left,
               const PID &right, const KeyType &low_key, const KeyType &high_key,
               const bool &has_low_key, const bool &has_high_key)
-          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left,
+  right,
                                                  low_key, high_key, has_low_key,
                                                  has_high_key),
             keys_(keys),
             children_(children) {}
   */
 
-  BWInnerNode(std::vector<KeyType> &&keys,
-              std::vector<PID> &&children, const PID &left,
-              const PID &right, const KeyType &low_key, const KeyType &high_key,
-              const bool &has_low_key, const bool &has_high_key)
-          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
-                                                 low_key, high_key, has_low_key,
-                                                 has_high_key),
-            keys_(keys),
-            children_(children) {}
+  BWInnerNode(std::vector<KeyType> &&keys, std::vector<PID> &&children,
+              const PID &left, const PID &right, const KeyType &low_key,
+              const KeyType &high_key, const bool &has_low_key,
+              const bool &has_high_key)
+      : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
+                                             low_key, high_key, has_low_key,
+                                             has_high_key),
+        keys_(keys),
+        children_(children) {}
 
   inline NodeType GetType() const { return NInner; }
 
@@ -433,21 +434,22 @@ class BWLeafNode : public BWNormalNode<KeyType, KeyComparator> {
              const std::vector<ValueType> &values, const PID &left,
              const PID &right, const KeyType &low_key, const KeyType &high_key,
              const bool &has_low_key, const bool &has_high_key)
-          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left,
+  right,
                                                  low_key, high_key, has_low_key,
                                                  has_high_key),
             keys_(keys),
             values_(values) {}
   */
-  BWLeafNode(std::vector<KeyType> &&keys,
-             std::vector<ValueType> &&values, const PID &left,
-             const PID &right, const KeyType &low_key, const KeyType &high_key,
-             const bool &has_low_key, const bool &has_high_key)
-          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
-                                                 low_key, high_key, has_low_key,
-                                                 has_high_key),
-            keys_(keys),
-            values_(values) {}
+  BWLeafNode(std::vector<KeyType> &&keys, std::vector<ValueType> &&values,
+             const PID &left, const PID &right, const KeyType &low_key,
+             const KeyType &high_key, const bool &has_low_key,
+             const bool &has_high_key)
+      : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
+                                             low_key, high_key, has_low_key,
+                                             has_high_key),
+        keys_(keys),
+        values_(values) {}
 
   inline const std::vector<KeyType> &GetKeys() const { return keys_; }
 
@@ -718,8 +720,8 @@ class BWSplitEntryNode : public BWDeltaNode<KeyType, KeyComparator> {
 
   inline bool IfInToRange(const KeyType &key,
                           const KeyComparator &comparator) const {
-    return ((!has_to_high_key_)||comparator(key, to_high_key_))&&
-            (!comparator(key, to_low_key_));
+    return ((!has_to_high_key_) || comparator(key, to_high_key_)) &&
+           (!comparator(key, to_low_key_));
   }
 
   virtual size_t GetMemoryFootprint() const {
@@ -1487,6 +1489,10 @@ class BWTree {
   bool InsertSplitEntry(const BWNode<KeyType, KeyComparator> *top,
                         const KeyType &key, std::vector<PID> &path,
                         const VersionNumber &root_version_number);
+
+  bool FindOrInsertSplitEntry(const KeyType &split_key, const PID &split_to,
+                              const BWNode<KeyType, KeyComparator> *parent_node,
+                              const PID &pid);
 
   bool ExistKeyValue(const BWNode<KeyType, KeyComparator> *node_ptr,
                      const KeyType &key, const ValueType &value,
