@@ -1410,13 +1410,30 @@ namespace peloton {
       }
 
       void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
+        // test iterator
+        ScanIterator *iterator = GetIterator(key);
+        while(iterator->HasNext()) {
+          auto pair = iterator->Next();
+          if(key_equality_checker_(key, pair.first))
+            result.push_back(pair.second);
+          else
+            break;
+        }
+        /*
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
         ScanKeyUtil(key, result, path, root_version_number_);
         GarbageCollector::global_gc_.Deregister(time);
+         */
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) const {
+        // test iterator
+        ScanIterator *iterator = GetIterator();
+        while(iterator->HasNext())
+          ret.push_back(iterator->Next().second);
+        delete iterator;
+        /*
         //LOG_TRACE("ScanAllKeys()");
         EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
@@ -1465,6 +1482,7 @@ namespace peloton {
           }
         }
         GarbageCollector::global_gc_.Deregister(time);
+         */
       }
 
     private:

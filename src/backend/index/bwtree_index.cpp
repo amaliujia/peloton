@@ -62,7 +62,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
     __attribute__((unused)) const ScanDirectionType& scan_direction) {
   dbg_msg("not implemented BWTreeIndex::Scan being called");
   std::vector<ItemPointer> result;
-
+/*
   KeyType index_key;
 
   // Check if we have leading (leftmost) column equality
@@ -84,6 +84,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
   LOG_TRACE("Special case : %d ", special_case);
 
   bool all_constraints_are_equal = false;
+  */
 /*
   if(special_case) {
     // If it is a special case, we can figure out the range to scan in the index
