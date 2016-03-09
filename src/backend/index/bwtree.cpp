@@ -856,7 +856,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
     FindOrInsertSplitEntry(const KeyType &split_key, const PID &split_to,
                            const BWNode<KeyType, KeyComparator> *parent_node,
                            const PID &pid) {
-  myassert(parent_node->IfInRange(key, key_comparator_));
+  myassert(parent_node->IfInRange(split_key, key_comparator_));
   const BWNode<KeyType, KeyComparator> *node = parent_node;
   bool has_high_key = false;
   KeyType high_key;
@@ -895,9 +895,8 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       }
       case NSplit: {
         myassert(!key_comparator_(
-                     static_cast<const BWSplitNode<KeyType, KeyComparator> *>(
-                         node_ptr)->GetSplitKey(),
-                     key));
+                static_cast<const BWSplitNode<KeyType, KeyComparator> *>(node)->GetSplitKey(),
+                split_key));
         node = node->GetNext();
         break;
       }
