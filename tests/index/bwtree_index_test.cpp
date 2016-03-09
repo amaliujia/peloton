@@ -188,7 +188,7 @@ namespace peloton {
     }
 
 #ifdef TT
-    TEST(IndexTests, SingleThreadTest) {
+    TEST(BWTreeIndexTests, SingleThreadTest) {
 #else
     void main2() {
 #endif
@@ -257,7 +257,7 @@ namespace peloton {
     }
 
 #ifdef TT
-    TEST(IndexTests, SingleThreadUniqueKeyTest) {
+    TEST(BWTreeIndexTests, SingleThreadUniqueKeyTest) {
 #else
     void main3() {
 #endif
@@ -338,7 +338,7 @@ namespace peloton {
     }
 
 #ifdef TT
-    TEST(IndexTests, MultipleThreadTest) {
+    TEST(BWTreeIndexTests, MultipleThreadTest) {
 #else
     void main4() {
 #endif
