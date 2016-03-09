@@ -30,7 +30,7 @@
 
 
 // for IDE formatting, since IDE can't recognize when we use TEST(...)
-#define TT
+//#define TT
 
 namespace peloton {
   namespace test {
@@ -446,7 +446,7 @@ namespace peloton {
     ItemPointer item1(120, 7);
     ItemPointer item2(123, 19);
 
-    index::Index *BuildIndex() {
+    index::Index *BuildIndex(bool unique_keys=false) {
       // Build tuple and key schema
       std::vector<std::vector<std::string>> column_names;
       std::vector<catalog::Column> columns;
@@ -473,9 +473,6 @@ namespace peloton {
 
       // TABLE SCHEMA -- {column1, column2, column3, column4}
       tuple_schema = new catalog::Schema(columns);
-
-      // Build index metadata
-      const bool unique_keys = false;
 
       index::IndexMetadata *index_metadata = new index::IndexMetadata(
               "test_index", 125, index_type, INDEX_CONSTRAINT_TYPE_DEFAULT,
@@ -667,7 +664,12 @@ namespace peloton {
 #endif
       auto pool = TestingHarness::GetInstance().GetTestingPool();
       // INDEX
-      std::unique_ptr<index::Index> index(BuildIndex());
+      std::unique_ptr<index::Index> index(BuildIndex(true));
+
+      if(!index->HasUniqueKeys()) {
+        LOG_TRACE("Index is built in duplicate mode, unique key test will not be done.");
+        return ;
+      }
 
       constexpr size_t size(2000);
       std::vector<std::pair<std::unique_ptr<storage::Tuple>, ItemPointer>> pairs;
