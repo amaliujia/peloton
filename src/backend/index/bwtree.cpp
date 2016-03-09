@@ -549,7 +549,7 @@ namespace peloton {
     ExistKeyValue(const BWNode<KeyType, KeyComparator> *node_ptr,
                   const KeyType &key, const ValueType &value,
                   size_t &value_vector_size) const {
-      LOG_TRACE("ExistKeyValue()");
+      //LOG_TRACE("ExistKeyValue()");
       // assume node_ptr is the header of leaf node
       myassert(node_ptr->IfLeafNode());
       value_vector_size = 0;
