@@ -302,7 +302,6 @@ namespace peloton {
         }
 
         index->Cleanup();
-        memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after second insertion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // try deletion
