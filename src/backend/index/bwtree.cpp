@@ -463,6 +463,7 @@ namespace peloton {
             myassert((position==keys_view.begin()||!key_equality_checker_(key, *(position-1)))&&
                      (position+1==keys_view.end()||!key_equality_checker_(key, *(position+1))));
             auto dist = std::distance(keys_view.begin(), position);
+            LOG_DEBUG("ScanKeyUtil dist=%lu", (unsigned long)dist);
             result.push_back(values_view[dist]);
           }
           else {
