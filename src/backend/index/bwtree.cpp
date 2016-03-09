@@ -458,12 +458,12 @@ namespace peloton {
             PID left_view, right_view;
             CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left_view, &right_view);
             auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
-            if(!key_equality_checker_(key, *position))
+            if(position==keys_view.end()||!key_equality_checker_(key, *position))
               return ;
             myassert((position==keys_view.begin()||!key_equality_checker_(key, *(position-1)))&&
                      (position+1==keys_view.end()||!key_equality_checker_(key, *(position+1))));
             auto dist = std::distance(keys_view.begin(), position);
-            LOG_DEBUG("ScanKeyUtil dist=%lu", (unsigned long)dist);
+            //LOG_DEBUG("ScanKeyUtil dist=%lu", (unsigned long)dist);
             result.push_back(values_view[dist]);
           }
           else {
@@ -472,12 +472,12 @@ namespace peloton {
             PID left_view, right_view;
             CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left_view, &right_view);
             auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
-            if(!key_equality_checker_(key, *position))
+            if(position==keys_view.end()||!key_equality_checker_(key, *position))
               return ;
             myassert((position==keys_view.begin()||!key_equality_checker_(key, *(position-1)))&&
                      (position+1==keys_view.end()||!key_equality_checker_(key, *(position+1))));
             auto dist = std::distance(keys_view.begin(), position);
-            LOG_DEBUG("ScanKeyUtil dist=%lu, values_view.size=%lu", (unsigned long)dist, values_view.size());
+            //LOG_DEBUG("ScanKeyUtil dist=%lu, values_view.size=%lu", (unsigned long)dist, values_view.size());
             result = values_view[dist];
           }
           return ;
