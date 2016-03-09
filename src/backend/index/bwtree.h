@@ -1080,7 +1080,7 @@ namespace peloton {
 
         void UpdateSelf() {
           myassert(next_==keys_.size());
-          myassert(next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL);
+          myassert((next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL));
 
           current_node_ = bwtree_.pid_table_.get(next_node_pid_);
           myassert(current_node_->IfLeafNode());
@@ -1173,7 +1173,7 @@ namespace peloton {
 
         void UpdateSelf() {
           myassert(key_next_==keys_.size());
-          myassert(next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL);
+          myassert((next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL));
 
           current_node_ = bwtree_.pid_table_.get(next_node_pid_);
           myassert(current_node_->IfLeafNode());
