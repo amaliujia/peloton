@@ -1417,7 +1417,7 @@ namespace peloton {
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) const {
-        LOG_TRACE("ScanAllKeys()");
+        //LOG_TRACE("ScanAllKeys()");
         EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
