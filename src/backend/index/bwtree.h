@@ -1142,11 +1142,15 @@ namespace peloton {
         inline bool HasRegistered() const { return registered_; }
 
         virtual bool HasNext() {
+          LOG_TRACE("enter");
           while(next_==keys_.size()) {
-            if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL)
+            if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL) {
+              LOG_TRACE("leave false");
               return false;
+            }
             UpdateSelf();
           }
+          LOG_TRACE("leave true");
           return true;
         }
 
@@ -1238,10 +1242,13 @@ namespace peloton {
         inline bool HasRegistered() const { return registered_; }
 
         bool HasNext() {
+          LOG_TRACE("enter");
           while(key_next_==keys_.size()||value_next_==values_[key_next_].size()) {
             if(key_next_==keys_.size()) {
-              if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL)
+              if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL) {
+                LOG_TRACE("leave false");
                 return false;
+              }
               UpdateSelf();
             }
             else {
@@ -1249,6 +1256,7 @@ namespace peloton {
               value_next_ = 0;
             }
           }
+          LOG_TRACE("leave true");
           return true;
         }
 
@@ -1411,6 +1419,7 @@ namespace peloton {
 
       void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
         // test iterator
+        LOG_TRACE("enter");
         ScanIterator *iterator = GetIterator(key);
         while(iterator->HasNext()) {
           auto pair = iterator->Next();
@@ -1420,6 +1429,7 @@ namespace peloton {
             break;
         }
         delete iterator;
+        LOG_TRACE("leave");
         /*
         EpochTime time = GarbageCollector::global_gc_.Register();
         std::vector<PID> path = {root_};
@@ -1429,11 +1439,13 @@ namespace peloton {
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) /*const*/ {
+        LOG_TRACE("enter");
         // test iterator
         ScanIterator *iterator = GetIterator();
         while(iterator->HasNext())
           ret.push_back(iterator->Next().second);
         delete iterator;
+        LOG_TRACE("leave");
         /*
         //LOG_TRACE("ScanAllKeys()");
         EpochTime time = GarbageCollector::global_gc_.Register();
