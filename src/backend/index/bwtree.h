@@ -1307,14 +1307,14 @@ namespace peloton {
         GarbageCollector::global_gc_.Deregister(time);
       }
 
-      ScanIterator *GetIterator() {
+      inline ScanIterator *GetIterator() {
         if(Duplicate)
           return new ScanIteratorDuplicate(*this);
         else
           return new ScanIteratorUnique(*this);
       }
 
-      ScanIterator *GetIterator(const KeyType &start_key) {
+      inline ScanIterator *GetIterator(const KeyType &start_key) {
         if(Duplicate)
           return new ScanIteratorDuplicate(*this, start_key);
         else
@@ -1427,7 +1427,7 @@ namespace peloton {
          */
       }
 
-      void ScanAllKeys(std::vector<ValueType> &ret) const {
+      void ScanAllKeys(std::vector<ValueType> &ret) /*const*/ {
         // test iterator
         ScanIterator *iterator = GetIterator();
         while(iterator->HasNext())
