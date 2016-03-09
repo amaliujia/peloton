@@ -72,7 +72,7 @@ typedef size_t SizeType;
 typedef uint_fast8_t VersionNumber;
 constexpr int max_chain_len = 10;               // for consolidation
 constexpr int compact_chain_len_threshold = 3;  // for compaction
-constexpr int max_node_size = 20;
+constexpr int max_node_size = 200;
 constexpr int min_node_size = max_node_size / 2;
 enum NodeType {
   NInner = 0,
