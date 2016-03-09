@@ -31,17 +31,20 @@
 
 // Debug mesasge for autolab, since LOG... won't be printed
 
-#define P2DEBUG 1
-#define dbg_msg(...)                                       \
-  do {                                                     \
-    if (P2DEBUG) {                                         \
-      fprintf(stderr, "%s line %d: ", __FILE__, __LINE__); \
-      fprintf(stderr, __VA_ARGS__);                        \
-      fprintf(stderr, "\n");                               \
-      fflush(stderr);                                      \
-    }                                                      \
+//#define P2DEBUG 1
+#ifdef P2DEBUG
+#define dbg_msg(...)                                     \
+  do {                                                   \
+    fprintf(stderr, "%s line %d: ", __FILE__, __LINE__); \
+    fprintf(stderr, __VA_ARGS__);                        \
+    fprintf(stderr, "\n");                               \
+    fflush(stderr);                                      \
   } while (0)
+#else
+#define dbg_msg(...)
+#endif
 
+#ifdef P2DEBUG
 // Customized assert, since an assertion failure on autolab won't be printed
 #define myassert(e)                \
   do {                             \
@@ -50,6 +53,9 @@
     }                              \
     assert(e);                     \
   } while (0)
+#else
+#define myassert(e)
+#endif
 
 namespace peloton {
 namespace index {
