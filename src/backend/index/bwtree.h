@@ -693,6 +693,11 @@ class BWSplitEntryNode : public BWDeltaNode<KeyType, KeyComparator> {
 
   inline const KeyType &GetToHighKey() const { return to_high_key_; }
 
+  inline bool IfInToRange(const KeyType &key, const KeyComparator &comparator) const {
+    return !comparator(key, to_low_key_)&&
+            (!has_to_high_key_||comparator(key, to_high_key_));
+  }
+
   virtual size_t GetMemoryFootprint() const {
     return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint() +
            sizeof(has_to_high_key_) + sizeof(to_low_key_) +

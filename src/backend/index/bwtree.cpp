@@ -638,18 +638,38 @@ PID BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
            Duplicate>::FindNextNodePID(const BWNode<KeyType, KeyComparator> *
                                            node_ptr,
                                        const KeyType &key) const {
-  // LOG_TRACE("FindNextNodePID()");
   myassert(node_ptr->IfInRange(key, key_comparator_));
-  std::vector<KeyType> keys_view;
-  std::vector<PID> children_view;
-  PID left_view, right_view;
-  CreateInnerNodeView(node_ptr, &keys_view, &children_view, &left_view,
-                      &right_view);
-  myassert(keys_view.size() + 1 == children_view.size());
-  auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key,
+  myassert(node_ptr->IfInnerNode());
+  while(node_ptr->GetType()!=NInner) {
+    switch(node_ptr->GetType()) {
+      case NSplit:
+        myassert(key_comparator_(key,
+                                 static_cast<const BWSplitNode<KeyType, KeyComparator> *>(node_ptr)->GetSplitKey()));
+        node_ptr = node_ptr->GetNext();
+        break;
+      case NSplitEntry: {
+        const BWSplitEntryNode<KeyType, KeyComparator> *split_node =
+                static_cast<const BWSplitEntryNode<KeyType, KeyComparator> *>(node_ptr);
+        if(split_node->IfInToRange(key, key_comparator_))
+          return split_node->GetTo();
+        node_ptr = node_ptr->GetNext();
+        break;
+      }
+      default:
+        // should not happen
+        myassert(0);
+    }
+  }
+  const BWInnerNode<KeyType, KeyComparator> *inner_node =
+          static_cast<const BWInnerNode<KeyType, KeyComparator> *>(node_ptr);
+
+  const std::vector<KeyType> &keys = inner_node->GetKeys();
+  const std::vector<PID> &children = inner_node->GetChildren();
+  myassert(keys.size() + 1 == children.size());
+  auto position = std::upper_bound(keys.begin(), keys.end(), key,
                                    key_comparator_);
-  auto dist = std::distance(keys_view.begin(), position);
-  return children_view[dist];
+  auto dist = std::distance(keys.begin(), position);
+  return children[dist];
 }
 
 template <typename KeyType, typename ValueType, class KeyComparator,
