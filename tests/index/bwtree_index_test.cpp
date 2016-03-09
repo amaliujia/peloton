@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-//#define TT
+#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
