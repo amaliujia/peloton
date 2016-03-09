@@ -16,7 +16,7 @@
 #include <iostream>
 #include <chrono>
 
-#define TT
+//#define TT
 
 namespace peloton {
   namespace test {
