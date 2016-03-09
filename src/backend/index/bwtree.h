@@ -1061,9 +1061,32 @@ namespace peloton {
     public :
       class ScanIterator {
       public:
-        virtual ~ScanIterator() { }
+        ScanIterator():registered_time_(GarbageCollector::global_gc_.Register()),
+                       registered_(true) { }
+
+        virtual ~ScanIterator() { Deregister(); }
         virtual bool HasNext() = 0;
         virtual std::pair<KeyType, ValueType> Next() = 0;
+
+        inline void Register() {
+          if(!registered_) {
+            registered_time_ = GarbageCollector::global_gc_.Register();
+            registered_ = true;
+          }
+        }
+
+        inline void Deregister() {
+          if(registered_) {
+            GarbageCollector::global_gc_.Deregister(registered_time_);
+            registered_ = false;
+          }
+        }
+
+        inline bool HasRegistered() const { return registered_; }
+
+      protected:
+        EpochTime registered_time_;
+        bool registered_;
       };
 
       class ScanIteratorUnique: public ScanIterator {
@@ -1075,8 +1098,6 @@ namespace peloton {
         std::vector<ValueType> values_;
         size_t next_;
         PID next_node_pid_;
-        EpochTime registered_time_;
-        bool registered_;
 
         void UpdateSelf() {
           myassert(next_==keys_.size());
@@ -1096,9 +1117,7 @@ namespace peloton {
                         KeyComparator, KeyEqualityChecker,
                         ValueComparator, ValueEqualityChecker, Duplicate> &bwtree):
                 bwtree_(bwtree),
-                current_node_(bwtree.FirstLeafNode()),
-                registered_time_(GarbageCollector::global_gc_.Register()),
-                registered_(true) {
+                current_node_(bwtree.FirstLeafNode()) {
           myassert(!Duplicate);
           myassert(current_node_->IfLeafNode());
           PID left_view;
@@ -1112,9 +1131,7 @@ namespace peloton {
                         ValueComparator, ValueEqualityChecker, Duplicate> &bwtree,
                 const KeyType &start_key):
                 bwtree_(bwtree),
-                current_node_(bwtree.FindLeafNode(start_key)),
-                registered_time_(GarbageCollector::global_gc_.Register()),
-                registered_(true) {
+                current_node_(bwtree.FindLeafNode(start_key)) {
           myassert(!Duplicate);
           myassert(current_node_->IfLeafNode());
           PID left_view;
@@ -1122,24 +1139,6 @@ namespace peloton {
           next_ = (size_t)std::distance(keys_.begin(),
                                         std::lower_bound(keys_.begin(), keys_.end(), start_key, bwtree_.key_comparator_));
         }
-
-        ~ScanIteratorUnique() { Deregister(); }
-
-        inline void Register() {
-          if(!registered_) {
-            registered_time_ = GarbageCollector::global_gc_.Register();
-            registered_ = true;
-          }
-        }
-
-        inline void Deregister() {
-          if(registered_) {
-            GarbageCollector::global_gc_.Deregister(registered_time_);
-            registered_ = false;
-          }
-        }
-
-        inline bool HasRegistered() const { return registered_; }
 
         virtual bool HasNext() {
           //LOG_TRACE("enter");
@@ -1194,9 +1193,7 @@ namespace peloton {
                         KeyComparator, KeyEqualityChecker,
                         ValueComparator, ValueEqualityChecker, Duplicate> &bwtree):
                 bwtree_(bwtree),
-                current_node_(bwtree.FirstLeafNode()),
-                registered_time_(GarbageCollector::global_gc_.Register()),
-                registered_(true) {
+                current_node_(bwtree.FirstLeafNode()) {
           myassert(Duplicate);
           myassert(current_node_->IfLeafNode());
           PID left_view;
@@ -1211,9 +1208,7 @@ namespace peloton {
                         ValueComparator, ValueEqualityChecker, Duplicate> &bwtree,
                 const KeyType &start_key):
                 bwtree_(bwtree),
-                current_node_(bwtree.FindLeafNode(start_key)),
-                registered_time_(GarbageCollector::global_gc_.Register()),
-                registered_(true) {
+                current_node_(bwtree.FindLeafNode(start_key)) {
           myassert(Duplicate);
           myassert(current_node_->IfLeafNode());
           PID left_view;
@@ -1222,24 +1217,6 @@ namespace peloton {
                                         std::lower_bound(keys_.begin(), keys_.end(), start_key, bwtree_.key_comparator_));
           value_next_ = 0;
         }
-
-        ~ScanIteratorDuplicate() { Deregister(); }
-
-        inline void Register() {
-          if(!registered_) {
-            registered_time_ = GarbageCollector::global_gc_.Register();
-            registered_ = true;
-          }
-        }
-
-        inline void Deregister() {
-          if(registered_) {
-            GarbageCollector::global_gc_.Deregister(registered_time_);
-            registered_ = false;
-          }
-        }
-
-        inline bool HasRegistered() const { return registered_; }
 
         bool HasNext() {
           //LOG_TRACE("enter");
@@ -1418,6 +1395,11 @@ namespace peloton {
       }
 
       void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
+        EpochTime time = GarbageCollector::global_gc_.Register();
+        std::vector<PID> path = {root_};
+        ScanKeyUtil(key, result, path, root_version_number_);
+        GarbageCollector::global_gc_.Deregister(time);
+        /*
         // test iterator
         //LOG_TRACE("enter");
         ScanIterator *iterator = GetIterator(key);
@@ -1430,23 +1412,10 @@ namespace peloton {
         }
         delete iterator;
         //LOG_TRACE("leave");
-        /*
-        EpochTime time = GarbageCollector::global_gc_.Register();
-        std::vector<PID> path = {root_};
-        ScanKeyUtil(key, result, path, root_version_number_);
-        GarbageCollector::global_gc_.Deregister(time);
-         */
+        */
       }
 
-      void ScanAllKeys(std::vector<ValueType> &ret) /*const*/ {
-        //LOG_TRACE("enter");
-        // test iterator
-        ScanIterator *iterator = GetIterator();
-        while(iterator->HasNext())
-          ret.push_back(iterator->Next().second);
-        delete iterator;
-        //LOG_TRACE("leave");
-        /*
+      void ScanAllKeys(std::vector<ValueType> &ret) const {
         //LOG_TRACE("ScanAllKeys()");
         EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
@@ -1495,7 +1464,16 @@ namespace peloton {
           }
         }
         GarbageCollector::global_gc_.Deregister(time);
-         */
+
+        /*
+        //LOG_TRACE("enter");
+        // test iterator
+        ScanIterator *iterator = GetIterator();
+        while(iterator->HasNext())
+          ret.push_back(iterator->Next().second);
+        delete iterator;
+        //LOG_TRACE("leave");
+        */
       }
 
     private:

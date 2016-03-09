@@ -57,6 +57,23 @@ class BWTreeIndex : public Index {
 
   std::string GetTypeName() const;
 
+  template<class ScanIterator>
+  void ExtractAllTuples(
+          const std::vector<Value> &values,
+          const std::vector<oid_t> &key_column_ids,
+          const std::vector<ExpressionType> &expr_types,
+          ScanIterator *iterator,
+          std::vector<ItemPointer> &result) {
+    while(iterator->HasNext()) {
+      auto pair = iterator->Next();
+      auto current_key = pair.first;
+      auto tuple = current_key.GetTupleForComparison(metadata->GetKeySchema());
+      if(Compare(tuple, key_column_ids, expr_types, values)) {
+        result.push_back(pair.second);
+      }
+    }
+  }
+
   bool Cleanup() {
     dbg_msg("BWTreeIndex::Cleanup being called");
     bool result = container_unique.CompactSelf();
