@@ -409,7 +409,6 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
             ValueComparator, ValueEqualityChecker,
             Duplicate>::InsertEntry(const KeyType &key,
                                     const ValueType &value) {
-
   EpochTime time = GarbageCollector::global_gc_.Register();
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
