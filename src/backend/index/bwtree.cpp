@@ -708,7 +708,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
         const BWInsertNode<KeyType, KeyComparator, ValueType> *insert_node =
                 static_cast<const BWInsertNode<KeyType, KeyComparator, ValueType> *>(node_ptr);
         if(key_equality_checker_(key, insert_node->GetKey())) {
-          --value_vector_size;
+          ++value_vector_size;
           if(value_equality_checker_(value, insert_node->GetValue()))
             ++count;
         }
