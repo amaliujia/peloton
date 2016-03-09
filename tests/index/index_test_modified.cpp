@@ -911,7 +911,7 @@ namespace peloton {
       index->InsertEntry(key4.get(), item1);
 
     }
-    LOG_DEBUG("InsertTest() done.");
+    LOG_TRACE("InsertTest() done.");
   }
 
 // DELETE HELPER FUNCTION
@@ -964,7 +964,7 @@ namespace peloton {
       index->DeleteEntry(key3.get(), item1);
       index->DeleteEntry(key4.get(), item1);
     }
-    LOG_DEBUG("DeleteTest() done.");
+    LOG_TRACE("DeleteTest() done.");
   }
 
   TEST(IndexTests, DeleteTest) {
@@ -1038,8 +1038,6 @@ EXPECT_EQ(locations[0].block, item0.block);
 delete tuple_schema;
 }
 
-}
-}
 }  // End test namespace
 }  // End peloton namespace
 
