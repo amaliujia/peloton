@@ -61,7 +61,7 @@ namespace peloton {
         }
         gc.Deregister(registered_time);
         //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-        dbg_msg("BASIC_TEST iteration %d finished.", iter);
+        LOG_TRACE("BASIC_TEST iteration %d finished.", iter);
       }
     }
 
@@ -83,7 +83,7 @@ namespace peloton {
         gc.SubmitGarbage(new_garbage);
       }
       gc.Deregister(registered_time);
-      dbg_msg("thread %d submit garbage done.", no);
+      LOG_TRACE("thread %d submit garbage done.", no);
     }
 
 #ifdef TT
@@ -97,7 +97,7 @@ namespace peloton {
       for(int iter = 0; iter<3; ++iter) {
         LaunchParallelTest(total, SubmitGarbage, &no_gen);
         //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-        dbg_msg("CONCURRENT_SUBMIT_GARBAGE_TEST iteration %d finished.", iter);
+        LOG_TRACE("CONCURRENT_SUBMIT_GARBAGE_TEST iteration %d finished.", iter);
       }
     }
 
@@ -213,25 +213,25 @@ namespace peloton {
           if(i%100==0)
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        dbg_msg("allocate thread %d allocation done.", no);
+        LOG_TRACE("allocate thread %d allocation done.", no);
 
         for(int i = 0; i<size_each; ++i) {
           EXPECT_EQ(table->get((*pids)[size_each*no+i]), (*addresses)[size_each*no+i]);
         }
 
-        dbg_msg("allocate thread %d verification done.", no);
+        LOG_TRACE("allocate thread %d verification done.", no);
 
         for(int i = 0; i<size_each; ++i) {
           table->free_PID((*pids)[size_each*no+i]);
         }
 
-        dbg_msg("allocate thread %d free done.", no);
+        LOG_TRACE("allocate thread %d free done.", no);
       }
         // odd free
       else {
         for(int i=0; i<size_each; ++i)
           table->free_PID((*pids)[size_each*no+i]);
-        dbg_msg("free thread %d done.", no);
+        LOG_TRACE("free thread %d done.", no);
       }
     }
 #ifdef TT
@@ -287,7 +287,7 @@ namespace peloton {
                                              (*original_addresses)[size_each*no+i],
                                              (*to_addresses)[size_each*no+i]);
       }
-      dbg_msg("CAS thread %d done.", no);
+      LOG_TRACE("CAS thread %d done.", no);
     }
 
 #ifdef TT
@@ -362,7 +362,7 @@ namespace peloton {
                                              (*original_addresses)[i],
                                              to_addresses[no][i]);
       }
-      dbg_msg("concurrent CAS thread %d done.", no);
+      LOG_TRACE("concurrent CAS thread %d done.", no);
     }
 
 #ifdef TT
@@ -573,7 +573,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->InsertEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      dbg_msg("insert thread %d done.", no);
+      LOG_TRACE("insert thread %d done.", no);
     }
 
     void DeleteFunction(std::atomic<std::uint_least8_t> *no_gen, index::Index *index, const size_t size_each,
@@ -585,7 +585,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->DeleteEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      dbg_msg("delete thread %d done.", no);
+      LOG_TRACE("delete thread %d done.", no);
     }
 
 #ifdef TT
@@ -649,7 +649,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;
@@ -732,7 +732,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;
@@ -802,7 +802,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;

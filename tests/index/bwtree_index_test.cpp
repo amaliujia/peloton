@@ -172,7 +172,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->InsertEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      dbg_msg("insert thread %d done.", no);
+      LOG_TRACE("insert thread %d done.", no);
     }
 
     void DeleteFunction(std::atomic<std::uint_least8_t> *no_gen, index::Index *index, const size_t size_each,
@@ -184,7 +184,7 @@ namespace peloton {
       for(auto i = no*size_each; i<(no+1)*size_each; ++i) {
         (*result)[i] = index->DeleteEntry((*pairs)[i].first.get(), (*pairs)[i].second);
       }
-      dbg_msg("delete thread %d done.", no);
+      LOG_TRACE("delete thread %d done.", no);
     }
 
 #ifdef TT
@@ -248,7 +248,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;
@@ -326,7 +326,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;
@@ -396,7 +396,7 @@ namespace peloton {
         pairs.clear();
         no_gen = 0;
         result.clear();
-        dbg_msg("iteration %d done.", iter);
+        LOG_TRACE("iteration %d done.", iter);
       }
 
       delete tuple_schema;

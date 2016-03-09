@@ -31,7 +31,7 @@
 
 // Debug mesasge for autolab, since LOG... won't be printed
 
-//#define P2DEBUG 1
+#define P2DEBUG 1
 #ifdef P2DEBUG
 #define dbg_msg(...)                                     \
   do {                                                   \
