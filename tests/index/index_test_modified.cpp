@@ -625,8 +625,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), size);
 
         index->Cleanup();
-        size_t memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // try deletion
         no_gen = 0;
@@ -644,8 +643,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), 0);
 
         index->Cleanup();
-        memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // clear up
         pairs.clear();
@@ -700,8 +698,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), size);
 
         index->Cleanup();
-        size_t memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after first insertion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after first insertion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // check unique constraint
         no_gen = 0;
@@ -711,8 +708,7 @@ namespace peloton {
         }
 
         index->Cleanup();
-        memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after second insertion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after second insertion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // try deletion
         no_gen = 0;
@@ -730,8 +726,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), 0);
 
         index->Cleanup();
-        memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // clear up
         pairs.clear();
@@ -783,8 +778,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), size);
 
         index->Cleanup();
-        size_t memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // try deletion
         no_gen = 0;
@@ -802,8 +796,7 @@ namespace peloton {
         EXPECT_EQ(locations.size(), 0);
 
         index->Cleanup();
-        memory_footprint = index->GetMemoryFootprint();
-        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
+        LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)index->GetMemoryFootprint());
 
         // clear up
         pairs.clear();
