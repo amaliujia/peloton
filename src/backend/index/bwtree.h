@@ -66,8 +66,8 @@ namespace peloton {
     typedef std::uint_fast32_t PID;
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
-    constexpr int max_chain_len = 20;
-    constexpr int max_node_size = 200;
+    constexpr int max_chain_len = 10;
+    constexpr int max_node_size = 20;
     constexpr int min_node_size = max_node_size/2;
 
     enum NodeType {
@@ -1187,6 +1187,7 @@ namespace peloton {
       }
 
       void ScanAllKeys(std::vector<ValueType> &ret) const {
+        LOG_TRACE("ScanAllKeys()");
         EpochTime time = GarbageCollector::global_gc_.Register();
         PID next_pid = root_;
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);

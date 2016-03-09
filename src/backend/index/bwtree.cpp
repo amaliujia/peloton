@@ -430,6 +430,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ScanKeyUtil(const KeyType &key, std::vector<ValueType> &result,
                 std::vector<PID> &path, VersionNumber root_version_number) {
+      LOG_TRACE("ScanKeyUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
@@ -505,6 +506,7 @@ namespace peloton {
           if(path.size()>1) {
             path.pop_back();
           }
+          LOG_TRACE("CheckStatus() SplitNode");
           return false;
         }
       }
@@ -512,6 +514,7 @@ namespace peloton {
       // if delta chain is too long
       if(node_ptr->IfChainTooLong()) {
         Consolidate(current, node_ptr);
+        LOG_TRACE("CheckStatus() Too Long");
         return false;
       }
 
@@ -527,12 +530,14 @@ namespace peloton {
           if(path.size()>1) {
             path.pop_back();
           }
+          LOG_TRACE("CheckStatus() Overflow");
           return false;
         }
         // always retry
+        LOG_TRACE("CheckStatus() Overflow");
         return false;
       }
-
+      LOG_TRACE("CheckStatus() Return True");
       return true;
     };
 
