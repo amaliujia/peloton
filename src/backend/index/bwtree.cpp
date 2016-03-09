@@ -496,7 +496,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     CheckStatus(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key,
                 std::vector<PID> &path, const VersionNumber &root_version_number) {
-      LOG_TRACE("CheckStatus()");
+      //LOG_TRACE("CheckStatus()");
       myassert(node_ptr->IfInRange(key, key_comparator_));
       const PID &current = path.back();
 
@@ -508,7 +508,7 @@ namespace peloton {
           if(path.size()>1) {
             path.pop_back();
           }
-          LOG_TRACE("CheckStatus() SplitNode");
+          //LOG_TRACE("CheckStatus() SplitNode");
           return false;
         }
       }
@@ -516,7 +516,7 @@ namespace peloton {
       // if delta chain is too long
       if(node_ptr->IfChainTooLong()) {
         Consolidate(current, node_ptr);
-        LOG_TRACE("CheckStatus() Too Long");
+        //LOG_TRACE("CheckStatus() Too Long");
         return false;
       }
 
@@ -532,14 +532,14 @@ namespace peloton {
           if(path.size()>1) {
             path.pop_back();
           }
-          LOG_TRACE("CheckStatus() Overflow");
+          //LOG_TRACE("CheckStatus() Overflow");
           return false;
         }
         // always retry
-        LOG_TRACE("CheckStatus() Overflow");
+        //LOG_TRACE("CheckStatus() Overflow");
         return false;
       }
-      LOG_TRACE("CheckStatus() Return True");
+      //LOG_TRACE("CheckStatus() Return True");
       return true;
     };
 
