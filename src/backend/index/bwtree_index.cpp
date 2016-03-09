@@ -62,7 +62,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
     __attribute__((unused)) const ScanDirectionType& scan_direction) {
   dbg_msg("not implemented BWTreeIndex::Scan being called");
   std::vector<ItemPointer> result;
-  /*
+
   KeyType index_key;
 
   // Check if we have leading (leftmost) column equality
@@ -85,7 +85,17 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
 
   bool all_constraints_are_equal = false;
 
-  if (special_case) {
+  if(special_case) {
+    // If it is a special case, we can figure out the range to scan in the index
+    std::unique_ptr<storage::Tuple> start_key;
+    start_key.reset(new storage::Tuple(metadata->GetKeySchema(), true));
+    index_key.SetFromKey(start_key.get());
+    all_constraints_are_equal =
+            ConstructLowerBoundTuple(start_key.get(), values, key_column_ids, expr_types);
+    LOG_TRACE("All constraints are equal : %d ", all_constraints_are_equal);
+    scan_begin_itr = container.equal_range(index_key).first;
+  }
+  else {
 
   }
   {
@@ -142,7 +152,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
 
     index_lock.Unlock();
   }
-  */
+
   return result;
 }
 

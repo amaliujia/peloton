@@ -621,6 +621,59 @@ namespace peloton {
       return children_view[dist];
     }
 
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    const BWNode<KeyType, KeyComparator> *
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    FirstLeafNode() const {
+      // assume we already registered
+      PID next_pid = root_;
+      const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
+      while(!node_ptr->IfLeafNode()) {
+        std::vector<KeyType> keys;
+        std::vector<PID> children;
+        PID left, right;
+        CreateInnerNodeView(node_ptr, &keys, &children, &left, &right);
+        myassert(children.size() != 0);
+        next_pid = children[0];
+        node_ptr = pid_table_.get(next_pid);
+      }
+      return node_ptr;
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    const BWNode<KeyType, KeyComparator> *
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    FindLeafNode(const KeyType &key) {
+      // assume we already registered
+      std::vector<PID> path = {root_};
+      VersionNumber root_version_number = root_version_number_;
+
+      while(true) {
+        // first check if we are in the right node
+        const PID &current = path.back();
+        const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
+        if(!node_ptr->IfInRange(key, key_comparator_)) {
+          myassert(path.size()>1);
+          path.pop_back();
+          continue;
+        }
+        if(path.size()==1&&root_version_number!=root_version_number_)
+          root_version_number = root_version_number_;
+
+        if(!CheckStatus(node_ptr, key, path, root_version_number))
+          continue;
+
+        if(node_ptr->IfInnerNode()) {
+          PID next_pid = FindNextNodePID(node_ptr, key);
+          path.push_back(next_pid);
+        }
+        else {
+          return node_ptr;
+        }
+      }
+    }
+
     /*
      * insert a split entry node at the parent of 'top' to finish the second step of split
      * path contains the pids all the way from the root down to 'top'

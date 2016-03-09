@@ -18,7 +18,9 @@
 #include "backend/index/index.h"
 #include "backend/common/value.h"
 #include "backend/index/index_key.h"
+#include "backend/storage/tuple.h"
 
+#include <utility>
 #include <mutex>
 #include <boost/lockfree/stack.hpp>
 #include <cstdint>
@@ -26,6 +28,7 @@
 #include <map>
 #include <set>
 #include <chrono>
+#include <backend/index/backup/bwtree.h>
 
 #define P2DEBUG 1
 #define dbg_msg(...) \
@@ -1054,7 +1057,211 @@ namespace peloton {
       PID root_;
       PIDTable<KeyType, KeyComparator> pid_table_;
       VersionNumber root_version_number_;
+      friend class ScanIterator;
+
     public :
+      class ScanIterator {
+      public:
+        virtual ~ScanIterator() { }
+        virtual bool HasNext() = 0;
+        virtual std::pair<KeyType, ValueType> Next() = 0;
+      };
+
+      class ScanIteratorUnique: public ScanIterator {
+        BWTree<KeyType, ValueType,
+                KeyComparator, KeyEqualityChecker,
+                ValueComparator, ValueEqualityChecker, Duplicate> &bwtree_;
+        const BWNode<KeyType, KeyComparator> *current_node_;
+        std::vector<KeyType> keys_;
+        std::vector<ValueType> values_;
+        size_t next_;
+        PID next_node_pid_;
+        EpochTime registered_time_;
+        bool registered_;
+
+        void UpdateSelf() {
+          myassert(next_==keys_.size());
+          myassert(next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL);
+
+          current_node_ = bwtree_.pid_table_.get(next_node_pid_);
+          myassert(current_node_->IfLeafNode());
+
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          next_ = 0;
+        }
+
+      public:
+        ScanIteratorUnique(
+                BWTree<KeyType, ValueType,
+                        KeyComparator, KeyEqualityChecker,
+                        ValueComparator, ValueEqualityChecker, Duplicate> &bwtree):
+                bwtree_(bwtree),
+                current_node_(bwtree.FirstLeafNode()),
+                registered_time_(GarbageCollector::global_gc_.Register()),
+                registered_(true) {
+          myassert(!Duplicate);
+          myassert(current_node_->IfLeafNode());
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          next_ = 0;
+        }
+
+        ScanIteratorUnique(
+                BWTree<KeyType, ValueType,
+                        KeyComparator, KeyEqualityChecker,
+                        ValueComparator, ValueEqualityChecker, Duplicate> &bwtree,
+                const KeyType &start_key):
+                bwtree_(bwtree),
+                current_node_(bwtree.FindLeafNode(start_key)),
+                registered_time_(GarbageCollector::global_gc_.Register()),
+                registered_(true) {
+          myassert(!Duplicate);
+          myassert(current_node_->IfLeafNode());
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          next_ = (size_t)std::distance(keys_.begin(),
+                                        std::lower_bound(keys_.begin(), keys_.end(), start_key, bwtree_.key_comparator_));
+        }
+
+        ~ScanIteratorUnique() { Deregister(); }
+
+        inline void Register() {
+          if(!registered_) {
+            registered_time_ = GarbageCollector::global_gc_.Register();
+            registered_ = true;
+          }
+        }
+
+        inline void Deregister() {
+          if(registered_) {
+            GarbageCollector::global_gc_.Deregister(registered_time_);
+            registered_ = false;
+          }
+        }
+
+        inline bool HasRegistered() const { return registered_; }
+
+        bool HasNext() {
+          while(next_==keys_.size()) {
+            if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL)
+              return false;
+            UpdateSelf();
+          }
+          return true;
+        }
+
+        std::pair<KeyType, ValueType> Next() {
+          myassert(next_<keys_.size());
+          auto result = std::make_pair(keys_[next_], values_[next_]);
+          ++next_;
+          return result;
+        }
+      };
+
+      class ScanIteratorDuplicate: public ScanIterator {
+        BWTree<KeyType, ValueType,
+                KeyComparator, KeyEqualityChecker,
+                ValueComparator, ValueEqualityChecker, Duplicate> &bwtree_;
+        const BWNode<KeyType, KeyComparator> *current_node_;
+        std::vector<KeyType> keys_;
+        std::vector<std::vector<ValueType>> values_;
+        size_t key_next_;
+        size_t value_next_;
+        PID next_node_pid_;
+        EpochTime registered_time_;
+        bool registered_;
+
+        void UpdateSelf() {
+          myassert(key_next_==keys_.size());
+          myassert(next_node_pid_!=PIDTable<KeyType, KeyComparator>::PID_NULL);
+
+          current_node_ = bwtree_.pid_table_.get(next_node_pid_);
+          myassert(current_node_->IfLeafNode());
+
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          key_next_ = 0;
+          value_next_ = 0;
+        }
+
+      public:
+        ScanIteratorDuplicate(
+                BWTree<KeyType, ValueType,
+                        KeyComparator, KeyEqualityChecker,
+                        ValueComparator, ValueEqualityChecker, Duplicate> &bwtree):
+                bwtree_(bwtree),
+                current_node_(bwtree.FirstLeafNode()),
+                registered_time_(GarbageCollector::global_gc_.Register()),
+                registered_(true) {
+          myassert(Duplicate);
+          myassert(current_node_->IfLeafNode());
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          key_next_ = 0;
+          value_next_ = 0;
+        }
+
+        ScanIteratorDuplicate(
+                BWTree<KeyType, ValueType,
+                        KeyComparator, KeyEqualityChecker,
+                        ValueComparator, ValueEqualityChecker, Duplicate> &bwtree,
+                const KeyType &start_key):
+                bwtree_(bwtree),
+                current_node_(bwtree.FindLeafNode(start_key)),
+                registered_time_(GarbageCollector::global_gc_.Register()),
+                registered_(true) {
+          myassert(Duplicate);
+          myassert(current_node_->IfLeafNode());
+          PID left_view;
+          bwtree_.CreateLeafNodeView(current_node_, &keys_, &values_, &left_view, &next_node_pid_);
+          key_next_ = (size_t)std::distance(keys_.begin(),
+                                        std::lower_bound(keys_.begin(), keys_.end(), start_key, bwtree_.key_comparator_));
+          value_next_ = 0;
+        }
+
+        ~ScanIteratorDuplicate() { Deregister(); }
+
+        inline void Register() {
+          if(!registered_) {
+            registered_time_ = GarbageCollector::global_gc_.Register();
+            registered_ = true;
+          }
+        }
+
+        inline void Deregister() {
+          if(registered_) {
+            GarbageCollector::global_gc_.Deregister(registered_time_);
+            registered_ = false;
+          }
+        }
+
+        inline bool HasRegistered() const { return registered_; }
+
+        bool HasNext() {
+          while(key_next_==keys_.size()||value_next_==values_[key_next_].size()) {
+            if(key_next_==keys_.size()) {
+              if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL)
+                return false;
+              UpdateSelf();
+            }
+            else {
+              ++key_next_;
+              value_next_ = 0;
+            }
+          }
+          return true;
+        }
+
+        std::pair<KeyType, ValueType> Next() {
+          myassert(key_next_<keys_.size());
+          myassert(value_next_<values_[key_next_].size());
+          auto result = std::make_pair(keys_[key_next_], values_[key_next_][value_next_]);
+          ++value_next_;
+          return result;
+        }
+      };
+
       BWTree(IndexMetadata *indexMetadata):
               key_comparator_(indexMetadata),
               key_equality_checker_(indexMetadata),
@@ -1087,8 +1294,6 @@ namespace peloton {
         root_ = pid_table_.allocate_PID(root_node);
       }
 
-      void SubmitGarbageNode(const BWNode<KeyType, KeyComparator> *);
-
       ~BWTree() {
         // wait for other garbage collection to finish
         //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
@@ -1102,6 +1307,22 @@ namespace peloton {
         LOG_TRACE("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
       }
+
+      ScanIterator GetIterator() {
+        if(Duplicate)
+          return ScanIteratorDuplicate(*this);
+        else
+          return ScanIteratorUnique(*this);
+      }
+
+      ScanIterator GetIterator(const KeyType &start_key) {
+        if(Duplicate)
+          return ScanIteratorDuplicate(*this, start_key);
+        else
+          return ScanIteratorUnique(*this, start_key);
+      }
+
+      void SubmitGarbageNode(const BWNode<KeyType, KeyComparator> *);
 
       inline size_t GetMemoryFootprint() const {
         EpochTime time = GarbageCollector::global_gc_.Register();
@@ -1289,6 +1510,10 @@ namespace peloton {
 
       PID FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr,
                           const KeyType &key) const;
+
+      const BWNode<KeyType, KeyComparator> *FirstLeafNode() const;
+
+      const BWNode<KeyType, KeyComparator> *FindLeafNode(const KeyType &key);
 
       inline void CreateLeafNodeView(const BWNode<KeyType, KeyComparator> *node_chain,
                               std::vector<KeyType> *keys,
