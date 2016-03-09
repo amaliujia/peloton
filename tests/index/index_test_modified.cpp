@@ -30,7 +30,7 @@
 
 
 // for IDE formatting, since IDE can't recognize when we use TEST(...)
-//#define TT
+#define TT
 
 namespace peloton {
   namespace test {
