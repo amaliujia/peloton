@@ -338,6 +338,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     InsertEntryUtil(const KeyType &key, const ValueType &value,
                     std::vector<PID> &path, VersionNumber root_version_number) {
+      LOG_TRACE("InsertEntryUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
@@ -389,6 +390,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value,
                     std::vector<PID> &path, VersionNumber root_version_number) {
+      LOG_TRACE("DeleteEntryUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
@@ -491,6 +493,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     CheckStatus(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key,
                 std::vector<PID> &path, const VersionNumber &root_version_number) {
+      LOG_TRACE("CheckStatus()");
       myassert(node_ptr->IfInRange(key, comparator_));
       const PID &current = path.back();
 
@@ -539,6 +542,7 @@ namespace peloton {
     ExistKeyValue(const BWNode<KeyType, KeyComparator> *node_ptr,
                   const KeyType &key, const ValueType &value,
                   size_t &value_vector_size) const {
+      LOG_TRACE("ExistKeyValue()");
       // assume node_ptr is the header of leaf node
       myassert(node_ptr->IfLeafNode());
       value_vector_size = 0;
@@ -575,6 +579,7 @@ namespace peloton {
     PID
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key) const {
+      LOG_TRACE("FindNextNodePID()");
       myassert(node_ptr->IfInRange(key, comparator_));
       std::vector<KeyType> keys_view;
       std::vector<PID> children_view;
@@ -672,6 +677,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_expand) {
+      LOG_TRACE("DeltaInsert(cur=%lu)", (unsigned long) cur);
       const BWNode<KeyType, KeyComparator> *insert_node_ptr =
               new BWInsertNode<KeyType, KeyComparator, ValueType>(
                       node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0),
@@ -691,6 +697,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaDelete(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_shrink) {
+      LOG_TRACE("DeltaDelete(cur=%lu)", (unsigned long) cur);
       const BWNode<KeyType, KeyComparator> *delete_node_ptr =
               new BWDeleteNode<KeyType, KeyComparator, ValueType>(
                       node_ptr, node_ptr->GetSlotUsage() - (need_shrink ? 1 : 0),
