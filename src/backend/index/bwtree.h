@@ -28,7 +28,6 @@
 #include <map>
 #include <set>
 #include <chrono>
-#include <backend/index/backup/bwtree.h>
 
 #define P2DEBUG 1
 #define dbg_msg(...) \
