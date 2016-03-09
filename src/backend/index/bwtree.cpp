@@ -413,7 +413,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
   EpochTime time = GarbageCollector::global_gc_.Register();
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
-  bool result = false;
+  bool result;
   while (true) {
     // first check if we are in the right node
     const PID &current = path.back();
@@ -476,7 +476,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
   EpochTime time = GarbageCollector::global_gc_.Register();
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
-  bool result = false;
+  bool result;
   while (true) {
     // first check if we are in the right node
     const PID &current = path.back();
@@ -712,6 +712,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
           if(value_equality_checker_(value, insert_node->GetValue()))
             ++count;
         }
+        node_ptr = node_ptr->GetNext();
         break;
       }
       case NDelete: {
@@ -722,11 +723,13 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
           if(value_equality_checker_(value, delete_node->GetValue()))
             --count;
         }
+        node_ptr = node_ptr->GetNext();
         break;
       }
       case NSplit:
         myassert(!key_comparator_(static_cast<const BWSplitNode<KeyType, KeyComparator> *>(node_ptr)->GetSplitKey(),
                                   key));
+        node_ptr = node_ptr->GetNext();
         break;
       default:
         // should not happen
@@ -763,6 +766,8 @@ PID BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
         if(split_entry_node->IfInToRange(key, key_comparator_))
           return split_entry_node->GetTo();
         // otherwise get the next too
+        node_ptr = node_ptr->GetNext();
+        break;
       }
       case NSplit: {
         node_ptr = node_ptr->GetNext();
