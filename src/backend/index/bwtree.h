@@ -31,7 +31,7 @@
 
 // Debug mesasge for autolab, since LOG... won't be printed
 
-//#define P2DEBUG 1
+#define P2DEBUG 1
 #ifdef P2DEBUG
 #define dbg_msg(...)                                     \
   do {                                                   \
@@ -344,15 +344,27 @@ class BWInnerNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
+  /*
   BWInnerNode(const std::vector<KeyType> &keys,
               const std::vector<PID> &children, const PID &left,
               const PID &right, const KeyType &low_key, const KeyType &high_key,
               const bool &has_low_key, const bool &has_high_key)
-      : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
-                                             low_key, high_key, has_low_key,
-                                             has_high_key),
-        keys_(keys),
-        children_(children) {}
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
+                                                 low_key, high_key, has_low_key,
+                                                 has_high_key),
+            keys_(keys),
+            children_(children) {}
+  */
+
+  BWInnerNode(std::vector<KeyType> &&keys,
+              std::vector<PID> &&children, const PID &left,
+              const PID &right, const KeyType &low_key, const KeyType &high_key,
+              const bool &has_low_key, const bool &has_high_key)
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
+                                                 low_key, high_key, has_low_key,
+                                                 has_high_key),
+            keys_(keys),
+            children_(children) {}
 
   inline NodeType GetType() const { return NInner; }
 
@@ -416,15 +428,26 @@ class BWLeafNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
+  /*
   BWLeafNode(const std::vector<KeyType> &keys,
              const std::vector<ValueType> &values, const PID &left,
              const PID &right, const KeyType &low_key, const KeyType &high_key,
              const bool &has_low_key, const bool &has_high_key)
-      : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
-                                             low_key, high_key, has_low_key,
-                                             has_high_key),
-        keys_(keys),
-        values_(values) {}
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
+                                                 low_key, high_key, has_low_key,
+                                                 has_high_key),
+            keys_(keys),
+            values_(values) {}
+  */
+  BWLeafNode(std::vector<KeyType> &&keys,
+             std::vector<ValueType> &&values, const PID &left,
+             const PID &right, const KeyType &low_key, const KeyType &high_key,
+             const bool &has_low_key, const bool &has_high_key)
+          : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
+                                                 low_key, high_key, has_low_key,
+                                                 has_high_key),
+            keys_(keys),
+            values_(values) {}
 
   inline const std::vector<KeyType> &GetKeys() const { return keys_; }
 
@@ -693,6 +716,12 @@ class BWSplitEntryNode : public BWDeltaNode<KeyType, KeyComparator> {
 
   inline const KeyType &GetToHighKey() const { return to_high_key_; }
 
+  inline bool IfInToRange(const KeyType &key,
+                          const KeyComparator &comparator) const {
+    return ((!has_to_high_key_)||comparator(key, to_high_key_))&&
+            (!comparator(key, to_low_key_));
+  }
+
   virtual size_t GetMemoryFootprint() const {
     return BWDeltaNode<KeyType, KeyComparator>::GetMemoryFootprint() +
            sizeof(has_to_high_key_) + sizeof(to_low_key_) +
@@ -745,7 +774,6 @@ protected:
   const BWNode *right_;
 };
 
-// TODO
 template<typename KeyType>
 class MergeEntryNode: public BWDeltaNode {
 public:
@@ -1380,99 +1408,13 @@ class BWTree {
   }
 
   void PrintSelf(__attribute__((unused)) PID pid,
-                 const BWNode<KeyType, KeyComparator> *node, int indent) const {
-    node->Print(pid_table_, indent);
-    if (node->IfInnerNode()) {
-      std::vector<KeyType> keys;
-      std::vector<PID> children;
-      PID left, right;
-      CreateInnerNodeView(node, &keys, &children, &left, &right);
-      std::string s;
-      for (size_t i = 0; i < indent; i++) {
-        s += "\t";
-      }
-      LOG_DEBUG("%sInner summary: size=%lu, self=%lu, left=%lu, right=%lu",
-                s.c_str(), keys.size(), pid, left, right);
-      for (int i = 0; i < children.size(); ++i)
-        PrintSelf(children[i], pid_table_.get(children[i]), indent + 2);
-    } else {
-      if (!Duplicate) {
-        std::vector<KeyType> keys;
-        std::vector<ValueType> values;
-        PID left, right;
-        CreateLeafNodeView(node, &keys, &values, &left, &right);
-        std::string s;
-        for (size_t i = 0; i < indent; i++) {
-          s += "\t";
-        }
-        LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
-                  s.c_str(), keys.size(), pid, left, right);
-      } else {
-        std::vector<KeyType> keys;
-        std::vector<std::vector<ValueType>> values;
-        PID left, right;
-        CreateLeafNodeView(node, &keys, &values, &left, &right);
-        std::string s;
-        for (size_t i = 0; i < indent; i++) {
-          s += "\t";
-        }
-        LOG_DEBUG("%sLeaf summary: size=%lu, self=%lu, left=%lu, right=%lu",
-                  s.c_str(), keys.size(), pid, left, right);
-      }
-    }
-  }
+                 const BWNode<KeyType, KeyComparator> *node, int indent) const;
 
-  inline bool InsertEntry(const KeyType &key, const ValueType &value) {
-    EpochTime time = GarbageCollector::global_gc_.Register();
-    std::vector<PID> path = {root_};
-    bool result = InsertEntryUtil(key, value, path, root_version_number_);
-    //        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert
-    //        print begin  ++++++++++++++++++++++++++++++++++++++");
-    //        LOG_DEBUG(" ");
-    //        PrintSelf(root_, pid_table_.get(root_), 0);
-    //        LOG_DEBUG(" ");
-    //        LOG_DEBUG("------------------------------------------------ insert
-    //        print end  --------------------------------------");
-    GarbageCollector::global_gc_.Deregister(time);
+  bool InsertEntry(const KeyType &key, const ValueType &value);
 
-    return result;
-  }
+  bool DeleteEntry(const KeyType &key, const ValueType &value);
 
-  inline bool DeleteEntry(const KeyType &key, const ValueType &value) {
-    EpochTime time = GarbageCollector::global_gc_.Register();
-    std::vector<PID> path = {root_};
-    bool result = DeleteEntryUtil(key, value, path, root_version_number_);
-    //        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete
-    //        print begin  ++++++++++++++++++++++++++++++++++++++");
-    //        LOG_DEBUG(" ");
-    //        PrintSelf(root_, pid_table_.get(root_), 0);
-    //        LOG_DEBUG(" ");
-    //        LOG_DEBUG("------------------------------------------------ delete
-    //        print end  --------------------------------------");
-    GarbageCollector::global_gc_.Deregister(time);
-    return result;
-  }
-
-  void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
-    EpochTime time = GarbageCollector::global_gc_.Register();
-    std::vector<PID> path = {root_};
-    ScanKeyUtil(key, result, path, root_version_number_);
-    GarbageCollector::global_gc_.Deregister(time);
-    /*
-    // test iterator
-    //LOG_TRACE("enter");
-    ScanIterator *iterator = GetIterator(key);
-    while(iterator->HasNext()) {
-      auto pair = iterator->Next();
-      if(key_equality_checker_(key, pair.first))
-        result.push_back(pair.second);
-      else
-        break;
-    }
-    delete iterator;
-    //LOG_TRACE("leave");
-    */
-  }
+  void ScanKey(const KeyType &key, std::vector<ValueType> &result);
 
   void ScanAllKeys(std::vector<ValueType> &ret) const {
     // LOG_TRACE("ScanAllKeys()");
@@ -1522,16 +1464,6 @@ class BWTree {
       }
     }
     GarbageCollector::global_gc_.Deregister(time);
-
-    /*
-    //LOG_TRACE("enter");
-    // test iterator
-    ScanIterator *iterator = GetIterator();
-    while(iterator->HasNext())
-      ret.push_back(iterator->Next().second);
-    delete iterator;
-    //LOG_TRACE("leave");
-    */
   }
 
  private:
@@ -1542,17 +1474,6 @@ class BWTree {
   bool CheckStatus(const BWNode<KeyType, KeyComparator> *node,
                    const KeyType &key, std::vector<PID> &path,
                    const VersionNumber &root_version_number);
-
-  bool InsertEntryUtil(const KeyType &key, const ValueType &value,
-                       std::vector<PID> &path,
-                       VersionNumber root_version_number);
-
-  bool DeleteEntryUtil(const KeyType &key, const ValueType &value,
-                       std::vector<PID> &path,
-                       VersionNumber root_version_number);
-
-  void ScanKeyUtil(const KeyType &key, std::vector<ValueType> &result,
-                   std::vector<PID> &path, VersionNumber root_version_number);
 
   const BWNode<KeyType, KeyComparator> *Split(
       const BWNode<KeyType, KeyComparator> *node_ptr, const PID &node_pid);
