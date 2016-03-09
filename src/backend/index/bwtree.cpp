@@ -586,7 +586,7 @@ namespace peloton {
     PID
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key) const {
-      LOG_TRACE("FindNextNodePID()");
+      //LOG_TRACE("FindNextNodePID()");
       myassert(node_ptr->IfInRange(key, key_comparator_));
       std::vector<KeyType> keys_view;
       std::vector<PID> children_view;
@@ -684,7 +684,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_expand) {
-      LOG_TRACE("DeltaInsert(cur=%lu)", (unsigned long) cur);
+      //LOG_TRACE("DeltaInsert(cur=%lu)", (unsigned long) cur);
       const BWNode<KeyType, KeyComparator> *insert_node_ptr =
               new BWInsertNode<KeyType, KeyComparator, ValueType>(
                       node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0),
@@ -704,7 +704,7 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaDelete(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_shrink) {
-      LOG_TRACE("DeltaDelete(cur=%lu)", (unsigned long) cur);
+      //LOG_TRACE("DeltaDelete(cur=%lu)", (unsigned long) cur);
       const BWNode<KeyType, KeyComparator> *delete_node_ptr =
               new BWDeleteNode<KeyType, KeyComparator, ValueType>(
                       node_ptr, node_ptr->GetSlotUsage() - (need_shrink ? 1 : 0),
