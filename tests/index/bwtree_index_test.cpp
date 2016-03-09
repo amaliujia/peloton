@@ -33,7 +33,7 @@ namespace peloton {
 // Index Tests
 //===--------------------------------------------------------------------===//
 
-#define TT
+//#define TT
 
     catalog::Schema *key_schema = nullptr;
     catalog::Schema *tuple_schema = nullptr;
@@ -223,6 +223,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        index->Cleanup();
         size_t memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
 
@@ -241,6 +242,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
 
+        index->Cleanup();
         memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 
@@ -291,6 +293,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        index->Cleanup();
         size_t memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after first insertion: %lu", (unsigned long)memory_footprint);
 
@@ -301,6 +304,7 @@ namespace peloton {
           EXPECT_FALSE(result[i]);
         }
 
+        index->Cleanup();
         memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after second insertion: %lu", (unsigned long)memory_footprint);
 
@@ -319,6 +323,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
 
+        index->Cleanup();
         memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 
@@ -371,6 +376,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), size);
 
+        index->Cleanup();
         size_t memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after insertion: %lu", (unsigned long)memory_footprint);
 
@@ -389,6 +395,7 @@ namespace peloton {
         locations = index->ScanAllKeys();
         EXPECT_EQ(locations.size(), 0);
 
+        index->Cleanup();
         memory_footprint = index->GetMemoryFootprint();
         LOG_DEBUG("MemoryFootprint after deletion: %lu", (unsigned long)memory_footprint);
 

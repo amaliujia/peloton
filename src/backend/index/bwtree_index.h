@@ -58,12 +58,14 @@ class BWTreeIndex : public Index {
   std::string GetTypeName() const;
 
   bool Cleanup() {
-    dbg_msg("not implemented BWTreeIndex::Cleanup being called");
-    return true;
+    dbg_msg("BWTreeIndex::Cleanup being called");
+    bool result = container_unique.CompactSelf();
+    result &= container_duplicate.CompactSelf();
+    return result;
   }
 
   size_t GetMemoryFootprint() {
-    dbg_msg("not implemented BWTreeIndex::GetMemoryFootprint being called");
+    dbg_msg("BWTreeIndex::GetMemoryFootprint being called");
     // for now, only count memory occupied by BWTree
     return container_unique.GetMemoryFootprint() + container_duplicate.GetMemoryFootprint();
   }

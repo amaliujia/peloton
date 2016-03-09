@@ -67,9 +67,9 @@ namespace peloton {
     typedef size_t size_type;
     typedef uint_fast8_t VersionNumber;
     constexpr int max_chain_len = 10;
+    constexpr int compact_chain_len_threshold = 3;
     constexpr int max_node_size = 20;
     constexpr int min_node_size = max_node_size/2;
-
     enum NodeType {
       NInner = 0,
       NLeaf = 1,
@@ -1061,7 +1061,7 @@ namespace peloton {
               root_version_number_(0) {
         // a BWtree has at least two nodes residing at two levels.
         // at initialization, one root node pointing to one leaf node
-        LOG_DEBUG("BWTree::BWTree()");
+        LOG_TRACE("BWTree::BWTree()");
         const BWNode<KeyType, KeyComparator> *first_leaf_node;
         if(!Duplicate)
           first_leaf_node =
@@ -1094,17 +1094,27 @@ namespace peloton {
         //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         PrintSelf(root_, pid_table_.get(root_), 0);
         EpochTime time = GarbageCollector::global_gc_.Register();
-        LOG_DEBUG("BWTree::~BWTree()");
+        LOG_TRACE("BWTree::~BWTree()");
         //garbage collect self
         const BWNode<KeyType, KeyComparator> *root_node = pid_table_.get(root_);
         pid_table_.free_PID(root_);
         SubmitGarbageNode(root_node);
-        LOG_DEBUG("finish BWTree::~BWTree()");
+        LOG_TRACE("finish BWTree::~BWTree()");
         GarbageCollector::global_gc_.Deregister(time);
       }
 
       inline size_t GetMemoryFootprint() const {
-        return GetMemoryFootprint(root_);
+        EpochTime time = GarbageCollector::global_gc_.Register();
+        size_t size = GetMemoryFootprint(root_);
+        GarbageCollector::global_gc_.Deregister(time);
+        return size;
+      }
+
+      inline bool CompactSelf() {
+        EpochTime time = GarbageCollector::global_gc_.Register();
+        bool result = CompactNode(root_);
+        GarbageCollector::global_gc_.Deregister(time);
+        return result;
       }
 
       void PrintSelf(__attribute__((unused)) PID pid,
@@ -1239,6 +1249,8 @@ namespace peloton {
 
     private:
       size_t GetMemoryFootprint(const PID &node_pid) const;
+
+      bool CompactNode(const PID &node_pid);
 
       bool CheckStatus(const BWNode<KeyType, KeyComparator> *node, const KeyType &key,
                        std::vector<PID> &path, const VersionNumber &root_version_number);

@@ -195,6 +195,29 @@ namespace peloton {
     }
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
+    bool
+    BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
+    CompactNode(const PID &node_pid) {
+      const BWNode<KeyType, KeyComparator> *node = pid_table_.get(node_pid);
+      // if safe and worth to consolidate
+      if(node->GetType()!=NSplit&&
+         node->GetChainLength()>compact_chain_len_threshold) {
+        Consolidate(node_pid, node);
+        node = pid_table_.get(node_pid);
+      }
+      // recursively consolidate all children
+      if(node->IfInnerNode()) {
+        std::vector<KeyType> keys_view;
+        std::vector<PID> children_view;
+        PID left_view, right_view;
+        CreateInnerNodeView(node, &keys_view, &children_view, &left_view, &right_view);
+        for(PID child: children_view)
+          CompactNode(child);
+      }
+      return true;
+    }
+
+    template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     const BWNode<KeyType, KeyComparator> *
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     SplitInnerNode(const BWNode<KeyType, KeyComparator> *inner_node, const PID &node_pid) {
