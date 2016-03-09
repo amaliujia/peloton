@@ -177,7 +177,6 @@ namespace peloton {
       GarbageCollector::global_gc_.SubmitGarbage(node);
     }
 
-
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     size_t
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
@@ -479,6 +478,7 @@ namespace peloton {
             auto dist = std::distance(keys_view.begin(), position);
             result = values_view[dist];
           }
+          return ;
         }
       }
     }
