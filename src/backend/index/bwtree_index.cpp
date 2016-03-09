@@ -84,7 +84,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
   LOG_TRACE("Special case : %d ", special_case);
 
   bool all_constraints_are_equal = false;
-
+/*
   if(special_case) {
     // If it is a special case, we can figure out the range to scan in the index
     std::unique_ptr<storage::Tuple> start_key;
@@ -152,7 +152,7 @@ BWTreeIndex<KeyType, ValueType, KeyComparator, KeyEqualityChecker>::Scan(
 
     index_lock.Unlock();
   }
-
+*/
   return result;
 }
 
