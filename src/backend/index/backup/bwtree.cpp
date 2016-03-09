@@ -130,7 +130,7 @@ namespace peloton {
             if(comparator_(low_key, *position))
               break;
               */
-          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), low_key, comparator_);
+          auto position = std::upper_bound(keys_view.cbegin(), keys_view.cend(), low_key, key_comparator_);
 
           // then check if this split entry has been inserted by others
           if(position!=keys_view.cbegin()&&key_equality_checker_(low_key, *(position-1)))
@@ -329,7 +329,7 @@ namespace peloton {
         }
         const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
         // if succeeded but we are on the wrong node, rollback to the parent node
-        if(!comparator_(key, split_ptr->GetSplitKey())) {
+        if(!key_comparator_(key, split_ptr->GetSplitKey())) {
           path.pop_back();
           version_number.pop_back();
           return false;
@@ -359,7 +359,7 @@ namespace peloton {
           return false;
         }
         const BWSplitNode<KeyType> *split_ptr = static_cast<const BWSplitNode<KeyType> *>(node_ptr);
-        if(!comparator_(key, split_ptr->GetSplitKey())) {
+        if(!key_comparator_(key, split_ptr->GetSplitKey())) {
           path.pop_back();
           version_number.pop_back();
           return false;
@@ -429,7 +429,7 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left, right;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
-        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
         if(position==keys_view.end()) {
           if(right==PIDTable::PID_NULL)
             return false;
@@ -443,7 +443,7 @@ namespace peloton {
             // key size = 0, cannot tell which one to go
             //dbg_msg("risky");
           }
-          else if(comparator_(key, right_sibling_keys_view[0])) {
+          else if(key_comparator_(key, right_sibling_keys_view[0])) {
             // key lies in between two nodes cannot tell which one to go
             //dbg_msg("risky");
           }
@@ -465,7 +465,7 @@ namespace peloton {
         std::vector<ValueType> values_view;
         PID left, right;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left, right);
-        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
         if(position==keys_view.end()) {
           if(right==PIDTable::PID_NULL)
             return false;
@@ -479,7 +479,7 @@ namespace peloton {
             // key size = 0, cannot tell which one to go
             //dbg_msg("risky");
           }
-          else if(comparator_(key, right_sibling_keys_view[0])) {
+          else if(key_comparator_(key, right_sibling_keys_view[0])) {
             // key lies in between two nodes cannot tell which one to go
             //dbg_msg("risky");
           }
@@ -489,7 +489,7 @@ namespace peloton {
           }
           return false;
         }
-        if(comparator_(key, *position))
+        if(key_comparator_(key, *position))
           return false;
         value_vector_size = 1;
         auto dist = std::distance(keys_view.begin(), position);
@@ -526,7 +526,7 @@ namespace peloton {
         PID left_view, right_view;
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
         assert(keys_view.size()==values_view.size());
-        auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
+        auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, key_comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         if(!value_equality_checker_(value, *(values_view.begin()+dist))) {
@@ -549,7 +549,7 @@ namespace peloton {
         CreateLeafNodeView(node_ptr, keys_view, values_view, left_view, right_view);
         assert(keys_view.size() == values_view.size());
 
-        auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, comparator_);
+        auto position = std::lower_bound(keys_view.cbegin(), keys_view.cend(), key, key_comparator_);
         assert(position!=keys_view.cend()&&key_equality_checker_(key, *position));
         auto dist = std::distance(keys_view.cbegin(), position);
         std::vector<ValueType> &value_vector = values_view[dist];
@@ -677,7 +677,7 @@ namespace peloton {
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
           assert(keys_view.size() + 1 == children_view.size());
-          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
           if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
             std::vector<KeyType> right_sibling_keys_view;
             std::vector<PID> right_sibling_children_view;
@@ -689,7 +689,7 @@ namespace peloton {
               // key size = 0, cannot tell which one to go
               //dbg_msg("risky");
             }
-            else if(comparator_(key, right_sibling_keys_view[0])) {
+            else if(key_comparator_(key, right_sibling_keys_view[0])) {
               // key lies in between two nodes cannot tell which one to go
               //dbg_msg("risky");
             }
@@ -761,7 +761,7 @@ namespace peloton {
           PID left_view, right_view;
           CreateInnerNodeView(node_ptr, keys_view, children_view, left_view, right_view);
           assert(keys_view.size()+1==children_view.size());
-          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
           if(position==keys_view.end()&&right_view!=PIDTable::PID_NULL) {
             std::vector<KeyType> right_sibling_keys_view;
             std::vector<PID> right_sibling_children_view;
@@ -773,7 +773,7 @@ namespace peloton {
               // key size = 0, cannot tell which one to go
               //dbg_msg("risky");
             }
-            else if(comparator_(key, right_sibling_keys_view[0])) {
+            else if(key_comparator_(key, right_sibling_keys_view[0])) {
               // key lies in between two nodes cannot tell which one to go
               //dbg_msg("risky");
             }
@@ -1072,7 +1072,7 @@ namespace peloton {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::upper_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for non-existence
       assert(position==keys.begin()||!key_equality_checker_(key, *(position-1)));
       auto dist = std::distance(keys.begin(), position);
@@ -1092,7 +1092,7 @@ namespace peloton {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::upper_bound(keys.begin(), keys.end(), key, key_comparator_);
       auto dist = std::distance(keys.begin(), position);
       if(position==keys.begin()||!key_equality_checker_(key, *(position-1))) {
         keys.insert(position, key);
@@ -1113,7 +1113,7 @@ namespace peloton {
       assert(!Duplicate);
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for both existence and uniqueness
       assert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
@@ -1134,7 +1134,7 @@ namespace peloton {
       assert(keys.size()==values.size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for existence
       assert(position!=keys.end()&&
              key_equality_checker_(key, *position));
@@ -1164,7 +1164,7 @@ namespace peloton {
       assert(node->IfLeafNode());
       assert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for both existence and uniqueness
       assert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
@@ -1189,7 +1189,7 @@ namespace peloton {
       assert(node->IfLeafNode());
       assert(keys.size()==values.size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for both existence and uniqueness
       assert(position!=keys.end()&&
              key_equality_checker_(key, *position)&&
@@ -1212,7 +1212,7 @@ namespace peloton {
       assert(node->IfInnerNode());
       assert(keys.size()+1==children.size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+      auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
       // check for both existence and uniqueness
       assert(position!=keys.begin()&&
              position!=keys.end()&&
@@ -1239,7 +1239,7 @@ namespace peloton {
       if(node->HasHighKey()) {
         const KeyType &high_key = node->GetHightKey();
         PID new_page = node->GetTo();
-        auto position = std::lower_bound(keys.begin(), keys.end(), high_key, comparator_);
+        auto position = std::lower_bound(keys.begin(), keys.end(), high_key, key_comparator_);
         // check for both existence and uniqueness
         assert(position!=keys.end()&&
                key_equality_checker_(high_key, *position)&&
@@ -1250,7 +1250,7 @@ namespace peloton {
         children.insert(children.begin()+dist+1, new_page);
       }
       else {
-        assert(keys.empty()||comparator_(keys.back(), low_key));
+        assert(keys.empty()||key_comparator_(keys.back(), low_key));
         PID new_page = node->GetTo();
         keys.push_back(low_key);
         children.push_back(new_page);
@@ -1273,7 +1273,7 @@ namespace peloton {
           CreateLeafNodeView(node_ptr, keys, values, left, right);
 
           // unique
-          auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+          auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
           if(position!=keys.end()&&key_equality_checker_(key, *position)) {
             auto dist = std::distance(keys.begin(), position);
             ret.push_back(values[dist]);
@@ -1284,7 +1284,7 @@ namespace peloton {
           std::vector<std::vector<ValueType>> values;
           PID left, right;
           CreateLeafNodeView(node_ptr, keys, values, left, right);
-          auto position = std::lower_bound(keys.begin(), keys.end(), key, comparator_);
+          auto position = std::lower_bound(keys.begin(), keys.end(), key, key_comparator_);
           if(position!=keys.end()&&key_equality_checker_(key, *position)) {
             auto dist = std::distance(keys.begin(), position);
             ret.insert(ret.end(), values[dist].begin(), values[dist].end());
@@ -1313,7 +1313,7 @@ namespace peloton {
           auto dist = std::distance(keys.begin(), position);
           ScanKeyUtil(children[dist], key, ret);
         }*/
-        auto position = std::upper_bound(keys.begin(), keys.end(), key, comparator_);
+        auto position = std::upper_bound(keys.begin(), keys.end(), key, key_comparator_);
         auto dist = std::distance(keys.begin(), position);
         ScanKeyUtil(children[dist], key, ret);
       }

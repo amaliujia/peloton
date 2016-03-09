@@ -1047,7 +1047,7 @@ namespace peloton {
 
     template<typename KeyType, typename ValueType, class KeyComparator, class KeyEqualityChecker, class ValueComparator, class ValueEqualityChecker, bool Duplicate>
     class BWTree {
-      KeyComparator comparator_;
+      KeyComparator key_comparator_;
       KeyEqualityChecker key_equality_checker_;
       ValueComparator value_comparator_;
       ValueEqualityChecker value_equality_checker_;
@@ -1056,7 +1056,7 @@ namespace peloton {
       VersionNumber root_version_number_;
     public :
       BWTree(IndexMetadata *indexMetadata):
-              comparator_(indexMetadata),
+              key_comparator_(indexMetadata),
               key_equality_checker_(indexMetadata),
               root_version_number_(0) {
         // a BWtree has at least two nodes residing at two levels.

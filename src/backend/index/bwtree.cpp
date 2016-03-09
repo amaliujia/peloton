@@ -337,15 +337,15 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     InsertEntryUtil(const KeyType &key, const ValueType &value,
                     std::vector<PID> &path, VersionNumber root_version_number) {
-      LOG_TRACE("InsertEntryUtil()");
+      //LOG_TRACE("InsertEntryUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
-        LOG_DEBUG("InsertEntryUtil while loop(%lu).", (unsigned long)current);
+        //LOG_DEBUG("InsertEntryUtil while loop(%lu).", (unsigned long)current);
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
-        if(!node_ptr->IfInRange(key, comparator_)) {
+        if(!node_ptr->IfInRange(key, key_comparator_)) {
           myassert(path.size()>1);
-          LOG_DEBUG("pid %lu is a wrong node.", (unsigned long)path.back());
+          //LOG_DEBUG("pid %lu is a wrong node.", (unsigned long)path.back());
           path.pop_back();
           continue;
         }
@@ -389,12 +389,12 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     DeleteEntryUtil(const KeyType &key, const ValueType &value,
                     std::vector<PID> &path, VersionNumber root_version_number) {
-      LOG_TRACE("DeleteEntryUtil()");
+      //LOG_TRACE("DeleteEntryUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
-        if(!node_ptr->IfInRange(key, comparator_)) {
+        if(!node_ptr->IfInRange(key, key_comparator_)) {
           myassert(path.size()>1);
           path.pop_back();
           continue;
@@ -429,12 +429,12 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     ScanKeyUtil(const KeyType &key, std::vector<ValueType> &result,
                 std::vector<PID> &path, VersionNumber root_version_number) {
-      LOG_TRACE("ScanKeyUtil()");
+      //LOG_TRACE("ScanKeyUtil()");
       while(true) {
         // first check if we are in the right node
         const PID &current = path.back();
         const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
-        if(!node_ptr->IfInRange(key, comparator_)) {
+        if(!node_ptr->IfInRange(key, key_comparator_)) {
           myassert(path.size()>1);
           path.pop_back();
           continue;
@@ -457,7 +457,7 @@ namespace peloton {
             std::vector<ValueType> values_view;
             PID left_view, right_view;
             CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left_view, &right_view);
-            auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+            auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
             if(!key_equality_checker_(key, *position))
               return ;
             myassert((position==keys_view.begin()||!key_equality_checker_(key, *(position-1)))&&
@@ -470,12 +470,13 @@ namespace peloton {
             std::vector<std::vector<ValueType>> values_view;
             PID left_view, right_view;
             CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left_view, &right_view);
-            auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+            auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
             if(!key_equality_checker_(key, *position))
               return ;
             myassert((position==keys_view.begin()||!key_equality_checker_(key, *(position-1)))&&
                      (position+1==keys_view.end()||!key_equality_checker_(key, *(position+1))));
             auto dist = std::distance(keys_view.begin(), position);
+            LOG_DEBUG("ScanKeyUtil dist=%lu, values_view.size=%lu", (unsigned long)dist, values_view.size());
             result = values_view[dist];
           }
           return ;
@@ -495,7 +496,7 @@ namespace peloton {
     CheckStatus(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key,
                 std::vector<PID> &path, const VersionNumber &root_version_number) {
       LOG_TRACE("CheckStatus()");
-      myassert(node_ptr->IfInRange(key, comparator_));
+      myassert(node_ptr->IfInRange(key, key_comparator_));
       const PID &current = path.back();
 
       // if we need to help others finish the second step of split
@@ -556,7 +557,7 @@ namespace peloton {
         std::vector<std::vector<ValueType>> values_view;
         PID left, right;
         CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left, &right);
-        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
         if(position==keys_view.end()||!key_equality_checker_(key, *position))
           return false;
         auto dist = std::distance(keys_view.begin(), position);
@@ -571,7 +572,7 @@ namespace peloton {
         std::vector<ValueType> values_view;
         PID left, right;
         CreateLeafNodeView(node_ptr, &keys_view, &values_view, &left, &right);
-        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+        auto position = std::lower_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
         if(position==keys_view.end()||!key_equality_checker_(key, *position))
           return false;
         value_vector_size = 1;
@@ -585,13 +586,13 @@ namespace peloton {
     BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator, ValueEqualityChecker, Duplicate>::
     FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr, const KeyType &key) const {
       LOG_TRACE("FindNextNodePID()");
-      myassert(node_ptr->IfInRange(key, comparator_));
+      myassert(node_ptr->IfInRange(key, key_comparator_));
       std::vector<KeyType> keys_view;
       std::vector<PID> children_view;
       PID left_view, right_view;
       CreateInnerNodeView(node_ptr, &keys_view, &children_view, &left_view, &right_view);
       myassert(keys_view.size() + 1 == children_view.size());
-      auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, comparator_);
+      auto position = std::upper_bound(keys_view.begin(), keys_view.end(), key, key_comparator_);
       auto dist = std::distance(keys_view.begin(), position);
       return children_view[dist];
     }
@@ -620,7 +621,7 @@ namespace peloton {
         while(true) {
           const BWNode<KeyType, KeyComparator> *parent_node = pid_table_.get(pid);
           if((path.size()==2&&root_version_number!=root_version_number_)||
-             !parent_node->IfInRange(key, comparator_))
+             !parent_node->IfInRange(key, key_comparator_))
             return false;
 
           // try to find the high key
@@ -629,7 +630,7 @@ namespace peloton {
           PID left_view, right_view;
           CreateInnerNodeView(parent_node, &keys_view, &children_view, &left_view, &right_view);
 
-          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), split_key, comparator_);
+          auto position = std::upper_bound(keys_view.begin(), keys_view.end(), split_key, key_comparator_);
 
           // then check if this split entry has been inserted by others
           if(position!=keys_view.begin()&&key_equality_checker_(split_key, *(position-1)))
@@ -959,7 +960,7 @@ namespace peloton {
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::upper_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::upper_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for non-existence
       myassert(position==keys->begin()||!key_equality_checker_(key, *(position-1)));
       auto dist = std::distance(keys->begin(), position);
@@ -978,7 +979,7 @@ namespace peloton {
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::upper_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::upper_bound(keys->begin(), keys->end(), key, key_comparator_);
       auto dist = std::distance(keys->begin(), position);
       if(position==keys->begin()||!key_equality_checker_(key, *(position-1))) {
         keys->insert(position, key);
@@ -1001,7 +1002,7 @@ namespace peloton {
       myassert(!Duplicate);
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetKey();
-      auto position = std::lower_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::lower_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for both existence and uniqueness
       myassert(position!=keys->end()&&
              key_equality_checker_(key, *position)&&
@@ -1024,7 +1025,7 @@ namespace peloton {
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetKey();
       const ValueType &value = node->GetValue();
-      auto position = std::lower_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::lower_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for existence
       myassert(position!=keys->end()&&
              key_equality_checker_(key, *position));
@@ -1054,7 +1055,7 @@ namespace peloton {
       myassert(node->IfLeafNode());
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::lower_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for both existence and uniqueness
       myassert(position!=keys->end()&&
              key_equality_checker_(key, *position)&&
@@ -1080,7 +1081,7 @@ namespace peloton {
       myassert(node->IfLeafNode());
       myassert(keys->size()==values->size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::lower_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for both existence and uniqueness
       myassert(position!=keys->end()&&
              key_equality_checker_(key, *position)&&
@@ -1104,7 +1105,7 @@ namespace peloton {
       myassert(node->IfInnerNode());
       myassert(keys->size()+1==children->size());
       const KeyType &key = node->GetSplitKey();
-      auto position = std::lower_bound(keys->begin(), keys->end(), key, comparator_);
+      auto position = std::lower_bound(keys->begin(), keys->end(), key, key_comparator_);
       // check for both existence and uniqueness
       myassert(position!=keys->begin()&&
              position!=keys->end()&&
@@ -1131,7 +1132,7 @@ namespace peloton {
       if(node->HasToHighKey()) {
         const KeyType &to_high_key = node->GetToHighKey();
         const PID &to = node->GetTo();
-        auto position = std::lower_bound(keys->begin(), keys->end(), to_high_key, comparator_);
+        auto position = std::lower_bound(keys->begin(), keys->end(), to_high_key, key_comparator_);
         // check for both existence and uniqueness
         myassert(position!=keys->end()&&
                key_equality_checker_(to_high_key, *position)&&
@@ -1142,7 +1143,7 @@ namespace peloton {
         children->insert(children->begin()+dist+1, to);
       }
       else {
-        myassert(keys->empty()||comparator_(keys->back(), to_low_key));
+        myassert(keys->empty()||key_comparator_(keys->back(), to_low_key));
         const PID &to = node->GetTo();
         keys->push_back(to_low_key);
         children->push_back(to);
