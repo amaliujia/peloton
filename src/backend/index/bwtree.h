@@ -1141,7 +1141,7 @@ namespace peloton {
 
         inline bool HasRegistered() const { return registered_; }
 
-        bool HasNext() {
+        virtual bool HasNext() {
           while(next_==keys_.size()) {
             if(next_node_pid_==PIDTable<KeyType, KeyComparator>::PID_NULL)
               return false;
@@ -1150,7 +1150,7 @@ namespace peloton {
           return true;
         }
 
-        std::pair<KeyType, ValueType> Next() {
+        virtual std::pair<KeyType, ValueType> Next() {
           myassert(next_<keys_.size());
           auto result = std::make_pair(keys_[next_], values_[next_]);
           ++next_;
@@ -1307,18 +1307,18 @@ namespace peloton {
         GarbageCollector::global_gc_.Deregister(time);
       }
 
-      ScanIterator GetIterator() {
+      ScanIterator *GetIterator() {
         if(Duplicate)
-          return ScanIteratorDuplicate(*this);
+          return new ScanIteratorDuplicate(*this);
         else
-          return ScanIteratorUnique(*this);
+          return new ScanIteratorUnique(*this);
       }
 
-      ScanIterator GetIterator(const KeyType &start_key) {
+      ScanIterator *GetIterator(const KeyType &start_key) {
         if(Duplicate)
-          return ScanIteratorDuplicate(*this, start_key);
+          return new ScanIteratorDuplicate(*this, start_key);
         else
-          return ScanIteratorUnique(*this, start_key);
+          return new ScanIteratorUnique(*this, start_key);
       }
 
       void SubmitGarbageNode(const BWNode<KeyType, KeyComparator> *);
