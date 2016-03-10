@@ -275,7 +275,6 @@ const BWNode<KeyType, KeyComparator> *BWTree<
     CreateLeafNodeView(leaf_node, &keys_view, &values_view, &left_view,
                        &right_view);
     myassert(keys_view.size() == values_view.size());
-    myassert(keys_view.size() >= max_node_size);
 
     // find the split position, and get the low key
     auto index = keys_view.size() / 2;
@@ -309,7 +308,6 @@ const BWNode<KeyType, KeyComparator> *BWTree<
     CreateLeafNodeView(leaf_node, &keys_view, &values_view, &left_view,
                        &right_view);
     myassert(keys_view.size() == values_view.size());
-    myassert(keys_view.size() >= max_node_size);
 
     auto index = keys_view.size() / 2;
     const KeyType &split_key = keys_view[index];
