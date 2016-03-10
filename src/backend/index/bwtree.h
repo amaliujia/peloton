@@ -31,7 +31,7 @@
 
 // Debug mesasge for autolab, since LOG... won't be printed
 
-#define P2DEBUG 1
+#define P2DEBUG
 #ifdef P2DEBUG
 #define dbg_msg(...)                                     \
   do {                                                   \
@@ -1431,15 +1431,7 @@ class BWTree {
     EpochTime time = GarbageCollector::global_gc_.Register();
     std::vector<PID> path = {root_};
     bool result = InsertEntryUtil(key, value, path, root_version_number_);
-    //        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ insert
-    //        print begin  ++++++++++++++++++++++++++++++++++++++");
-    //        LOG_DEBUG(" ");
-    //        PrintSelf(root_, pid_table_.get(root_), 0);
-    //        LOG_DEBUG(" ");
-    //        LOG_DEBUG("------------------------------------------------ insert
-    //        print end  --------------------------------------");
     GarbageCollector::global_gc_.Deregister(time);
-
     return result;
   }
 
@@ -1447,97 +1439,18 @@ class BWTree {
     EpochTime time = GarbageCollector::global_gc_.Register();
     std::vector<PID> path = {root_};
     bool result = DeleteEntryUtil(key, value, path, root_version_number_);
-    //        LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++ delete
-    //        print begin  ++++++++++++++++++++++++++++++++++++++");
-    //        LOG_DEBUG(" ");
-    //        PrintSelf(root_, pid_table_.get(root_), 0);
-    //        LOG_DEBUG(" ");
-    //        LOG_DEBUG("------------------------------------------------ delete
-    //        print end  --------------------------------------");
     GarbageCollector::global_gc_.Deregister(time);
     return result;
   }
 
-  void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
+  inline void ScanKey(const KeyType &key, std::vector<ValueType> &result) {
     EpochTime time = GarbageCollector::global_gc_.Register();
     std::vector<PID> path = {root_};
     ScanKeyUtil(key, result, path, root_version_number_);
     GarbageCollector::global_gc_.Deregister(time);
-    /*
-    // test iterator
-    //LOG_TRACE("enter");
-    ScanIterator *iterator = GetIterator(key);
-    while(iterator->HasNext()) {
-      auto pair = iterator->Next();
-      if(key_equality_checker_(key, pair.first))
-        result.push_back(pair.second);
-      else
-        break;
-    }
-    delete iterator;
-    //LOG_TRACE("leave");
-    */
   }
 
-  void ScanAllKeys(std::vector<ValueType> &ret) const {
-    // LOG_TRACE("ScanAllKeys()");
-    EpochTime time = GarbageCollector::global_gc_.Register();
-    PID next_pid = root_;
-    const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
-
-    while (!node_ptr->IfLeafNode()) {
-      std::vector<KeyType> keys;
-      std::vector<PID> children;
-      PID left, right;
-      CreateInnerNodeView(node_ptr, &keys, &children, &left, &right);
-      myassert(children.size() != 0);
-      next_pid = children[0];
-      node_ptr = pid_table_.get(next_pid);
-    }
-
-    // reach first leaf node
-    // Ready to scan
-    while (node_ptr != NULL) {
-      PID left, right;
-      if (!Duplicate) {
-        std::vector<KeyType> keys;
-        std::vector<ValueType> values;
-        CreateLeafNodeView(node_ptr, &keys, &values, &left, &right);
-        // const unsigned long temp = ret.size();
-        ret.insert(ret.end(), values.begin(), values.end());
-      } else {
-        std::vector<KeyType> keys;
-        std::vector<std::vector<ValueType>> values;
-        CreateLeafNodeView(node_ptr, &keys, &values, &left, &right);
-        for (const auto &v : values) {
-          ret.insert(ret.end(), v.begin(), v.end());
-        }
-      }
-
-      // Assume node_ptr->GetRight() returns the most recent split node delta's
-      // right (aka new page
-      // in that split), if any.
-      next_pid = right;
-      if (right != PIDTable<KeyType, KeyComparator>::PID_NULL) {
-        //          if(node_ptr->GetRight()!=null_) {
-        //            node_ptr = pid_table_.get(node_ptr->GetRight());
-        node_ptr = pid_table_.get(right);
-      } else {
-        node_ptr = NULL;
-      }
-    }
-    GarbageCollector::global_gc_.Deregister(time);
-
-    /*
-    //LOG_TRACE("enter");
-    // test iterator
-    ScanIterator *iterator = GetIterator();
-    while(iterator->HasNext())
-      ret.push_back(iterator->Next().second);
-    delete iterator;
-    //LOG_TRACE("leave");
-    */
-  }
+  void ScanAllKeys(std::vector<ValueType> &ret) const;
 
  private:
   size_t GetMemoryFootprint(const PID &node_pid) const;

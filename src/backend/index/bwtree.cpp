@@ -363,7 +363,6 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                                         const ValueType &value,
                                         std::vector<PID> &path,
                                         VersionNumber root_version_number) {
-  // LOG_TRACE("InsertEntryUtil()");
   while (true) {
     // first check if we are in the right node
     const PID &current = path.back();
@@ -515,7 +514,62 @@ void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
   }
 }
 
-/*
+  template <typename KeyType, typename ValueType, class KeyComparator,
+          class KeyEqualityChecker, class ValueComparator,
+          class ValueEqualityChecker, bool Duplicate>
+  void
+  BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
+          ValueComparator, ValueEqualityChecker,
+          Duplicate>::
+  ScanAllKeys(std::vector<ValueType> &ret) const {
+    // LOG_TRACE("ScanAllKeys()");
+    EpochTime time = GarbageCollector::global_gc_.Register();
+    PID next_pid = root_;
+    const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
+
+    while (!node_ptr->IfLeafNode()) {
+      std::vector<KeyType> keys;
+      std::vector<PID> children;
+      PID left, right;
+      CreateInnerNodeView(node_ptr, &keys, &children, &left, &right);
+      myassert(children.size() != 0);
+      next_pid = children[0];
+      node_ptr = pid_table_.get(next_pid);
+    }
+
+    // reach first leaf node
+    // Ready to scan
+    while (node_ptr != NULL) {
+      PID left, right;
+      if (!Duplicate) {
+        std::vector<KeyType> keys;
+        std::vector<ValueType> values;
+        CreateLeafNodeView(node_ptr, &keys, &values, &left, &right);
+        // const unsigned long temp = ret.size();
+        ret.insert(ret.end(), values.begin(), values.end());
+      } else {
+        std::vector<KeyType> keys;
+        std::vector<std::vector<ValueType>> values;
+        CreateLeafNodeView(node_ptr, &keys, &values, &left, &right);
+        for (const auto &v : values) {
+          ret.insert(ret.end(), v.begin(), v.end());
+        }
+      }
+
+      // Assume node_ptr->GetRight() returns the most recent split node delta's
+      // right (aka new page
+      // in that split), if any.
+      next_pid = right;
+      if (right != PIDTable<KeyType, KeyComparator>::PID_NULL) {
+        node_ptr = pid_table_.get(right);
+      } else {
+        node_ptr = NULL;
+      }
+    }
+    GarbageCollector::global_gc_.Deregister(time);
+  }
+
+  /*
  * check the status of a node
  * it will check whether some SMOs (split, consolidate) are needed
  * it returns false when some SMO has been done that we need to retry this
