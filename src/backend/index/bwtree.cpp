@@ -644,7 +644,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
     return false;
   } else {
     const BWLeafNode<KeyType, KeyComparator, ValueType> *leaf_node =
-            static_cast<const BWLeafNode<KeyType, KeyComparator, std::vector<ValueType>> *>(node_ptr);
+            static_cast<const BWLeafNode<KeyType, KeyComparator, ValueType> *>(node_ptr);
     const std::vector<KeyType> &keys = leaf_node->GetKeys();
     const std::vector<ValueType> &values = leaf_node->GetValues();
     auto position = std::lower_bound(keys.begin(), keys.end(), key,
