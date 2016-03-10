@@ -1573,8 +1573,10 @@ class BWTree {
                         const VersionNumber &root_version_number);
 
   bool ExistKeyValue(const BWNode<KeyType, KeyComparator> *node_ptr,
-                     const KeyType &key, const ValueType &value,
-                     size_t &value_vector_size) const;
+                     const KeyType &key, const ValueType &value) const;
+
+  bool ExistKey(const BWNode<KeyType, KeyComparator> *node_ptr,
+                const KeyType &key) const;
 
   PID FindNextNodePID(const BWNode<KeyType, KeyComparator> *node_ptr,
                       const KeyType &key) const;
