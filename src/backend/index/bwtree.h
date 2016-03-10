@@ -31,7 +31,7 @@
 
 // Debug mesasge for autolab, since LOG... won't be printed
 
-#define P2DEBUG
+//#define P2DEBUG
 #ifdef P2DEBUG
 #define dbg_msg(...)                                     \
   do {                                                   \
@@ -344,10 +344,10 @@ class BWInnerNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
-  BWInnerNode(std::vector<KeyType> &&keys,
-              std::vector<PID> &&children, const PID &left,
-              const PID &right, const KeyType &low_key, const KeyType &high_key,
-              const bool &has_low_key, const bool &has_high_key)
+  BWInnerNode(std::vector<KeyType> &&keys, std::vector<PID> &&children,
+              const PID &left, const PID &right, const KeyType &low_key,
+              const KeyType &high_key, const bool &has_low_key,
+              const bool &has_high_key)
       : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, false, left, right,
                                              low_key, high_key, has_low_key,
                                              has_high_key),
@@ -416,10 +416,10 @@ class BWLeafNode : public BWNormalNode<KeyType, KeyComparator> {
     myassert(!has_low_key && !has_high_key);
   }
 
-  BWLeafNode(std::vector<KeyType> &&keys,
-             std::vector<ValueType> &&values, const PID &left,
-             const PID &right, const KeyType &low_key, const KeyType &high_key,
-             const bool &has_low_key, const bool &has_high_key)
+  BWLeafNode(std::vector<KeyType> &&keys, std::vector<ValueType> &&values,
+             const PID &left, const PID &right, const KeyType &low_key,
+             const KeyType &high_key, const bool &has_low_key,
+             const bool &has_high_key)
       : BWNormalNode<KeyType, KeyComparator>(keys.size(), 0, true, left, right,
                                              low_key, high_key, has_low_key,
                                              has_high_key),
@@ -693,9 +693,10 @@ class BWSplitEntryNode : public BWDeltaNode<KeyType, KeyComparator> {
 
   inline const KeyType &GetToHighKey() const { return to_high_key_; }
 
-  inline bool IfInToRange(const KeyType &key, const KeyComparator &comparator) const {
-    return !comparator(key, to_low_key_)&&
-            (!has_to_high_key_||comparator(key, to_high_key_));
+  inline bool IfInToRange(const KeyType &key,
+                          const KeyComparator &comparator) const {
+    return !comparator(key, to_low_key_) &&
+           (!has_to_high_key_ || comparator(key, to_high_key_));
   }
 
   virtual size_t GetMemoryFootprint() const {
