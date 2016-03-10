@@ -635,7 +635,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       // found the key
       auto dist = std::distance(keys.begin(), position);
       const std::vector<ValueType> &value_vector = values[dist];
-      auto value_position = std::lower_bound(value_vector.begin(), value_vector.end(), key, key_comparator_);
+      auto value_position = std::lower_bound(value_vector.begin(), value_vector.end(), value, value_comparator_);
       if(value_position!=value_vector.end()&&value_equality_checker_(value, *value_position)) {
         // found the value
         return true;
