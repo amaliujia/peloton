@@ -27,7 +27,7 @@ namespace index {
 GarbageCollector GarbageCollector::global_gc_;
 
 void *Begin(void *arg) {
-  LOG_DEBUG("GarbageCollector::Begin()");
+  LOG_TRACE("GarbageCollector::Begin()");
   GarbageCollector *gc = static_cast<GarbageCollector *>(arg);
   while (!(gc->stopped_)) {
     std::this_thread::sleep_for(
@@ -35,21 +35,19 @@ void *Begin(void *arg) {
     gc->head_ = new Epoch((gc->timer_)++, gc->head_);
     gc->ReclaimGarbage();
   }
-  LOG_DEBUG("GarbageCollector::Begin() Stopped");
+  LOG_TRACE("GarbageCollector::Begin() Stopped");
   return NULL;
 }
 
 const int GarbageCollector::epoch_interval_ = 10;  // ms
 
 void GarbageCollector::ReclaimGarbage() {
-  // LOG_DEBUG("GarbageCollector::ReclaimGarbage()");
   myassert(head_ != nullptr && head_->next_ != nullptr);
   if (last_stopped_prev_ == nullptr) last_stopped_prev_ = head_->next_;
 
   // check if all the epochs beyond last_stopped_prev are safe to delete
   for (Epoch *p = last_stopped_prev_->next_; p != nullptr; p = p->next_)
     if (!(p->SafeToReclaim())) return;
-  // LOG_DEBUG("GarbageCollector::ReclaimGarbage() safe to reclaim");
   // if so, we delete all the epochs beyond prev
   ReclaimGarbageList(last_stopped_prev_->next_);
   last_stopped_prev_->next_ = nullptr;
@@ -362,10 +360,10 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                                         std::vector<PID> &path,
                                         VersionNumber root_version_number) {
   while (true) {
-    // first check if we are in the right node
     const PID &current = path.back();
-    // LOG_DEBUG("InsertEntryUtil while loop(%lu).", (unsigned long)current);
     const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
+
+    // first check if we are in the right node
     if (!node_ptr->IfInRange(key, key_comparator_)) {
       myassert(path.size() > 1);
       // LOG_DEBUG("pid %lu is a wrong node.", (unsigned long)path.back());
@@ -375,6 +373,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
     if (path.size() == 1 && root_version_number != root_version_number_)
       root_version_number = root_version_number_;
 
+    // then check if we should proceed
     if (!CheckStatus(node_ptr, key, path, root_version_number)) continue;
 
     if (node_ptr->IfInnerNode()) {
@@ -405,9 +404,10 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                                         std::vector<PID> &path,
                                         VersionNumber root_version_number) {
   while (true) {
-    // first check if we are in the right node
     const PID &current = path.back();
     const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
+
+    // first check if we are in the right node
     if (!node_ptr->IfInRange(key, key_comparator_)) {
       myassert(path.size() > 1);
       path.pop_back();
@@ -416,7 +416,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
     if (path.size() == 1 && root_version_number != root_version_number_)
       root_version_number = root_version_number_;
 
-    // If current is split node
+    // then check if we should proceed
     if (!CheckStatus(node_ptr, key, path, root_version_number)) continue;
 
     if (node_ptr->IfInnerNode()) {
@@ -443,11 +443,11 @@ void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                                     std::vector<ValueType> &result,
                                     std::vector<PID> &path,
                                     VersionNumber root_version_number) {
-  // LOG_TRACE("ScanKeyUtil()");
   while (true) {
-    // first check if we are in the right node
     const PID &current = path.back();
     const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(current);
+
+    // first check if we are in the right node
     if (!node_ptr->IfInRange(key, key_comparator_)) {
       myassert(path.size() > 1);
       path.pop_back();
@@ -456,6 +456,7 @@ void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
     if (path.size() == 1 && root_version_number != root_version_number_)
       root_version_number = root_version_number_;
 
+    // then check if we should proceed
     if (!CheckStatus(node_ptr, key, path, root_version_number)) continue;
 
     if (node_ptr->IfInnerNode()) {
@@ -480,7 +481,6 @@ void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                  (position + 1 == keys_view.end() ||
                   !key_equality_checker_(key, *(position + 1))));
         auto dist = std::distance(keys_view.begin(), position);
-        // LOG_DEBUG("ScanKeyUtil dist=%lu", (unsigned long)dist);
         result.push_back(values_view[dist]);
       } else {
         std::vector<KeyType> keys_view;
@@ -498,8 +498,6 @@ void BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                  (position + 1 == keys_view.end() ||
                   !key_equality_checker_(key, *(position + 1))));
         auto dist = std::distance(keys_view.begin(), position);
-        // LOG_DEBUG("ScanKeyUtil dist=%lu, values_view.size=%lu", (unsigned
-        // long)dist, values_view.size());
         result = values_view[dist];
       }
       return;
@@ -576,7 +574,6 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
                                         node_ptr,
                                     const KeyType &key, std::vector<PID> &path,
                                     const VersionNumber &root_version_number) {
-  // LOG_TRACE("CheckStatus()");
   myassert(node_ptr->IfInRange(key, key_comparator_));
   const PID &current = path.back();
 
@@ -611,14 +608,11 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       if (path.size() > 1) {
         path.pop_back();
       }
-      // LOG_TRACE("CheckStatus() Overflow");
       return false;
     }
     // always retry
-    // LOG_TRACE("CheckStatus() Overflow");
     return false;
   }
-  // LOG_TRACE("CheckStatus() Return True");
   return true;
 };
 
@@ -817,8 +811,6 @@ template <typename KeyType, typename ValueType, class KeyComparator,
 const BWNode<KeyType, KeyComparator> *
 BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
        ValueEqualityChecker, Duplicate>::FirstLeafNode() const {
-  // assume we already registered
-  // LOG_TRACE("enter");
   PID next_pid = root_;
   const BWNode<KeyType, KeyComparator> *node_ptr = pid_table_.get(next_pid);
   while (!node_ptr->IfLeafNode()) {
@@ -830,7 +822,6 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
     next_pid = children[0];
     node_ptr = pid_table_.get(next_pid);
   }
-  // LOG_TRACE("leave");
   return node_ptr;
 }
 
@@ -840,8 +831,6 @@ template <typename KeyType, typename ValueType, class KeyComparator,
 const BWNode<KeyType, KeyComparator> *
 BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
        ValueEqualityChecker, Duplicate>::FindLeafNode(const KeyType &key) {
-  // LOG_TRACE("enter");
-  // assume we already registered
   std::vector<PID> path = {root_};
   VersionNumber root_version_number = root_version_number_;
 
@@ -863,7 +852,6 @@ BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker, ValueComparator,
       PID next_pid = FindNextNodePID(node_ptr, key);
       path.push_back(next_pid);
     } else {
-      // LOG_TRACE("leave");
       return node_ptr;
     }
   }
@@ -929,7 +917,7 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
       // fail, clean up, retry
       delete split_entry;
     }
-  } else {
+  } else { // root split, need to create a new root node
     myassert(path.back() == root_);
     const BWNode<KeyType, KeyComparator> *old_root = pid_table_.get(root_);
     // allocate a new pid for the original root node
@@ -962,7 +950,6 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
             ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaInsert(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_expand) {
-  // LOG_TRACE("DeltaInsert(cur=%lu)", (unsigned long) cur);
   const BWNode<KeyType, KeyComparator> *insert_node_ptr =
       new BWInsertNode<KeyType, KeyComparator, ValueType>(
           node_ptr, node_ptr->GetSlotUsage() + (need_expand ? 1 : 0), key,
@@ -984,7 +971,6 @@ bool BWTree<KeyType, ValueType, KeyComparator, KeyEqualityChecker,
             ValueComparator, ValueEqualityChecker, Duplicate>::
     DeltaDelete(const PID &cur, const BWNode<KeyType, KeyComparator> *node_ptr,
                 const KeyType &key, const ValueType &value, bool need_shrink) {
-  // LOG_TRACE("DeltaDelete(cur=%lu)", (unsigned long) cur);
   const BWNode<KeyType, KeyComparator> *delete_node_ptr =
       new BWDeleteNode<KeyType, KeyComparator, ValueType>(
           node_ptr, node_ptr->GetSlotUsage() - (need_shrink ? 1 : 0), key,

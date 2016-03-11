@@ -61,7 +61,7 @@ namespace peloton {
 namespace index {
 
 struct ItemPointerComparator {
-  inline bool operator()(const ItemPointer &lhs, const ItemPointer &rhs) {
+  inline bool operator()(const ItemPointer &lhs, const ItemPointer &rhs) const {
     return (lhs.block < rhs.block) ||
            ((lhs.block == rhs.block) && (lhs.offset < rhs.offset));
   }
@@ -1361,11 +1361,6 @@ class BWTree {
       return new ScanIteratorUnique(*this, start_key);
   }
 
-  // Submit a garbage node. This function is used at the destruction of this
-  // BWTree
-  // to submit all its nodes as garbage
-  void SubmitGarbageNode(const BWNode<KeyType, KeyComparator> *node);
-
   inline size_t GetMemoryFootprint() const {
     EpochTime time = GarbageCollector::global_gc_.Register();
     size_t size = GetMemoryFootprint(root_);
@@ -1457,6 +1452,11 @@ class BWTree {
   size_t GetMemoryFootprint(const PID &node_pid) const;
 
   bool CompactNode(const PID &node_pid);
+
+  // Submit a garbage node. This function is used at the destruction of this
+  // BWTree
+  // to submit all its nodes as garbage
+  void SubmitGarbageNode(const BWNode<KeyType, KeyComparator> *node);
 
   bool CheckStatus(const BWNode<KeyType, KeyComparator> *node,
                    const KeyType &key, std::vector<PID> &path,
