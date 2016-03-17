@@ -115,7 +115,7 @@ bool SeqScanExecutor::DExecute() {
 
 
     if (assigned_tile_group_offset_ != INVALID_OID) {
-      LOG_TRACE("Seq Scan executor ::  assigned_tile_group_offset %u, table count is %u",
+      LOG_TRACE("Seq Scan executor ::  assigned_tile_group_offset %lu, table count is %lu",
                 current_tile_group_offset_, table_tile_group_count_);
       current_tile_group_offset_ = assigned_tile_group_offset_;
     }

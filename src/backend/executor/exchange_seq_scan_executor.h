@@ -21,7 +21,7 @@ protected:
   bool DExecute();
 
 private:
-  oid_t  current_tile_offset_;
+  oid_t current_tile_offset_;
   oid_t total_tile_count_;
 //  /** @brief Pointer to table to scan from. */
 //  storage::DataTable *target_table_ = nullptr;
