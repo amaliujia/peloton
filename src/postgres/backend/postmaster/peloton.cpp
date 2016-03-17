@@ -190,7 +190,7 @@ peloton_dml(PlanState *planstate,
   // Get our plan
   if (prepStmtName) {
     mapped_plan_ptr = peloton::bridge::PlanTransformer::GetInstance().GetCachedPlan(prepStmtName);
-  }
+   }
 
   /* A cache miss or an unnamed plan */
   if (mapped_plan_ptr.get() == nullptr) {
