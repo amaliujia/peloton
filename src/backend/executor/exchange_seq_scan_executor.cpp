@@ -17,12 +17,12 @@ bool ExchangeSeqScanExecutor::DInit() {
   return true;
 }
 
-bool DExecute() {
-  for (auto child : AbstractExecutor::children_) {
+bool ExchangeSeqScanExecutor::DExecute() {
+  for (auto child : children_) {
     bool ret = child->Execute();
 
     if (ret) {
-      std::unique_ptr<LogicalTile *> logical_tile = child->GetOutput();
+      std::unique_ptr<LogicalTile> logical_tile = child->GetOutput();
       SetOutput(logical_tile.release());
       return ret;
     } else {

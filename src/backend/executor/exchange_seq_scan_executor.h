@@ -1,6 +1,7 @@
 #include "backend/expression/abstract_expression.h"
 #include "backend/storage/data_table.h"
 #include "backend/executor/abstract_executor.h"
+#include "backend/executor/abstract_scan_executor.h"
 
 namespace peloton {
 namespace executor {
@@ -19,7 +20,7 @@ protected:
 
   bool DExecute();
 
-private:
+// private:
 //  /** @brief Pointer to table to scan from. */
 //  storage::DataTable *target_table_ = nullptr;
 //
