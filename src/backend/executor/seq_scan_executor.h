@@ -44,6 +44,8 @@ class SeqScanExecutor : public AbstractScanExecutor {
   /** @brief Keeps track of the number of tile groups to scan. */
   oid_t table_tile_group_count_ = INVALID_OID;
 
+  oid_t assigned_tile_group_offset_ = INVALID_OID;
+
   //===--------------------------------------------------------------------===//
   // Plan Info
   //===--------------------------------------------------------------------===//

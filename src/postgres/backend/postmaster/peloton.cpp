@@ -62,6 +62,12 @@
 #include "storage/proc.h"
 #include "tcop/tcopprot.h"
 
+/*
+ * Enable Intra-query parallelism
+ */
+
+bool intra_query_parallelism = true;
+
 /* ----------
  * Logging Flag
  * ----------
@@ -196,6 +202,15 @@ peloton_dml(PlanState *planstate,
   if(mapped_plan_ptr.get() == nullptr) {
     elog(WARNING, "Empty or unrecognized plan sent to Peloton");
     return;
+  }
+
+  if (intra_query_parallelism) {
+    if (mapped_plan_ptr->GetPlanNodeType() == peloton::PLAN_NODE_TYPE_SEQSCAN) {
+      //std::shared_ptr<const peloton::planner::AbstractPlan *> mapped_parallel_plan_ptr;
+      // If is seq scan plan, parallelize it.
+      auto mapped_parallel_plan = peloton::bridge::PlanTransformer::GetInstance().BuildParallelSeqScanPlan(mapped_plan_ptr.get());
+      mapped_plan_ptr.reset(mapped_parallel_plan);
+    }
   }
 
   std::vector<peloton::oid_t> target_list;

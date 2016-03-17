@@ -68,6 +68,9 @@ class PlanTransformer {
 
   static std::vector<Value> BuildParams(const ParamListInfo param_list);
 
+  // Intra-query parallelism
+  static const planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan);
+
  private:
   Cache<std::string, const planner::AbstractPlan> plan_cache_;
 
@@ -208,6 +211,7 @@ class PlanTransformer {
 
   static const planner::ProjectInfo *BuildProjectInfoFromTLSkipJunk(
       List *targetLis);
+
 };
 
 }  // namespace bridge

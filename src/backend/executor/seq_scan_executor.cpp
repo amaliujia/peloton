@@ -54,6 +54,8 @@ bool SeqScanExecutor::DInit() {
 
   current_tile_group_offset_ = START_OID;
 
+  assigned_tile_group_offset_ = node.GetAssignedTileGroupOffset();
+
   if (target_table_ != nullptr) {
     table_tile_group_count_ = target_table_->GetTileGroupCount();
 
@@ -111,6 +113,10 @@ bool SeqScanExecutor::DExecute() {
     assert(target_table_ != nullptr);
     assert(column_ids_.size() > 0);
 
+
+    if (assigned_tile_group_offset_ != INVALID_OID) {
+      current_tile_group_offset_ = assigned_tile_group_offset_;
+    }
     // Retrieve next tile group.
     while (current_tile_group_offset_ < table_tile_group_count_) {
       auto tile_group =
@@ -154,7 +160,11 @@ bool SeqScanExecutor::DExecute() {
 
       // Don't return empty tiles
       if (0 == logical_tile->GetTupleCount()) {
-        continue;
+        if (assigned_tile_group_offset_ != INVALID_OID) {
+          break;
+        } else {
+          continue;
+        }
       }
 
       SetOutput(logical_tile.release());

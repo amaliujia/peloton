@@ -195,6 +195,7 @@ executor::AbstractExecutor *BuildExecutorTree(
     executor::ExecutorContext *executor_context) {
   // Base case
   if (plan == nullptr) return root;
+  LOG_TRACE("Building executor for plan node %s", plan->GetInfo().c_str());
 
   executor::AbstractExecutor *child_executor = nullptr;
 
@@ -260,6 +261,10 @@ executor::AbstractExecutor *BuildExecutorTree(
 
     case PLAN_NODE_TYPE_ORDERBY:
       child_executor = new executor::OrderByExecutor(plan, executor_context);
+      break;
+
+    case PLAN_NODE_TYPE_EXCHANGE_SEQSCAN:
+      child_executor = new executor::ExchangeSeqScanExecutor(plan, executor_context);
       break;
 
     default:
