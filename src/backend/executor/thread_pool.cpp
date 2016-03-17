@@ -1,4 +1,4 @@
-#include "ThreadPool.h"
+#include "thread_pool.h"
 
 namespace peloton {
 namespace executor {

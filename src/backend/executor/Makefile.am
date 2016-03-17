@@ -29,7 +29,7 @@ executor_FILES = \
 		 backend/executor/append_executor.cpp	\
 		 backend/executor/projection_executor.cpp   \
 		 backend/executor/exchange_seq_scan_executor.cpp   \
-		 backend/executor/ThreadPool.cpp   \
+		 backend/executor/thread_pool.cpp   \
 		 backend/executor/AbstractParallelTaskRequest.cpp   \
 		 backend/executor/AbstractParallelTaskResponse.cpp
 
