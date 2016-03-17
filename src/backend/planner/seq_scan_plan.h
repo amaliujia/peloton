@@ -50,7 +50,7 @@ class SeqScanPlan : public AbstractScan {
 
   const std::string GetInfo() const { return "SeqScan"; }
 
-  const oid_t GetAssignedTileGroupOffset() const {return assigned_tile_group_offset_;}
+  oid_t GetAssignedTileGroupOffset() const {return assigned_tile_group_offset_;}
 
 private:
   oid_t assigned_tile_group_offset_ = INVALID_OID;
