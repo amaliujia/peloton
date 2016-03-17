@@ -14,20 +14,21 @@ ExchangeSeqScanExecutor::ExchangeSeqScanExecutor(const planner::AbstractPlan *no
 
 
 bool ExchangeSeqScanExecutor::DInit() {
+  assert(children_.size() != 0);
+  current_tile_offset_ = 0;
+  total_tile_count_ = children_.size();
   return true;
 }
 
 bool ExchangeSeqScanExecutor::DExecute() {
-  LOG_INFO("Exchange Seq Scan executor:: start execute");
-  for (auto child : children_) {
-    bool ret = child->Execute();
+  LOG_INFO("Exchange Seq Scan executor:: start execute, children_size %lu", children_.size());
+  while (current_tile_offset_ < total_tile_count_) {
+    bool ret = children_[current_tile_offset_++]->Execute();
 
     if (ret) {
-      std::unique_ptr<LogicalTile> logical_tile(child->GetOutput());
+      std::unique_ptr<LogicalTile> logical_tile(children_[current_tile_offset_ - 1]->GetOutput());
       SetOutput(logical_tile.release());
-      return ret;
-    } else {
-      continue;
+      return true;
     }
   }
   return false;
