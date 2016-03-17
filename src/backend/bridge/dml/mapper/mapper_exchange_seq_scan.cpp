@@ -7,7 +7,7 @@ namespace bridge {
 
 const planner::AbstractPlan *PlanTransformer::BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan) {
   /* Grab the target table */
-  LOG_TRACE("Mapper seq scan plan to parallel seq scan plan");
+  LOG_TRACE("Mapping seq scan plan to parallel seq scan plan (add exchange seq scan operator)");
   const planner::SeqScanPlan *plan = dynamic_cast<const planner::SeqScanPlan *>(seq_scan_plan); 
   storage::DataTable *target_table = plan->GetTable();
 

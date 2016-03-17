@@ -18,6 +18,7 @@ bool ExchangeSeqScanExecutor::DInit() {
 }
 
 bool ExchangeSeqScanExecutor::DExecute() {
+  LOG_INFO("Exchange Seq Scan executor:: start execute");
   for (auto child : children_) {
     bool ret = child->Execute();
 

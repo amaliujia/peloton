@@ -264,6 +264,7 @@ executor::AbstractExecutor *BuildExecutorTree(
       break;
 
     case PLAN_NODE_TYPE_EXCHANGE_SEQSCAN:
+      LOG_INFO("ExchangeSeqScan: build exchange seq scan executor from exchange seq scan plan");
       child_executor = new executor::ExchangeSeqScanExecutor(plan, executor_context);
       break;
 
