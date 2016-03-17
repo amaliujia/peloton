@@ -17,6 +17,10 @@ bool ExchangeSeqScanExecutor::DInit() {
   assert(children_.size() != 0);
   current_tile_offset_ = 0;
   total_tile_count_ = children_.size();
+
+
+  // Init thread pool
+  // TODO: it should not here, but for now let's just put it here
   return true;
 }
 
