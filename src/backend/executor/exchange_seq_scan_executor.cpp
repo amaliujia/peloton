@@ -22,7 +22,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
     bool ret = child->Execute();
 
     if (ret) {
-      std::unique_ptr<LogicalTile> logical_tile = child->GetOutput();
+      std::unique_ptr<LogicalTile> logical_tile(child->GetOutput());
       SetOutput(logical_tile.release());
       return ret;
     } else {
