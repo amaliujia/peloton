@@ -46,6 +46,12 @@ class SeqScanPlan : public AbstractScan {
               oid_t tile_gourp_offset)
     : AbstractScan(table, predicate, column_ids), assigned_tile_group_offset_(tile_gourp_offset){}
 
+  SeqScanPlan(storage::DataTable *table,
+              const expression::AbstractExpression *predicate,
+              const std::vector<oid_t> &column_ids,
+              oid_t tile_gourp_offset)
+    : AbstractScan(table, predicate, column_ids), assigned_tile_group_offset_(tile_gourp_offset){}
+
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_SEQSCAN; }
 
   const std::string GetInfo() const { return "SeqScan"; }

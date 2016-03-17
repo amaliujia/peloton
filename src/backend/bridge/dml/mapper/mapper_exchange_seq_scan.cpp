@@ -16,8 +16,7 @@ const planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPla
   assert(target_table);
   LOG_INFO("ExchangeSeqScan: database table: %s", target_table->GetName().c_str());
 
-  const expression::AbstractExpression *predicate =
-    plan->GetPredicate();
+  const expression::AbstractExpression *predicate = plan->GetPredicate();
   std::vector<oid_t> column_ids(plan->GetColumnIds());
 
   // Creates a bunch of seq_scan_plan nodes.
