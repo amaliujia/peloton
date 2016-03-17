@@ -1,13 +1,9 @@
-//
-// Created by 王 瑞 on 16-3-15.
-//
-
-#ifndef THREADPOOL_THREADPOOL_H
-#define THREADPOOL_THREADPOOL_H
-
 #include <vector>
 #include <thread>
 #include <iostream>
+
+namespace peloton {
+namespace executor {
 
 class Task{
 public:
@@ -93,5 +89,5 @@ private:
     bool flag;
 };
 
-
-#endif //THREADPOOL_THREADPOOL_H
+}  // namespace executor
+}  // namespace peloton

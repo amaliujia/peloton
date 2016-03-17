@@ -1,12 +1,12 @@
 
 namespace peloton {
-namespace parallelism {
+namespace executor {
 
 class AbstractParallelTaskRequest {
 
 };
 
-}  // namespace parallelism
+}  // namespace executor
 }  // namespace peloton
 
 

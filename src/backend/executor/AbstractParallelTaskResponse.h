@@ -3,7 +3,7 @@
 //
 
 namespace peloton {
-namespace parallelism {
+namespace executor {
 
 
 class AbstractParallelTaskResponse {
@@ -11,5 +11,5 @@ class AbstractParallelTaskResponse {
 };
 
 
-}  // namespace parallelism
+}  // namespace executor
 }  // namespace peloton

@@ -3,8 +3,8 @@
 
 
 namespace peloton {
-namespace parallelism {
+namespace executor  {
 
 
-}  // namespace parallelism
+}  // namespace executor
 }  // namespace peloton
