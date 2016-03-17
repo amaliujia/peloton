@@ -8,16 +8,17 @@ namespace bridge {
 const planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan) {
   /* Grab the target table */
   LOG_TRACE("Mapper seq scan plan to parallel seq scan plan");
-  storage::DataTable *target_table = reinterpret_cast<const planner::SeqScanPlan *>(seq_scan_plan)->GetTable();
+  const planner::SeqScanPlan *plan = dynamic_cast<const planner::SeqScanPlan *>(seq_scan_plan); 
+  storage::DataTable *target_table = plan->GetTable();
 
   // TODO: it is possbile target_table is nullptr, aka seq_scan_plan has child plan (just a guess). Need handle
   // This case.
   assert(target_table);
   LOG_INFO("ExchangeSeqScan: database table: %s", target_table->GetName().c_str());
 
-  expression::AbstractExpression *predicate =
-    (expression::AbstractExpression *) reinterpret_cast<planner::SeqScanPlan *>(seq_scan_plan)->GetPredicate();
-  std::vector<oid_t> column_ids(reinterpret_cast<const planner::SeqScanPlan *>(seq_scan_plan)->GetColumnIds());
+  const expression::AbstractExpression *predicate =
+    plan->GetPredicate();
+  std::vector<oid_t> column_ids(plan->GetColumnIds());
 
   // Creates a bunch of seq_scan_plan nodes.
   // auto exchange_seq_scan_plan = new planner::ExchangeSeqScanPlan(target_table, predicate, column_ids);
