@@ -5,7 +5,7 @@
 namespace peloton {
 namespace bridge {
 
-const planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan) {
+const planner::AbstractPlan *PlanTransformer::BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan) {
   /* Grab the target table */
   LOG_TRACE("Mapper seq scan plan to parallel seq scan plan");
   const planner::SeqScanPlan *plan = dynamic_cast<const planner::SeqScanPlan *>(seq_scan_plan); 

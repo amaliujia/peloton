@@ -208,7 +208,7 @@ peloton_dml(PlanState *planstate,
     if (mapped_plan_ptr->GetPlanNodeType() == peloton::PLAN_NODE_TYPE_SEQSCAN) {
       //std::shared_ptr<const peloton::planner::AbstractPlan *> mapped_parallel_plan_ptr;
       // If is seq scan plan, parallelize it.
-      auto mapped_parallel_plan = peloton::bridge::PlanTransformer::BuildParallelSeqScanPlan(mapped_plan_ptr.get());
+      auto mapped_parallel_plan = peloton::bridge::PlanTransformer::GetInstance().BuildParallelSeqScanPlan(mapped_plan_ptr.get());
       mapped_plan_ptr.reset(mapped_parallel_plan);
     }
   }
