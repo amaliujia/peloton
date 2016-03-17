@@ -6,7 +6,8 @@
 
 parallelism_FILES = \
 			   backend/parallelism/AbstractParallelTaskRequest.cpp \
-			   backend/parallelism/AbstractParallelTaskResponse.cpp
+			   backend/parallelism/AbstractParallelTaskResponse.cpp \
+			   backend/parallelism/ThreadPool.cpp
 
 parallelism_INCLUDES = \
                   -I$(srcdir)/backend/parallelism
