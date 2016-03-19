@@ -1,3 +1,5 @@
+#pragma once
+
 #include "backend/expression/abstract_expression.h"
 #include "backend/storage/data_table.h"
 #include "backend/executor/abstract_executor.h"
@@ -17,13 +19,15 @@ public:
 
   explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context);
+  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
+
 protected:
   bool DInit();
 
   bool DExecute();
 
 private:
-  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
+  //void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
 
 private:
   oid_t current_tile_offset_;

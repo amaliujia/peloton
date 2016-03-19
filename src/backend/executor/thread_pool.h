@@ -1,23 +1,10 @@
 #include <mutex>
 #include <vector>
 #include <thread>
-#include <iostream>
 #include <condition_variable>
 
 namespace peloton {
 namespace executor {
-
-class Task{
-public:
-    Task(int id): id_(id) {}
-
-    void Execute() {
-      std::cout << id_ << std::endl;
-    }
-private:
-    int id_;
-};
-
 
 template <typename T>
 class BlockingQueue {
@@ -52,43 +39,6 @@ private:
     std::vector<T> storage_;
     std::mutex lock_;
     std::condition_variable cond_;
-};
-
-
-class ThreadPool {
-public:
-    ThreadPool(int num): num_(num), flag(true){
-      workers_.resize(num);
-    }
-
-    void PutTask(const Task& t) {
-      queue_.PutTask(t);
-    }
-
-    void Start() {
-      for (int i = 0; i < num_; i++) {
-        workers_[i] = std::thread(&ThreadPool::WorkerMain, this, &queue_, &flag);
-      }
-    }
-
-    void Destroy() {
-      flag = false;
-      for (int i = 0; i < num_; i++) {
-        workers_[i].join();
-      }
-    }
-private:
-    void WorkerMain(TaskQueue<Task> *queue, bool *flag) {
-      while (*flag) {
-        Task t = queue->GetTask();
-        t.Execute();
-      }
-    }
-private:
-    BockingQueue<Task> queue_;
-    std::vector<std::thread> workers_;
-    int num_;
-    bool flag;
 };
 
 }  // namespace executor

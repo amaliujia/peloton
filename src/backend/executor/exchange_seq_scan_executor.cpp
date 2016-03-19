@@ -1,7 +1,6 @@
 #include "backend/common/thread_manager.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
 #include "backend/executor/parallel_seq_scan_task_response.h"
-#include "backend/executor/abstract_parallel_task_response.h"
 
 namespace peloton {
 namespace executor {
@@ -26,10 +25,10 @@ bool ExchangeSeqScanExecutor::DExecute() {
   LOG_INFO("Exchange Seq Scan executor:: start execute, children_size %lu", children_.size());
 
   if (!parallelize_done_) {
-    auto thread_pool = ThreadManager::GetServerThreadPool();
     while (current_tile_offset_ < total_tile_count_) {
-      std::function<void()> f_seq_scan = []() { this->SeqScanThreadMain(children_[current_tile_offset_], queue_); };
-      thread_pool.AddTask(f_seq_scan);
+      LOG_TRACE("ExchangeSeqScanExecutor :: submit task to thread pool, dealing with %lu tile.", current_tile_offset_);
+      std::function<void()> f_seq_scan = std::bind(&ExchangeSeqScanExecutor::SeqScanThreadMain, this, children_[current_tile_offset_], &queue_); 
+      ThreadManager::GetServerThreadPool().AddTask(f_seq_scan);
       current_tile_offset_++;
     }
     parallelize_done_ = true;
@@ -52,7 +51,8 @@ bool ExchangeSeqScanExecutor::DExecute() {
 
 void ExchangeSeqScanExecutor::SeqScanThreadMain(
                             AbstractExecutor *executor,
-                            BlockingQueue<AbstractParallelTaskResponse *> queue) {
+                            BlockingQueue<AbstractParallelTaskResponse *> *queue) {
+  LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", executor->GetRawNode()->GetInfo().c_str());
   bool ret = executor->Execute();
   AbstractParallelTaskResponse *response = nullptr;
 
@@ -62,7 +62,7 @@ void ExchangeSeqScanExecutor::SeqScanThreadMain(
   } else {
     response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
   }
-  queue.PutTask(response);
+  queue->PutTask(response);
 }
 
 }  // executor

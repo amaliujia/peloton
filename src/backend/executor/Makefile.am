@@ -30,8 +30,8 @@ executor_FILES = \
 		 backend/executor/projection_executor.cpp   \
 		 backend/executor/exchange_seq_scan_executor.cpp   \
 		 backend/executor/thread_pool.cpp   \
-		 backend/executor/AbstractParallelTaskRequest.cpp   \
-		 backend/executor/AbstractParallelTaskResponse.cpp
+		 backend/executor/abstract_parallel_task_response.cpp	\
+		 backend/executor/parallel_seq_scan_task_response.cpp
 
 
 executor_INCLUDES = \

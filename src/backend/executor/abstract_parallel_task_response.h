@@ -1,3 +1,5 @@
+#pragma once
+
 #include "backend/executor/logical_tile.h"
 
 namespace peloton {
