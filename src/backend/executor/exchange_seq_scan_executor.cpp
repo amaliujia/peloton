@@ -29,6 +29,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
       LOG_TRACE("ExchangeSeqScanExecutor :: submit task to thread pool, dealing with %lu tile.", current_tile_offset_);
       std::function<void()> f_seq_scan = std::bind(&ExchangeSeqScanExecutor::SeqScanThreadMain, this, children_[current_tile_offset_], &queue_); 
       ThreadManager::GetServerThreadPool().AddTask(f_seq_scan);
+
       current_tile_offset_++;
     }
     parallelize_done_ = true;
@@ -49,7 +50,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
   return false;
 }
 
-void ExchangeSeqScanExecutor::SeqScanThreadMain(
+void  ExchangeSeqScanExecutor::SeqScanThreadMain(
                             AbstractExecutor *executor,
                             BlockingQueue<AbstractParallelTaskResponse *> *queue) {
   LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", executor->GetRawNode()->GetInfo().c_str());

@@ -11,14 +11,12 @@ enum ParallelTaskStatus {
   NoRetValue
 };
 
-
 class AbstractParallelTaskResponse {
 public:
   AbstractParallelTaskResponse();
   AbstractParallelTaskResponse(ParallelTaskStatus status);
 
   ParallelTaskStatus GetStatus();
-
 
   virtual LogicalTile *GetOutput() = 0;
 private:
