@@ -20,7 +20,7 @@ private:
 
 
 template <typename T>
-class TaskQueue {
+class BlockingQueue {
 public:
     T GetTask() {
       std::unique_lock<std::mutex> locker(lock_);
@@ -85,7 +85,7 @@ private:
       }
     }
 private:
-    TaskQueue<Task> queue_;
+    BockingQueue<Task> queue_;
     std::vector<std::thread> workers_;
     int num_;
     bool flag;

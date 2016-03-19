@@ -2,6 +2,8 @@
 #include "backend/storage/data_table.h"
 #include "backend/executor/abstract_executor.h"
 #include "backend/executor/abstract_scan_executor.h"
+#include "backend/executor/abstract_parallel_task_response.h"
+#include "backend/executor/thread_pool.h"
 
 namespace peloton {
 namespace executor {
@@ -21,21 +23,16 @@ protected:
   bool DExecute();
 
 private:
+  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
+
+private:
   oid_t current_tile_offset_;
   oid_t total_tile_count_;
 
+  oid_t current_tile_count_;
+  bool parallelize_done_;
 
-
-//  /** @brief Pointer to table to scan from. */
-//  storage::DataTable *target_table_ = nullptr;
-//
-//  /** @brief Selection predicate. */
-//  const expression::AbstractExpression *predicate_ = nullptr;
-//
-//  /** @brief Columns from tile group to be added to logical tile output. */
-//  std::vector<oid_t> column_ids_;
-
-
+  BlockingQueue<AbstractParallelTaskResponse *> queue_;
 
 };
 
