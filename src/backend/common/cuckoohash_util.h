@@ -3,7 +3,7 @@
 
 #include <exception>
 #include <pthread.h>
-#include "cuckoohash_config.hh" // for LIBCUCKOO_DEBUG
+#include "cuckoohash_config.h" // for LIBCUCKOO_DEBUG
 
 namespace peloton {
 

@@ -26,9 +26,9 @@
 #include <utility>
 #include <vector>
 
-#include "cuckoohash_config.hh"
-#include "cuckoohash_util.hh"
-#include "default_hasher.hh"
+#include "cuckoohash_config.h"
+#include "cuckoohash_util.h"
+#include "default_hasher.h"
 
 namespace peloton {
 
