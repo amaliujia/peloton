@@ -9,6 +9,7 @@ namespace peloton {
 namespace planner {
 
 class ExchangeHashPlan : public AbstractPlan {
+public:
   ExchangeHashPlan(const ExchangeHashPlan &) = delete;
   ExchangeHashPlan &operator=(const ExchangeHashPlan &) = delete;
   ExchangeHashPlan(ExchangeHashPlan &&) = delete;
@@ -19,6 +20,9 @@ class ExchangeHashPlan : public AbstractPlan {
 
   ExchangeHashPlan(std::vector<HashKeyPtrType> &hashkeys)
   : hash_keys_(std::move(hashkeys)) {}
+
+  ExchangeHashPlan(const std::vector<HashKeyPtrType> &hashkeys)
+    : hash_keys_(std::move(hashkeys)) {}
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
 

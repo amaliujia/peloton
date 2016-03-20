@@ -268,6 +268,10 @@ executor::AbstractExecutor *BuildExecutorTree(
       child_executor = new executor::ExchangeSeqScanExecutor(plan, executor_context);
       break;
 
+    case PLAN_NODE_TYPE_EXCHANGE_HASH:
+      LOG_INFO("ExchangeHash: build exchange hash executor from exchange hash plan");
+      break;
+
     default:
       LOG_ERROR("Unsupported plan node type : %d ", plan_node_type);
       break;

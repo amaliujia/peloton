@@ -2,7 +2,7 @@
 
 #include "backend/expression/abstract_expression.h"
 #include "backend/storage/data_table.h"
-#include "backend/executor/abstract_executor.h"
+#include "backend/executor/abstract_exchange_executor.h"
 #include "backend/executor/abstract_scan_executor.h"
 #include "backend/executor/abstract_parallel_task_response.h"
 #include "backend/executor/thread_pool.h"
@@ -10,7 +10,7 @@
 namespace peloton {
 namespace executor {
 
-class ExchangeSeqScanExecutor : public AbstractExecutor {
+class ExchangeSeqScanExecutor : public AbstractExchangeExecutor {
 public:
   ExchangeSeqScanExecutor(const ExchangeSeqScanExecutor &) = delete;
   ExchangeSeqScanExecutor &operator=(const ExchangeSeqScanExecutor &) = delete;
@@ -19,7 +19,7 @@ public:
 
   explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context);
-  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
+  // void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
 
 protected:
   bool DInit();
@@ -27,7 +27,7 @@ protected:
   bool DExecute();
 
 private:
-  //void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
+  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
 
 private:
   oid_t current_tile_offset_;
@@ -35,8 +35,6 @@ private:
 
   oid_t current_tile_count_;
   bool parallelize_done_;
-
-  BlockingQueue<AbstractParallelTaskResponse *> queue_;
 
 };
 
