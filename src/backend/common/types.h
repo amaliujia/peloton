@@ -437,7 +437,8 @@ enum PlanNodeType {
   PLAN_NODE_TYPE_MOCK = 80,
 
   // Exchange Nodes
-  PLAN_NODE_TYPE_EXCHANGE_SEQSCAN = 100
+  PLAN_NODE_TYPE_EXCHANGE_SEQSCAN = 100,
+  PLAN_NODE_TYPE_EXCHANGE_HASH = 101
 };
 
 //===--------------------------------------------------------------------===//

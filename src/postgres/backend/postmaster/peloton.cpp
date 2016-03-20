@@ -205,6 +205,7 @@ peloton_dml(PlanState *planstate,
   }
 
   if (intra_query_parallelism) {
+    // TODO: should use of unified transformer here
     if (mapped_plan_ptr->GetPlanNodeType() == peloton::PLAN_NODE_TYPE_SEQSCAN) {
       //std::shared_ptr<const peloton::planner::AbstractPlan *> mapped_parallel_plan_ptr;
       // If is seq scan plan, parallelize it.
