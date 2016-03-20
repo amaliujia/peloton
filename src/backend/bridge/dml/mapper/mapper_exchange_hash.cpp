@@ -1,4 +1,5 @@
 #include "backend/bridge/dml/mapper/mapper.h"
+#include "backend/common/cuckoohash_map.h"
 
 namespace peloton {
 namespace bridge {
