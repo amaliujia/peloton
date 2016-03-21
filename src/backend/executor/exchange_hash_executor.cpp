@@ -1,5 +1,14 @@
+#include <utility>
+#include <vector>
+
 #include "backend/planner/exchange_hash_plan.h"
 #include "backend/executor/exchange_hash_executor.h"
+#include "backend/common/logger.h"
+#include "backend/common/value.h"
+#include "backend/executor/logical_tile.h"
+#include "backend/executor/hash_executor.h"
+#include "backend/planner/hash_plan.h"
+#include "backend/expression/tuple_value_expression.h"
 
 namespace peloton {
 namespace executor {
@@ -7,7 +16,7 @@ namespace executor {
 /**
  * @brief Constructor
  */
-HExchangeHashExecutor::ExchangeHashExecutor(const planner::AbstractPlan *node,
+ExchangeHashExecutor::ExchangeHashExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context)
   : AbstractExecutor(node, executor_context) {}
 
@@ -33,7 +42,7 @@ bool ExchangeHashExecutor::DExecute() {
   LOG_INFO("Exchange Hash Executor");
 
   if (done_ == false) {
-    const planner::ExchangeHashPlan *node = GetPlanNode<planner::ExchangeHashPlan>();
+    const planner::ExchangeHashPlan node = GetPlanNode<planner::ExchangeHashPlan>();
 
     // First, get all the input logical tiles
     while (children_[0]->Execute()) {
