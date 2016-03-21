@@ -26,5 +26,5 @@ protected:
   BlockingQueue<AbstractParallelTaskResponse *> queue_;
 };
 
-}
-}
+}  // namespace executor
+}  // namespace planner
