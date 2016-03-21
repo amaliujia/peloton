@@ -7,7 +7,7 @@ namespace peloton {
 namespace bridge {
 
 static const planner::AbstractPlan *BuildParallelHashPlanUtil(const planner::HashPlan *old_plan) {
-  const planner::AbstractPlan *exchange_hash_plan = new planner::ExchangeHashPlan(old_plan->GetHashKeys());
+  const planner::AbstractPlan *exchange_hash_plan = new planner::ExchangeHashPlan(old_plan->GetHashKeysNonConst());
   return exchange_hash_plan;
 }
 

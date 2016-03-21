@@ -39,6 +39,10 @@ class HashPlan : public AbstractPlan {
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
 
   const std::string GetInfo() const { return "Hash"; }
+  
+  inline std::vector<HashKeyPtrType> &GetHashKeysNonConst() {
+    return this->hash_keys_;
+  }
 
   inline const std::vector<HashKeyPtrType> &GetHashKeys() const {
     return this->hash_keys_;
