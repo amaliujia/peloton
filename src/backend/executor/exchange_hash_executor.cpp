@@ -42,7 +42,7 @@ bool ExchangeHashExecutor::DExecute() {
   LOG_INFO("Exchange Hash Executor");
 
   if (done_ == false) {
-    const planner::ExchangeHashPlan node = GetPlanNode<planner::ExchangeHashPlan>();
+    const planner::ExchangeHashPlan& node = GetPlanNode<planner::ExchangeHashPlan>();
 
     // First, get all the input logical tiles
     while (children_[0]->Execute()) {
