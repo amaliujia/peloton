@@ -18,8 +18,8 @@ public:
   typedef const expression::AbstractExpression HashKeyType;
   typedef std::unique_ptr<HashKeyType> HashKeyPtrType;
  
-  ExchangeHashPlan(std::vector<HashKeyPtrType> &hashkeys)
-    : hash_keys_(std::move(hashkeys)) {}
+  ExchangeHashPlan(std::vector<std::unique_ptr<const expression::AbstractExpression>> *hashkeys)
+    : hash_keys_(std::move(*hashkeys)) {}
   
   /*ExchangeHashPlan(const std::vector<HashKeyPtrType> &hashkeys) {
     for (size_t i = 0; i < hashkeys.size(); i++) {
