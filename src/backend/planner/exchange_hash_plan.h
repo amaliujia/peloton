@@ -5,11 +5,11 @@
 #include "backend/expression/abstract_expression.h"
 
 namespace peloton {
-
 namespace planner {
 
 class ExchangeHashPlan : public AbstractPlan {
 public:
+  ExchangeHashPlan() = delete;
   ExchangeHashPlan(const ExchangeHashPlan &) = delete;
   ExchangeHashPlan &operator=(const ExchangeHashPlan &) = delete;
   ExchangeHashPlan(ExchangeHashPlan &&) = delete;
