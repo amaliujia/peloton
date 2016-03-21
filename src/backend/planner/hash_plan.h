@@ -40,9 +40,9 @@ class HashPlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "Hash"; }
   
-  inline std::vector<HashKeyPtrType> &GetHashKeysNonConst() {
-    return this->hash_keys_;
-  }
+//  inline std::vector<HashKeyPtrType> &GetHashKeysNonConst() {
+//    return this->hash_keys_;
+//  }
 
   inline const std::vector<HashKeyPtrType> &GetHashKeys() const {
     return this->hash_keys_;
