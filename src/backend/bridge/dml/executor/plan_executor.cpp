@@ -269,6 +269,7 @@ executor::AbstractExecutor *BuildExecutorTree(
       break;
 
     case PLAN_NODE_TYPE_EXCHANGE_HASH:
+      child_executor = new executor::ExchangeHashExecutor(plan, executor_context); 
       LOG_INFO("ExchangeHash: build exchange hash executor from exchange hash plan");
       break;
 

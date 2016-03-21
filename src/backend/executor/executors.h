@@ -31,3 +31,4 @@
 #include "backend/executor/append_executor.h"
 #include "backend/executor/projection_executor.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
+#include "backend/executor/exchange_hash_executor.h"
