@@ -18,7 +18,7 @@ namespace executor {
  */
 ExchangeHashExecutor::ExchangeHashExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context)
-  : AbstractExecutor(node, executor_context) {}
+  : AbstractExchangeExecutor(node, executor_context) {}
 
 /**
  * @brief Do some basic checks and initialize executor state.

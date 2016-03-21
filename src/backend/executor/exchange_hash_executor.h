@@ -4,7 +4,7 @@
 #include <unordered_set>
 
 #include "backend/common/types.h"
-#include "backend/executor/abstract_executor.h"
+#include "backend/executor/abstract_exchange_executor.h"
 #include "backend/executor/logical_tile.h"
 #include "backend/expression/container_tuple.h"
 
@@ -14,7 +14,7 @@ namespace peloton {
 
 namespace executor {
 
-class ExchangeHashExecutor : public AbstractExecutor{
+class ExchangeHashExecutor : public AbstractExchangeExecutor{
 public:
   ExchangeHashExecutor(const ExchangeHashExecutor &) = delete;
   ExchangeHashExecutor &operator=(const ExchangeHashExecutor &) = delete;

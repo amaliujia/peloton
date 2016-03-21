@@ -20,12 +20,6 @@ public:
  
   ExchangeHashPlan(std::vector<std::unique_ptr<const expression::AbstractExpression>> *hashkeys)
     : hash_keys_(std::move(*hashkeys)) {}
-  
-  /*ExchangeHashPlan(const std::vector<HashKeyPtrType> &hashkeys) {
-    for (size_t i = 0; i < hashkeys.size(); i++) {
-      hash_keys_.push_back(std::unique_ptr<HashKeyType>(hashkeys[i].release()));
-    }
-  }*/
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
 
