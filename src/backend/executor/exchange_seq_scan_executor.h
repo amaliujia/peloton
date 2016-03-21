@@ -19,7 +19,7 @@ public:
 
   explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context);
-  // void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
+  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
 
 protected:
   bool DInit();
@@ -27,7 +27,7 @@ protected:
   bool DExecute();
 
 private:
-  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
+  // void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> queue);
 
 private:
   oid_t current_tile_offset_;

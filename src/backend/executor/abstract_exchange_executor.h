@@ -4,7 +4,7 @@
 #include "backend/executor/abstract_parallel_task_response.h"
 #include "backend/executor/thread_pool.h"
 
-namespace planner {
+namespace peloton {
 namespace executor {
 
 class AbstractExchangeExecutor : public AbstractExecutor {
