@@ -264,13 +264,13 @@ executor::AbstractExecutor *BuildExecutorTree(
       break;
 
     case PLAN_NODE_TYPE_EXCHANGE_SEQSCAN:
-      LOG_INFO("ExchangeSeqScan: build exchange seq scan executor from exchange seq scan plan");
+      LOG_TRACE("ExchangeSeqScan: build exchange seq scan executor from exchange seq scan plan");
       child_executor = new executor::ExchangeSeqScanExecutor(plan, executor_context);
       break;
 
     case PLAN_NODE_TYPE_EXCHANGE_HASH:
+      LOG_TRACE("ExchangeHash: build exchange hash executor from exchange hash plan");
       child_executor = new executor::ExchangeHashExecutor(plan, executor_context); 
-      LOG_INFO("ExchangeHash: build exchange hash executor from exchange hash plan");
       break;
 
     default:

@@ -40,10 +40,6 @@ class HashPlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "Hash"; }
 
-  inline const std::vector<std::unique_ptr<const expression::AbstractExpression>> *GetHashKeysPtr() const {
-    return &(this->hash_keys_);
-  }
-
   inline const std::vector<HashKeyPtrType> &GetHashKeys() const {
     return this->hash_keys_;
   }

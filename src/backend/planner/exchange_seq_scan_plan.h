@@ -3,11 +3,14 @@
 #include "backend/storage/database.h"
 #include "backend/expression/abstract_expression.h"
 #include "abstract_plan.h"
+#include "abstract_scan_plan.h"
+#include "seq_scan_plan.h"
+#include "abstract_exchange_plan.h"
 
 namespace peloton {
 namespace planner {
 
-class ExchangeSeqScanPlan : public AbstractScan {
+class ExchangeSeqScanPlan : public AbstractScan, public AbstractExchangePlan {
 public:
   ExchangeSeqScanPlan(const ExchangeSeqScanPlan &) = delete;
   ExchangeSeqScanPlan &operator=(const ExchangeSeqScanPlan &) = delete;
@@ -25,8 +28,6 @@ public:
 
   const std::string GetInfo() const { return "ExchangeSeqScan"; }
 
-private:
-  std::unique_ptr<const planner::AbstractPlan> old_plan;
 };
 
 }  // namespace planner

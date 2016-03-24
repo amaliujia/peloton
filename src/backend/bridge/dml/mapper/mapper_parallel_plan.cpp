@@ -1,4 +1,5 @@
 #include <backend/planner/hash_plan.h>
+#include <backend/planner/exchange_hash_plan.h>
 #include "backend/planner/exchange_seq_scan_plan.h"
 #include "backend/planner/seq_scan_plan.h"
 #include "backend/bridge/dml/mapper/mapper.h"
@@ -9,9 +10,8 @@ namespace bridge {
 static planner::AbstractPlan *BuildParallelHashPlan(const planner::AbstractPlan *old_plan) {
   LOG_TRACE("Mapping hash plan to parallel seq scan plan (add exchange hash operator)");
   const planner::HashPlan *plan = dynamic_cast<const planner::HashPlan *>(old_plan);
-//  auto hashkeys = const_cast<std::vector<std::unique_ptr<const expression::AbstractExpression>> *>(old_plan->GetHashKeysPtr());
-//  planner::AbstractPlan *exchange_hash_plan = new planner::ExchangeHashPlan(hashkeys);
-  return nullptr;
+  planner::AbstractPlan *exchange_hash_plan = new planner::ExchangeHashPlan(plan);
+  return exchange_hash_plan;
 }
 
 static planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan) {
@@ -51,7 +51,7 @@ const planner::AbstractPlan *PlanTransformer::BuildParallelPlan(const planner::A
     return BuildParallelPlanUtil(old_plan);
   } else {
     planner::AbstractPlan *ret_ptr = nullptr;
-    std::vector<const planner::AbstractPlan *> child_plan_vec;
+    std::vector<planner::AbstractPlan *> child_plan_vec;
 
     for (const planner::AbstractPlan *child : old_plan->GetChildren()) {
       child_plan_vec.push_back(BuildParallelPlanUtil(child));

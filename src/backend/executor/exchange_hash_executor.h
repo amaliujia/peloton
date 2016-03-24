@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "backend/common/types.h"
+#include "backend/common/cuckoohash_map.h"
 #include "backend/executor/abstract_exchange_executor.h"
 #include "backend/executor/logical_tile.h"
 #include "backend/expression/container_tuple.h"
@@ -15,7 +16,7 @@ namespace peloton {
 
 namespace executor {
 
-class ExchangeHashExecutor : public AbstractExchangeExecutor, public AbstractScanExecutor {
+class ExchangeHashExecutor : public AbstractExchangeExecutor, public AbstractExecutor {
 public:
   ExchangeHashExecutor(const ExchangeHashExecutor &) = delete;
   ExchangeHashExecutor &operator=(const ExchangeHashExecutor &) = delete;
@@ -25,20 +26,30 @@ public:
   explicit ExchangeHashExecutor(const planner::AbstractPlan *node,
                                    ExecutorContext *executor_context);
 
-  // TODO: make this hashmap safe. Either use a lock or use latch-free hashmap.
-  // TODO: latch-free hashmap is prefered.
-  typedef std::unordered_map<
-    expression::ContainerTuple<LogicalTile>,
-    std::unordered_set<std::pair<size_t, oid_t>,
-    boost::hash<std::pair<size_t, oid_t>>>,
-    expression::ContainerTupleHasher<LogicalTile>,
-    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
+// typedef std::unordered_map<
+//    expression::ContainerTuple<LogicalTile>,
+//    std::unordered_set<std::pair<size_t, oid_t>,
+//    boost::hash<std::pair<size_t, oid_t>>>,
+//    expression::ContainerTupleHasher<LogicalTile>,
+//    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
+
+  typedef cuckoohash_map<
+      expression::ContainerTuple<LogicalTile>,
+      std::unordered_set<std::pair<size_t, oid_t>>,
+      boost::hash<std::pair<size_t, oid_t>>,
+      expression::ContainerTupleHasher<LogicalTile>,
+      expression::ContainerTupleComparator<LogicalTile>
+    > HashMapType;
 
   inline HashMapType &GetHashTable() { return this->hash_table_; }
 
   inline const std::vector<oid_t> &GetHashKeyIds() const {
     return this->column_ids_;
   }
+
+  void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile,
+                                const std::vector<const expression::AbstractExpression *> &hashkeys,
+                          BlockingQueue<AbstractParallelTaskResponse *> *queue);
 
 protected:
   bool DInit();
