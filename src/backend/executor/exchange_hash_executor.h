@@ -34,11 +34,11 @@ public:
 //    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
 
   typedef cuckoohash_map<
-      expression::ContainerTuple<LogicalTile>,
-      std::unordered_set<std::pair<size_t, oid_t>>,
-      boost::hash<std::pair<size_t, oid_t>>,
-      expression::ContainerTupleHasher<LogicalTile>,
-      expression::ContainerTupleComparator<LogicalTile>
+    expression::ContainerTuple<LogicalTile>,
+    std::unordered_set<std::pair<size_t, oid_t>,
+    boost::hash<std::pair<size_t, oid_t>>>,
+    expression::ContainerTupleHasher<LogicalTile>,
+    expression::ContainerTupleComparator<LogicalTile> 
     > HashMapType;
 
   inline HashMapType &GetHashTable() { return this->hash_table_; }
