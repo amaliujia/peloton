@@ -10,7 +10,7 @@
 namespace peloton {
 namespace executor {
 
-class ExchangeSeqScanExecutor : public AbstractExchangeExecutor {
+class ExchangeSeqScanExecutor : public AbstractExchangeExecutor, public AbstractScanExecutor {
 public:
   ExchangeSeqScanExecutor(const ExchangeSeqScanExecutor &) = delete;
   ExchangeSeqScanExecutor &operator=(const ExchangeSeqScanExecutor &) = delete;
@@ -20,7 +20,11 @@ public:
   explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context);
 
-  void SeqScanThreadMain(AbstractExecutor *executor, BlockingQueue<AbstractParallelTaskResponse *> *queue);
+  void SeqScanThreadMain(ExchangeSeqScanExecutor *executor,
+                         oid_t current_tile_group_offset_,
+                         BlockingQueue<AbstractParallelTaskResponse *> *queue);
+
+  bool ThreadExecute(oid_t current_tile_group_offset_);
 
 protected:
   bool DInit();
@@ -28,10 +32,24 @@ protected:
   bool DExecute();
 
 private:
-  oid_t current_tile_offset_;
-  oid_t total_tile_count_;
+  //===--------------------------------------------------------------------===//
+  // Executor State
+  //===--------------------------------------------------------------------===//
 
-  oid_t current_tile_count_;
+  /** @brief Keeps track of current tile group id being scanned. */
+  oid_t current_tile_group_offset_ = INVALID_OID;
+
+  /** @brief Keeps track of the number of tile groups to scan. */
+  oid_t table_tile_group_count_ = INVALID_OID;
+
+  //===--------------------------------------------------------------------===//
+  // Plan Info
+  //===--------------------------------------------------------------------===//
+
+  /** @brief Pointer to table to scan from. */
+  storage::DataTable *target_table_ = nullptr;
+
+private:
   bool parallelize_done_;
 
 };

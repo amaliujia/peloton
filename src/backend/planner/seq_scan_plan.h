@@ -40,20 +40,20 @@ class SeqScanPlan : public AbstractScan {
               const std::vector<oid_t> &column_ids)
       : AbstractScan(table, predicate, column_ids) {}
 
-  SeqScanPlan(storage::DataTable *table,
-              expression::AbstractExpression *predicate,
-              const std::vector<oid_t> &column_ids,
-              oid_t tile_gourp_offset)
-    : AbstractScan(table, predicate, column_ids), assigned_tile_group_offset_(tile_gourp_offset){}
+//  SeqScanPlan(storage::DataTable *table,
+//              expression::AbstractExpression *predicate,
+//              const std::vector<oid_t> &column_ids,
+//              oid_t tile_gourp_offset)
+//    : AbstractScan(table, predicate, column_ids), assigned_tile_group_offset_(tile_gourp_offset){}
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_SEQSCAN; }
 
   const std::string GetInfo() const { return "SeqScan"; }
 
-  oid_t GetAssignedTileGroupOffset() const {return assigned_tile_group_offset_;}
+//  oid_t GetAssignedTileGroupOffset() const {return assigned_tile_group_offset_;}
 
-private:
-  oid_t assigned_tile_group_offset_ = INVALID_OID;
+//private:
+//  oid_t assigned_tile_group_offset_ = INVALID_OID;
 };
 
 }  // namespace planner

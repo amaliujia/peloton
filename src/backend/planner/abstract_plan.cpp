@@ -33,6 +33,10 @@ void AbstractPlan::AddChild(const AbstractPlan *child) {
   children_.push_back(child);
 }
 
+void AbstractPlan::ClearChild() {
+  children_.clear();
+}
+
 const std::vector<const AbstractPlan *> &AbstractPlan::GetChildren() const {
   return children_;
 }

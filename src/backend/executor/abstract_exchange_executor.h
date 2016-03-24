@@ -2,25 +2,19 @@
 
 #include "backend/executor/abstract_executor.h"
 #include "backend/executor/abstract_parallel_task_response.h"
-#include "backend/executor/thread_pool.h"
+#include "backend/common/blocking_queue.h"
 
 namespace peloton {
 namespace executor {
 
-class AbstractExchangeExecutor : public AbstractExecutor {
+class AbstractExchangeExecutor {
 public:
   AbstractExchangeExecutor(const AbstractExchangeExecutor &) = delete;
   AbstractExchangeExecutor &operator=(const AbstractExchangeExecutor&) = delete;
   AbstractExchangeExecutor(AbstractExchangeExecutor &&) = delete;
   AbstractExchangeExecutor &operator=(AbstractExchangeExecutor &&) = delete;
 
-  explicit AbstractExchangeExecutor(const planner::AbstractPlan *node,
-                                   ExecutorContext *executor_context);
-
-protected:
-  bool DInit() = 0;
-
-  bool DExecute() = 0;
+  explicit AbstractExchangeExecutor();
 
 protected:
   BlockingQueue<AbstractParallelTaskResponse *> queue_;

@@ -52,6 +52,8 @@ class AbstractPlan : public Printable {
 
   void AddChild(const AbstractPlan *child);
 
+  void ClearChild();
+
   const std::vector<const AbstractPlan *> &GetChildren() const;
 
   const AbstractPlan *GetParent();

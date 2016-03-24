@@ -39,6 +39,7 @@ class ThreadManager {
 
   static ThreadManager &GetServerThreadPool(void);
   static ThreadManager &GetClientThreadPool(void);
+  static ThreadManager &GetQueryExecutionPool(void);
 
   // The main function: add task into the task queue
   void AddTask(std::function<void()> f);

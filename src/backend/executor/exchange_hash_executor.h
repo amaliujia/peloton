@@ -7,6 +7,7 @@
 #include "backend/executor/abstract_exchange_executor.h"
 #include "backend/executor/logical_tile.h"
 #include "backend/expression/container_tuple.h"
+#include "abstract_scan_executor.h"
 
 #include <boost/functional/hash.hpp>
 
@@ -14,7 +15,7 @@ namespace peloton {
 
 namespace executor {
 
-class ExchangeHashExecutor : public AbstractExchangeExecutor{
+class ExchangeHashExecutor : public AbstractExchangeExecutor, public AbstractScanExecutor {
 public:
   ExchangeHashExecutor(const ExchangeHashExecutor &) = delete;
   ExchangeHashExecutor &operator=(const ExchangeHashExecutor &) = delete;

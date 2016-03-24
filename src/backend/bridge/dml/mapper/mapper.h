@@ -71,10 +71,6 @@ class PlanTransformer {
   // Intra-query parallelism
   const planner::AbstractPlan *BuildParallelPlan(const planner::AbstractPlan *old_plan);
 
-  const planner::AbstractPlan *BuildParallelHashPlan(const planner::AbstractPlan *old_plan);
-
-  const planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPlan *seq_scan_plan);
-
  private:
   Cache<std::string, const planner::AbstractPlan> plan_cache_;
 
