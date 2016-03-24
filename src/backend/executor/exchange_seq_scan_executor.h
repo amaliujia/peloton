@@ -5,7 +5,7 @@
 #include "backend/executor/abstract_exchange_executor.h"
 #include "backend/executor/abstract_scan_executor.h"
 #include "backend/executor/abstract_parallel_task_response.h"
-#include "backend/executor/thread_pool.h"
+#include "backend/common/blocking_queue.h"
 
 namespace peloton {
 namespace executor {

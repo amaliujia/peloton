@@ -22,7 +22,7 @@ public:
     : AbstractScan(seq_scan_plan->GetTable(),
                    const_cast<expression::AbstractExpression *>(seq_scan_plan->GetPredicate()),
                    seq_scan_plan->GetColumnIds()),
-      old_plan(seq_scan_plan) {}
+      AbstractExchangePlan(seq_scan_plan) {}
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_EXCHANGE_SEQSCAN; }
 

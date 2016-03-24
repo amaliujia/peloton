@@ -23,7 +23,6 @@ static planner::AbstractPlan *BuildParallelSeqScanPlan(const planner::AbstractPl
 }
 
 static planner::AbstractPlan *BuildParallelPlanUtil(const planner::AbstractPlan *old_plan) {
-  planner::AbstractPlan *ret_ptr = nullptr;
   switch (old_plan->GetPlanNodeType()) {
     case PLAN_NODE_TYPE_SEQSCAN:
       return BuildParallelSeqScanPlan(old_plan);

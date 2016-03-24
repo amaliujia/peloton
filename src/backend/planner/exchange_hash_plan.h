@@ -3,8 +3,8 @@
 #include "backend/planner/abstract_plan.h"
 #include "backend/common/types.h"
 #include "backend/expression/abstract_expression.h"
-#include "hash_plan.h"
-#include "abstract_exchange_plan.h"
+#include "backend/planner/hash_plan.h"
+#include "backend/planner/abstract_exchange_plan.h"
 
 namespace peloton {
 namespace planner {
@@ -20,13 +20,13 @@ public:
   typedef const expression::AbstractExpression HashKeyType;
   typedef std::unique_ptr<HashKeyType> HashKeyPtrType;
  
-  ExchangeHashPlan(const planner::HashPlan *plan): old_plan(plan)
+  ExchangeHashPlan(const planner::HashPlan *hash_plan): AbstractExchangePlan(hash_plan)
   {
-    for (const auto& hashkey : plan->GetHashKeys()) {
+    for (const auto& hashkey : hash_plan->GetHashKeys()) {
       hash_keys_.push_back(hashkey.get());
     }
   }
-
+  
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
 
   const std::string GetInfo() const { return "ExchangeHash"; }
