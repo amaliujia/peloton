@@ -47,7 +47,7 @@ public:
     return this->column_ids_;
   }
 
-  void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile,
+  void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile, oid_t child_tile_itr,
                                 const std::vector<const expression::AbstractExpression *> &hashkeys,
                           BlockingQueue<AbstractParallelTaskResponse *> *queue);
 

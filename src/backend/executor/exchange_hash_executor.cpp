@@ -36,7 +36,7 @@ bool ExchangeHashExecutor::DInit() {
   return true;
 }
 
-void ExchangeHashExecutor::BuildHashTableThreadMain(HashMapType *table, LogicalTile *tile,
+void ExchangeHashExecutor::BuildHashTableThreadMain(HashMapType *table, LogicalTile *tile, oid_t child_tile_itr,
                                                     const std::vector<const expression::AbstractExpression *> &hashkeys,
                                                     BlockingQueue<AbstractParallelTaskResponse *> *queue) {
   /* *
@@ -54,19 +54,14 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(HashMapType *table, LogicalT
     column_ids_.push_back(tuple_value->GetColumnId());
   }
 
-  // Construct the hash table by going over each child logical tile and
+  // Construct the hash table by going over given logical tile and
   // hashing
-  for (size_t child_tile_itr = 0; child_tile_itr < child_tiles_.size();
-       child_tile_itr++) {
-    auto tile = child_tiles_[child_tile_itr].get();
-
-    // Go over all tuples in the logical tile
-    for (oid_t tuple_id : *tile) {
-      // Key : container tuple with a subset of tuple attributes
-      // Value : < child_tile offset, tuple offset >
-      // TODO: test cuckoohash_map
-      table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::make_pair(child_tile_itr, tuple_id));
-    }
+  // Go over all tuples in the logical tile
+  for (oid_t tuple_id : *tile) {
+    // Key : container tuple with a subset of tuple attributes
+    // Value : < child_tile offset, tuple offset >
+    // TODO: test cuckoohash_map
+    table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::make_pair(child_tile_itr, tuple_id));
   }
 
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
@@ -84,11 +79,12 @@ bool ExchangeHashExecutor::DExecute() {
     const planner::ExchangeHashPlan& node = GetPlanNode<planner::ExchangeHashPlan>();
 
     // First, get all the input logical tiles
+    oid_t child_tile_iter = 0;
     while (children_[0]->Execute()) {
       auto tile = children_[0]->GetOutput();
       child_tiles_.emplace_back(tile);
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                   &hash_table_, tile, node.GetHashKeys(), &queue_);
+                                                   &hash_table_, tile, child_tile_iter, node.GetHashKeys(), &queue_);
       ThreadManager::GetQueryExecutionPool().AddTask(f_build_hash_table);
     }
 
