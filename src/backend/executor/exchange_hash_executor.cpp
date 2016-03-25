@@ -36,8 +36,7 @@ bool ExchangeHashExecutor::DInit() {
   return true;
 }
 
-void ExchangeHashExecutor::BuildHashTableThreadMain(HashMapType *table, LogicalTile *tile, oid_t child_tile_itr,
-                                                    const std::vector<const expression::AbstractExpression *> &hashkeys,
+void ExchangeHashExecutor::BuildHashTableThreadMain( __attribute__((unused)) HashMapType *table, __attribute__((unused)) LogicalTile *tile, __attribute__((unused)) oid_t child_tile_itr, __attribute__((unused)) const std::vector<const expression::AbstractExpression *> &hashkeys,
                                                     BlockingQueue<AbstractParallelTaskResponse *> *queue) {
   /* *
     * HashKeys is a vector of TupleValue expr
@@ -61,7 +60,9 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(HashMapType *table, LogicalT
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
     // TODO: test cuckoohash_map
-    table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::make_pair(child_tile_itr, tuple_id));
+    // table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::make_pair(child_tile_itr, tuple_id));
+    HashMapType::key_type(tile, tuple_id, &column_ids_);
+    std::make_pair(child_tile_itr, tuple_id);
   }
 
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
@@ -96,7 +97,7 @@ bool ExchangeHashExecutor::DExecute() {
   }
 
   // make sure building hashmap is done before return any child tiles.
-  int task_count = 0;
+  size_t task_count = 0;
   while (task_count < child_tiles_.size()) {
     queue_.GetTask();
     task_count++;

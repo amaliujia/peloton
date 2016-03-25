@@ -204,7 +204,7 @@ peloton_dml(PlanState *planstate,
     return;
   }
 
-  if (intra_query_parallelism) {
+/*  if (intra_query_parallelism) {
     // TODO: should use of unified transformer here
     if (mapped_plan_ptr->GetPlanNodeType() == peloton::PLAN_NODE_TYPE_SEQSCAN) {
       //std::shared_ptr<const peloton::planner::AbstractPlan *> mapped_parallel_plan_ptr;
@@ -212,7 +212,7 @@ peloton_dml(PlanState *planstate,
       auto mapped_parallel_plan = peloton::bridge::PlanTransformer::GetInstance().BuildParallelSeqScanPlan(mapped_plan_ptr.get());
       mapped_plan_ptr.reset(mapped_parallel_plan);
     }
-  }
+  } */
 
   std::vector<peloton::oid_t> target_list;
   std::vector<peloton::oid_t> qual;
