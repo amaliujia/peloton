@@ -60,9 +60,11 @@ void ExchangeHashExecutor::BuildHashTableThreadMain( __attribute__((unused)) Has
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
     // TODO: test cuckoohash_map
-    // table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::make_pair(child_tile_itr, tuple_id));
-    HashMapType::key_type(tile, tuple_id, &column_ids_);
-    std::make_pair(child_tile_itr, tuple_id);
+    if (!table->contains(HashMapType::key_type(tile, tuple_id, &column_ids_))) {
+      table->insert(HashMapType::key_type(tile, tuple_id, &column_ids_), std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>>());
+    }
+
+    table->find(HashMapType::key_type(tile, tuple_id, &column_ids_)).insert(std::make_pair(child_tile_itr, tuple_id));
   }
 
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
