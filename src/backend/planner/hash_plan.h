@@ -45,25 +45,25 @@ class HashPlan : public AbstractPlan {
   }
 
   const AbstractPlan *Copy() const {
-    // std::vector<HashKeyPtrType> copied_hash_keys(hash_keys_);
-    // return new HashPlan(copied_hash_keys);
-    return nullptr;
+    std::vector<HashKeyPtrType> copied_hash_keys;
+    for (const auto& key : hash_keys_) {
+      copied_hash_keys.push_back(std::unique_ptr<HashKeyType>(key.get()));
+    }
+    return new HashPlan(copied_hash_keys);    
   }
 
   bool IfEqual(const HashPlan *plan) {
-     /*auto keys = plan->GetHashKeys();
-     std::set<const expression::AbstractExpression *> plan_set;
-     for (const auto& key : keys) {
-       plan_set.insert(key.get());
+     const auto& keys = plan->GetHashKeys();
+     if (keys.size() != hash_keys_.size()) {
+        return false;
      }
 
-    std::set<const expression::AbstractExpression *> self_set;
-    for (const auto& key : hash_keys_) {
-      self_set.insert(key.get());
-    }
-
-    return self_set == plan_set; */
-    return plan == nullptr;
+     for (size_t i = 0; i < keys.size(); i++) {
+        if (keys[i].get() != hash_keys_[i].get()) {
+            return false; 
+        }   
+     }
+     return true; 
   }
 
  private:
