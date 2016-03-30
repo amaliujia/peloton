@@ -16,7 +16,7 @@ class CUCKOOTest : public PelotonTest {};
 
 typedef std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>> value_type;
 
-typedef cuckoohash_map<std::string, value_type *> HashMapType;
+typedef cuckoohash_map<std::string, std::unique_ptr<value_type>> HashMapType;
 
 
 
@@ -40,14 +40,28 @@ void Insert(HashMapType *cuckoo_map) {
   srand (time(NULL));
   size_t iSecret = rand() % 1000000 + 1;
   for (int i = 0; i < 30; i++) {
-    if (!cuckoo_map->contains(vec[i])) {
-      cuckoo_map->insert(vec[i], new value_type());
-    }
     size_t lv = iSecret + i;
     oid_t tv = iSecret + i + 1;
-    
-    // value_type v;
-    cuckoo_map->find(vec[i])->insert(std::make_pair(lv, tv));
+
+    bool ok = cuckoo_map->update_fn(vec[i], [] (std::unique_ptr<value_type>& inner) {
+      inner->insert(std::make_pair(lv, tv));
+    });
+
+    if (!ok) {
+      cuckoo_map->upsert(vec[i], [](std::unique_ptr<value_type>& inner){
+        // It is possbile this insert would succeed.
+        // I won't check since I am using unordered_set, even insert succeed,
+        // another won't hurt.
+        inner->insert(std::make_pair(lv, tv));
+      }, std::unique<value_type>(new value_type()));
+
+      bool ok = cuckoo_map->update_fn(vec[i], [] (std::unique_ptr<value_type>& inner) {
+        inner->insert(std::make_pair(lv, tv));
+      });
+
+      // There is no way second update fail.
+      assert(ok == true);
+    }
   }
 }
 
