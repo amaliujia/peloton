@@ -68,6 +68,18 @@ class MergeJoinPlan : public AbstractJoinPlan {
 
   const std::string GetInfo() const { return "MergeJoin"; }
 
+  const AbstractPlan *Copy() {
+    std::vector<JoinClause> new_join_clauses(join_clauses_);
+    MergeJoinPlan *new_plan = new MergeJoinPlan(GetJoinType(), GetPredicate(), GetProjInfo(), GetSchema(), new_join_clauses);
+    return new_plan;
+  }
+
+  bool IfEqual(const MergeJoinPlan *plan) {
+    VectorComparator<JoinClause> comparator;
+    return AbstractJoinPlan::IfEqual(plan) &&
+           comparator.Compare(plan->GetJoinClauses(), join_clauses_);
+  }
+
  private:
   std::vector<JoinClause> join_clauses_;
 };

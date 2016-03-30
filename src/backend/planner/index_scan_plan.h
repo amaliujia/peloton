@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <backend/common/vector_comparator.h>
 
 #include "backend/planner/abstract_scan_plan.h"
 #include "backend/common/types.h"
@@ -103,6 +104,29 @@ class IndexScanPlan : public AbstractScan {
   }
 
   const std::string GetInfo() const { return "IndexScan"; }
+
+  const AbstractPlan *Copy() const {
+    IndexScanDesc desc(index_, key_column_ids_, expr_types_, values_, runtime_keys_);
+    IndexScanPlan *new_plan = new IndexScanPlan(GetTable(),
+                                                  const_cast<expression::AbstractExpression *>(GetPredicate()),
+                                                   GetColumnIds(), desc);
+    return new_plan;
+  }
+
+  bool IfEqual(const IndexScanPlan *plan) {
+    VectorComparator<oid_t> oid_comparator;
+    VectorComparator<ExpressionType> expr_type_comparator;
+    VectorComparator<Value> value_comparator;
+    VectorComparator<expression::AbstractExpression *> expr_ptr_comparator;
+
+    return expr_ptr_comparator.Compare(plan->GetRunTimeKeys(), runtime_keys_) &&
+           oid_comparator.Compare(plan->GetColumnIds(), column_ids_) &&
+           oid_comparator.Compare(key_column_ids_, plan->GetKeyColumnIds()) &&
+           expr_type_comparator.Compare(plan->GetExprTypes(), expr_types_) &&
+           value_comparator.Compare(plan->GetValues(), values_) &&
+           index_ == plan->GetIndex() &&
+            AbstractScan::IfEqual(plan);
+  }
 
  private:
   /** @brief index associated with index scan. */

@@ -50,6 +50,15 @@ class UpdatePlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "UpdatePlan"; }
 
+  const AbstractPlan *Copy() const {
+    return new UpdatePlan(target_table_, project_info_.get());
+  }
+
+  bool IfEqual(const UpdatePlan *plan) {
+    return plan->GetTable() == target_table_ &&
+           plan->GetProjectInfo() == project_info_.get();
+  }
+
  private:
   /** @brief Target table. */
   storage::DataTable *target_table_;

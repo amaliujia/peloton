@@ -62,6 +62,15 @@ class AbstractJoinPlan : public AbstractPlan {
 
   const catalog::Schema *GetSchema() const { return proj_schema_.get(); }
 
+  const AbstractPlan *Copy() const = 0;
+
+  bool IfEqual(AbstractJoinPlan *plan) {
+    return plan->GetJoinType() == join_type_ &&
+           plan->GetPredicate() == predicate_.get() &&
+           plan->GetProjInfo() == proj_info_ &&
+           plan->GetSchema() == proj_schema_;
+  }
+
  private:
   /** @brief The type of join that we're going to perform */
   PelotonJoinType join_type_;
