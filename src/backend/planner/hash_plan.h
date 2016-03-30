@@ -49,7 +49,7 @@ class HashPlan : public AbstractPlan {
     for (const auto& key : hash_keys_) {
       copied_hash_keys.push_back(std::unique_ptr<HashKeyType>(key.get()));
     }
-    return new HashPlan(copied_hash_keys);    
+    return new HashPlan(copied_hash_keys);
   }
 
   bool IfEqual(const HashPlan *plan) {

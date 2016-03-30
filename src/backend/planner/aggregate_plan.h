@@ -49,7 +49,7 @@ class AggregatePlan : public AbstractPlan {
          return true;
        } else if (aggtype > other.aggtype){
          return false;
-       } 
+       }
 
        if (expression < other.expression) {
          return true;
