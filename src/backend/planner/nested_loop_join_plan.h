@@ -58,7 +58,7 @@ class NestedLoopJoinPlan : public AbstractJoinPlan {
     return nl_;
   }  // added to support IN+subquery
 
-  const AbstractPlan *Copy() {
+  const AbstractPlan *Copy() const {
     NestedLoopJoinPlan *new_plan = new NestedLoopJoinPlan(GetJoinType(), GetPredicate(), GetProjInfo(), GetSchema(), nl_);
     return new_plan;
   }

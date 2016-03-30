@@ -56,7 +56,7 @@ class InsertPlan : public AbstractPlan {
 
   bool IfEqual(const InsertPlan *plan) {
     return target_table_ == plan->GetTable() &&
-           plan->GetProjectInfo() == project_info_ &&
+           plan->GetProjectInfo() == project_info_.get() &&
            plan->GetBulkInsertCount() == bulk_insert_count;
   }
 

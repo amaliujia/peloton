@@ -67,7 +67,7 @@ class ProjectionPlan : public AbstractPlan {
     VectorComparator<oid_t> oid_comp;
 
     return plan->GetProjectInfo() == project_info_.get() &&
-           plan->GetSchema() == schema_ &&
+           plan->GetSchema() == schema_.get() &&
            oid_comp.Compare(plan->GetColumnIds(), column_ids_);
   }
 

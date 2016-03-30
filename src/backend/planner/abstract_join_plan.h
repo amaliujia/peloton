@@ -64,11 +64,11 @@ class AbstractJoinPlan : public AbstractPlan {
 
   const AbstractPlan *Copy() const = 0;
 
-  bool IfEqual(AbstractJoinPlan *plan) {
+  bool IfEqual(const AbstractJoinPlan *plan) {
     return plan->GetJoinType() == join_type_ &&
            plan->GetPredicate() == predicate_.get() &&
-           plan->GetProjInfo() == proj_info_ &&
-           plan->GetSchema() == proj_schema_;
+           plan->GetProjInfo() == proj_info_.get() &&
+           plan->GetSchema() == proj_schema_.get();
   }
 
  private:
