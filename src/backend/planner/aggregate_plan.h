@@ -38,6 +38,26 @@ class AggregatePlan : public AbstractPlan {
     const expression::AbstractExpression *expression;
     bool distinct;
 
+    bool operator<( const AggTerm& other ) const {
+       if(aggtype < other.aggtype) {
+         return true;
+       } else if (aggtype > other.aggtype){
+         return false;
+       } 
+
+       if (expression < other.expression) {
+         return true;
+       } else if (expression > other.expression) {
+         return false;
+       }
+
+       if (distinct == true && other.distinct == false) {
+         return true;
+       }
+
+       return false;
+    }
+
     AggTerm(ExpressionType et, expression::AbstractExpression *expr,
             bool distinct = false)
         : aggtype(et), expression(expr), distinct(distinct) {}
