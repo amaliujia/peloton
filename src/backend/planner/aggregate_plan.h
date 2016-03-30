@@ -37,6 +37,12 @@ class AggregatePlan : public AbstractPlan {
     ExpressionType aggtype;
     const expression::AbstractExpression *expression;
     bool distinct;
+    
+    bool operator==( const AggTerm& other ) const {
+        return (aggtype == other.aggtype) &&
+                (expression == other.expression) &&
+                (distinct == other.distinct);
+    }
 
     bool operator<( const AggTerm& other ) const {
        if(aggtype < other.aggtype) {
