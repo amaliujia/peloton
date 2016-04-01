@@ -33,6 +33,8 @@ public:
 //    expression::ContainerTupleHasher<LogicalTile>,
 //    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
 
+  typedef std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>> MapValueType;
+
   typedef cuckoohash_map<
     expression::ContainerTuple<LogicalTile>,
     std::unordered_set<std::pair<size_t, oid_t>,
@@ -47,7 +49,7 @@ public:
     return this->column_ids_;
   }
 
-  void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile, oid_t child_tile_itr,
+  void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile, size_t child_tile_itr,
                                 const std::vector<const expression::AbstractExpression *> &hashkeys,
                           BlockingQueue<AbstractParallelTaskResponse *> *queue);
 
