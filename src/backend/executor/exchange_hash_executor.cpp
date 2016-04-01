@@ -38,22 +38,7 @@ bool ExchangeHashExecutor::DInit() {
 
 void ExchangeHashExecutor::BuildHashTableThreadMain( HashMapType *table, LogicalTile *tile,
                                                      size_t child_tile_itr,
-                                                     const std::vector<const expression::AbstractExpression *> &hashkeys,
                                                     BlockingQueue<AbstractParallelTaskResponse *> *queue) {
-  /* *
-    * HashKeys is a vector of TupleValue expr
-    * from which we construct a vector of column ids that represent the
-    * attributes of the underlying table.
-    * The hash table is built on top of these hash key attributes
-    * */
-  // Construct a logical tile
-  for (auto &hashkey : hashkeys) {
-    assert(hashkey->GetExpressionType() == EXPRESSION_TYPE_VALUE_TUPLE);
-    auto tuple_value =
-      reinterpret_cast<const expression::TupleValueExpression *>(
-        hashkey);
-    column_ids_.push_back(tuple_value->GetColumnId());
-  }
 
   // Construct the hash table by going over given logical tile and
   // hashing
@@ -96,13 +81,29 @@ bool ExchangeHashExecutor::DExecute() {
   if (done_ == false) {
     const planner::ExchangeHashPlan& node = GetPlanNode<planner::ExchangeHashPlan>();
 
+    /* *
+    * HashKeys is a vector of TupleValue expr
+    * from which we construct a vector of column ids that represent the
+    * attributes of the underlying table.
+    * The hash table is built on top of these hash key attributes
+    * */
+    auto &hashkeys = node.GetHashKeys();
+
+    for (auto &hashkey : hashkeys) {
+      assert(hashkey->GetExpressionType() == EXPRESSION_TYPE_VALUE_TUPLE);
+      auto tuple_value =
+        reinterpret_cast<const expression::TupleValueExpression *>(
+          hashkey);
+      column_ids_.push_back(tuple_value->GetColumnId());
+    }
+
     // First, get all the input logical tiles
     size_t child_tile_iter = 0;
     while (children_[0]->Execute()) {
       auto tile = children_[0]->GetOutput();
       child_tiles_.emplace_back(tile);
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                   &hash_table_, tile, child_tile_iter, node.GetHashKeys(), &queue_);
+                                                   &hash_table_, tile, child_tile_iter, &queue_);
       child_tile_iter++;
       ThreadManager::GetQueryExecutionPool().AddTask(f_build_hash_table);
     }

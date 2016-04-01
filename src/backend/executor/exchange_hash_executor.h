@@ -50,8 +50,7 @@ public:
   }
 
   void BuildHashTableThreadMain(HashMapType *table, LogicalTile * tile, size_t child_tile_itr,
-                                const std::vector<const expression::AbstractExpression *> &hashkeys,
-                          BlockingQueue<AbstractParallelTaskResponse *> *queue);
+                              BlockingQueue<AbstractParallelTaskResponse *> *queue);
 
 protected:
   bool DInit();

@@ -45,7 +45,6 @@ class AbstractJoinPlan : public AbstractPlan {
         predicate_(predicate),
         proj_info_(proj_info),
         proj_schema_(proj_schema) {
-    // Fuck off!
   }
 
   //===--------------------------------------------------------------------===//
