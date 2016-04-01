@@ -1,6 +1,10 @@
 #include <unordered_set>
 #include <stdlib.h>
 #include <time.h>
+#include <random>
+#include <chrono>
+#include <cstdint>
+#include <limits>
 
 #include "harness.h"
 #include "backend/common/logger.h"
@@ -16,7 +20,7 @@ class CUCKOOTest : public PelotonTest {};
 
 typedef std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>> value_type;
 
-typedef cuckoohash_map<std::string, std::unique_ptr<value_type>> HashMapType;
+typedef cuckoohash_map<std::string, value_type *> HashMapType;
 
 
 
@@ -33,34 +37,33 @@ TEST_F(CUCKOOTest, BasicTest) {
 }
 
 void Insert(HashMapType *cuckoo_map) {
-  std::vector<std::string> vec;
-  for (int i = 0; i < 30; i++) {
-    vec.push_back(std::to_string(i));
-  }
-  srand (time(NULL));
-  size_t iSecret = rand() % 1000000 + 1;
-  for (int i = 0; i < 30; i++) {
-    size_t lv = iSecret + i;
-    oid_t tv = iSecret + i + 1;
+  std::mt19937_64 gen(
+      std::chrono::system_clock::now().time_since_epoch().count());
+  std::uniform_int_distribution<size_t> dist(
+      std::numeric_limits<size_t>::min(),
+                          std::numeric_limits<size_t>::max());
 
-    bool ok = cuckoo_map->update_fn(vec[i], [] (std::unique_ptr<value_type>& inner) {
+  for (int i = 0; i < 30; i++) {
+    size_t lv = dist(gen) + i;
+    oid_t tv = dist(gen) + i + 1;
+    bool ok = cuckoo_map->update_fn(std::to_string(i), [&] (value_type *inner) {
       inner->insert(std::make_pair(lv, tv));
     });
-
+    
     if (!ok) {
-      cuckoo_map->upsert(vec[i], [](std::unique_ptr<value_type>& inner){
+      cuckoo_map->upsert(std::to_string(i), [&](value_type *inner) {
         // It is possbile this insert would succeed.
         // I won't check since I am using unordered_set, even insert succeed,
         // another won't hurt.
         inner->insert(std::make_pair(lv, tv));
-      }, std::unique<value_type>(new value_type()));
+      }, new value_type());
 
-      bool ok = cuckoo_map->update_fn(vec[i], [] (std::unique_ptr<value_type>& inner) {
+      bool ok = cuckoo_map->update_fn(std::to_string(i), [&] (value_type *inner) {
         inner->insert(std::make_pair(lv, tv));
       });
 
       // There is no way second update fail.
-      assert(ok == true);
+      EXPECT_EQ(ok, true);
     }
   }
 }
@@ -68,16 +71,21 @@ void Insert(HashMapType *cuckoo_map) {
 TEST_F(CUCKOOTest, MultiThreadedTest) {
   HashMapType cuckoo_map;
   size_t numThreads = 5;
+  int iter_num = 30;
+
   LaunchParallelTest(numThreads, Insert, &cuckoo_map);
-  EXPECT_EQ(cuckoo_map.size(), 30);
+  EXPECT_EQ(cuckoo_map.size(), iter_num);
  
-  for (int i = 0; i < 30; i++) {
+  for (int i = 0; i < iter_num; i++) {
     EXPECT_EQ(cuckoo_map.contains(std::to_string(i)), true); 
     EXPECT_EQ(cuckoo_map.find(std::to_string(i))->size(), numThreads); 
   }
 
-  // const auto& pair_set = cuckoo_map.find(std::to_string(10));
-  // EXPECT_EQ(pair_set.find(std::make_pair(0, 0)) != pair_set.end(), true);
+  // delete pointers
+  auto lt = cuckoo_map.lock_table();
+  for (const auto& it : lt) {
+      delete it.second;
+  }
 }
 
 }
