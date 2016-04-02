@@ -37,6 +37,12 @@ class VectorExpression : public AbstractExpression {
                                                          elementType);
   }
 
+  VectorExpression(const std::vector<AbstractExpression *> &arguments,
+                   const Value& value)
+    : AbstractExpression(EXPRESSION_TYPE_VALUE_VECTOR), arguments(arguments) {
+    in_list = ValueFactory::Clone(value, nullptr);
+  }
+
   virtual ~VectorExpression() {
     for (auto argument : arguments) delete argument;
   }
@@ -69,6 +75,18 @@ class VectorExpression : public AbstractExpression {
 
   // for test
   std::vector<AbstractExpression *> GetArgs() const { return arguments; }
+
+  AbstractExpression *Copy() const {
+//    std::vector<AbstractExpression *> copied_expression;
+//    for (AbstractExpression * expression : arguments) {
+//      if (expression == nullptr) {
+//        continue;
+//      }
+//      copied_expression.push_back(expression->Copy());
+//    }
+//    return new VectorExpression(copied_expression, in_list);
+    return nullptr;
+  }
 
  private:
   // Arguments

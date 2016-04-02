@@ -81,8 +81,8 @@ template <typename OP, typename ValueExtractorLeft,
 class VectorComparisonExpression : public AbstractExpression {
  public:
   VectorComparisonExpression(ExpressionType et, AbstractExpression *left,
-                             AbstractExpression *right,
-                             executor::ExecutorContext *context)
+                             AbstractExpression *right)
+                             // executor::ExecutorContext *context)
       : AbstractExpression(et, left, right) {
     assert(left != NULL);
     assert(right != NULL);
@@ -107,6 +107,10 @@ class VectorComparisonExpression : public AbstractExpression {
 
   std::string DebugInfo(const std::string &spacer) const {
     return (spacer + "VectorComparisonExpression\n");
+  }
+
+  AbstractExpression *Copy() const {
+    return new VectorComparisonExpression(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()), m_quantifier);
   }
 
  private:

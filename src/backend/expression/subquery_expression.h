@@ -42,6 +42,10 @@ class SubqueryExpression : public AbstractExpression {
 
   std::string DebugInfo(const std::string &spacer) const;
 
+  AbstractExpression *Copy() const {
+    return new SubqueryExpression(GetExpressionType(), m_subqueryId, m_paramIdxs, m_otherParamIdxs, std::vector<AbstractExpression *>());
+  }
+
  private:
   const int m_subqueryId;
 
