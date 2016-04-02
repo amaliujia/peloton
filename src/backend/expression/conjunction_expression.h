@@ -41,6 +41,10 @@ class ConjunctionExpression : public AbstractExpression {
     return (spacer + "ConjunctionExpression\n");
   }
 
+  AbstractExpression *Copy() const {
+    return new ConjunctionExpression(GetExpressionType(), CopyUtil(m_left), CopyUtil(m_right));
+  }
+
   AbstractExpression *m_left;
   AbstractExpression *m_right;
 };

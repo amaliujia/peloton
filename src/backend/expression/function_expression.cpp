@@ -111,6 +111,10 @@ class ConstantFunctionExpression : public expression::AbstractExpression {
     buffer << spacer << "ConstantFunctionExpression " << F << std::endl;
     return (buffer.str());
   }
+
+  expression::AbstractExpression *Copy() const {
+    return new ConstantFunctionExpression();
+  }
 };
 
 /*
@@ -139,6 +143,11 @@ class UnaryFunctionExpression : public expression::AbstractExpression {
     std::stringstream buffer;
     buffer << spacer << "UnaryFunctionExpression " << F << std::endl;
     return (buffer.str());
+  }
+
+  expression::AbstractExpression *Copy() const {
+    assert(m_child != nullptr);
+    return new UnaryFunctionExpression(m_child->Copy());
   }
 };
 

@@ -248,7 +248,11 @@ class ComparisonExpression : public AbstractExpression {
     return (spacer + "ComparisonExpression\n");
   }
 
- private:
+  AbstractExpression *Copy() const {
+    return new ComparisonExpression(GetExpressionType(), m_left->Copy(), m_right->Copy());
+  }
+
+private:
   AbstractExpression *m_left;
   AbstractExpression *m_right;
 };
@@ -259,6 +263,10 @@ class InlinedComparisonExpression : public ComparisonExpression<C> {
   InlinedComparisonExpression(ExpressionType type, AbstractExpression *left,
                               AbstractExpression *right)
       : ComparisonExpression<C>(type, left, right) {}
+
+  AbstractExpression *Copy() const {
+    return new InlinedComparisonExpression(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()));
+  }
 };
 
 }  // End expression namespace
