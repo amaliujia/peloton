@@ -14,7 +14,6 @@
 
 #include "backend/expression/abstract_expression.h"
 #include "backend/common/abstract_tuple.h"
-#include "expressions.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -113,10 +112,11 @@ class HashRangeExpression : public AbstractExpression {
   int GetColumnId() const { return this->value_idx; }
 
   AbstractExpression *Copy() const {
-    srange_type * copied_ranges = new srange_type;
-    copied_ranges->first = ranges.get()->first;
-    copied_ranges->second = ranges.get()->second;
-    return new HashRangeExpression(value_idx, copied_ranges, num_ranges);
+//    srange_type * copied_ranges = new srange_type;
+//    copied_ranges->first = ranges.get()->first;
+//    copied_ranges->second = ranges.get()->second;
+//    return new HashRangeExpression(value_idx, copied_ranges, num_ranges);
+    return nullptr;
   }
 
  private:
