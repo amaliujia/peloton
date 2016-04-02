@@ -31,7 +31,7 @@ bool TransactionRecord::Serialize(CopySerializeOutput &output) {
   // Then reserve 4 bytes for the header size to be written later
   size_t start = output.Position();
   output.WriteInt(0);
-  output.WriteLong(cid);
+  output.WriteLong(txn_id);
 
   // Write out the header now
   int32_t header_length =
@@ -54,7 +54,7 @@ void TransactionRecord::Deserialize(CopySerializeInputBE &input) {
   input.ReadInt();
 
   // Just grab the transaction id
-  cid = (txn_id_t)(input.ReadLong());
+  txn_id = (txn_id_t)(input.ReadLong());
 }
 
 // Used for peloton logging

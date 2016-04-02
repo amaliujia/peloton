@@ -50,6 +50,16 @@ class InsertPlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "InsertPlan"; }
 
+  const AbstractPlan *Copy() const {
+    return new InsertPlan(target_table_, project_info_.get(), bulk_insert_count);
+  }
+
+  bool IfEqual(const InsertPlan *plan) {
+    return target_table_ == plan->GetTable() &&
+           plan->GetProjectInfo() == project_info_.get() &&
+           plan->GetBulkInsertCount() == bulk_insert_count;
+  }
+
  private:
   /** @brief Target table. */
   storage::DataTable *target_table_ = nullptr;

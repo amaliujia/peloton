@@ -18,6 +18,7 @@
 
 #include "abstract_plan.h"
 #include "backend/common/types.h"
+#include <backend/common/vector_comparator.h>
 #include "backend/expression/abstract_expression.h"
 
 namespace peloton {
@@ -53,6 +54,16 @@ class AbstractScan : public AbstractPlan {
   const std::string GetInfo() const { return "AbstractScan"; }
 
   storage::DataTable *GetTable() const { return target_table_; }
+
+  const AbstractPlan *Copy() const = 0;
+
+  bool IfEqual(const AbstractScan *plan) {
+
+    VectorComparator<oid_t> comparator;
+    return comparator.Compare(plan->GetColumnIds(), this->GetColumnIds()) &&
+          plan->GetPredicate() == this->GetPredicate() &&
+          plan->GetTable() == this->GetTable();
+  }
 
  private:
   /** @brief Pointer to table to scan from. */

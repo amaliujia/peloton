@@ -47,6 +47,15 @@ class ResultPlan : public AbstractPlan {
 
   inline std::string GetInfo() const { return "Result"; }
 
+  const AbstractPlan *Copy() const {
+    return new ResultPlan(tuple_.get(), backend_);
+  }
+
+  bool IfEqual(const ResultPlan *plan) {
+    return plan->GetTuple() == tuple_.get() &&
+           plan->GetBackend() == backend_;
+  }
+
  private:
   /**
    * @brief A backend is needed to create physical tuple

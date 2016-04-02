@@ -2,9 +2,9 @@
 //
 //                         Peloton
 //
-// rpwp_txn_manager.h
+// pessimistic_transaction_manager.h
 //
-// Identification: src/backend/concurrency/rpwp_txn_manager.h
+// Identification: src/backend/concurrency/pessimistic_transaction_manager.h
 //
 // Copyright (c) 2015-16, Carnegie Mellon University Database Group
 //
@@ -18,25 +18,31 @@ namespace peloton {
 namespace concurrency {
 
 extern thread_local std::unordered_map<oid_t, std::unordered_map<oid_t, bool>>
-    rpwp_released_rdlock;
+    released_rdlock;
 
-class RpwpTxnManager : public TransactionManager {
+class PessimisticTransactionManager : public TransactionManager {
  public:
-  RpwpTxnManager() {}
-  virtual ~RpwpTxnManager() {}
+  PessimisticTransactionManager() {
+    released_rdlock =
+        std::unordered_map<oid_t, std::unordered_map<oid_t, bool>>();
+  }
 
-  static RpwpTxnManager &GetInstance();
+  virtual ~PessimisticTransactionManager() {}
 
-  virtual bool IsVisible(const storage::TileGroupHeader * const tile_group_header, const oid_t &tuple_id);
+  static PessimisticTransactionManager &GetInstance();
 
-  virtual bool IsOwner(const storage::TileGroupHeader * const tile_group_header,
-                       const oid_t &tuple_id);
+  virtual bool IsVisible(const txn_id_t &tuple_txn_id,
+                         const cid_t &tuple_begin_cid,
+                         const cid_t &tuple_end_cid);
 
-  virtual bool IsOwnable(const storage::TileGroupHeader * const tile_group_header,
+  virtual bool IsOwner(storage::TileGroup *tile_group,
+                       const txn_id_t &tuple_txn_id);
+
+  virtual bool IsAccessable(storage::TileGroup *tile_group,
                             const oid_t &tuple_id);
 
-  virtual bool AcquireLock(const storage::TileGroupHeader * const tile_group_header,
-                            const oid_t &tile_group_id, const oid_t &tuple_id);
+  virtual bool AcquireTuple(storage::TileGroup *tile_group,
+                            const oid_t &physical_tuple_id);
 
   virtual bool PerformRead(const oid_t &tile_group_id, const oid_t &tuple_id);
 
@@ -51,10 +57,10 @@ class RpwpTxnManager : public TransactionManager {
   virtual void SetInsertVisibility(const oid_t &tile_group_id,
                                    const oid_t &tuple_id);
 
-  virtual void PerformDelete(const oid_t &tile_group_id,
+  virtual void SetDeleteVisibility(const oid_t &tile_group_id,
                                    const oid_t &tuple_id);
 
-  virtual void PerformUpdate(const oid_t &tile_group_id,
+  virtual void SetUpdateVisibility(const oid_t &tile_group_id,
                                    const oid_t &tuple_id);
 
   virtual Result CommitTransaction();
@@ -72,7 +78,7 @@ class RpwpTxnManager : public TransactionManager {
     return (txn_id >> 56) & READ_COUNT_MASK;
   }
 
-  bool ReleaseReadLock(const storage::TileGroupHeader * const tile_group_header, const oid_t &tuple_id);
+  bool ReleaseReadLock(storage::TileGroup *tile_group, const oid_t &tuple_id);
 };
 }
 }

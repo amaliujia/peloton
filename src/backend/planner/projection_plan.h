@@ -13,9 +13,11 @@
 #pragma once
 
 #include <memory>
+#include <postgres/include/nodes/primnodes.h>
 
 #include "abstract_plan.h"
 #include "backend/common/types.h"
+#include "backend/common/vector_comparator.h"
 #include "backend/planner/project_info.h"
 
 namespace peloton {
@@ -54,6 +56,20 @@ class ProjectionPlan : public AbstractPlan {
   }
 
   const std::vector<oid_t> &GetColumnIds() const { return column_ids_; }
+
+  const AbstractPlan *Copy() const {
+    ProjectionPlan *new_plan = new ProjectionPlan(project_info_.get(), schema_.get());
+    new_plan->SetColumnIds(column_ids_);
+    return new_plan;
+  }
+
+  bool IfEqual(const ProjectionPlan *plan) {
+    VectorComparator<oid_t> oid_comp;
+
+    return plan->GetProjectInfo() == project_info_.get() &&
+           plan->GetSchema() == schema_.get() &&
+           oid_comp.Compare(plan->GetColumnIds(), column_ids_);
+  }
 
  private:
   /** @brief Projection Info.            */

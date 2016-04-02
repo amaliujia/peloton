@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "backend/benchmark/hyadapt/hyadapt.h"
 #include "backend/benchmark/hyadapt/hyadapt_configuration.h"
 #include "backend/common/logger.h"
 #include "backend/benchmark/hyadapt/hyadapt_workload.h"

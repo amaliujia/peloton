@@ -18,6 +18,7 @@
 
 #include "abstract_plan.h"
 #include "backend/common/types.h"
+#include "backend/common/vector_comparator.h"
 #include "backend/expression/abstract_expression.h"
 
 namespace peloton {
@@ -52,6 +53,19 @@ class OrderByPlan : public AbstractPlan {
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_ORDERBY; }
 
   const std::string GetInfo() const { return "OrderBy"; }
+
+  const AbstractPlan *Copy() const {
+    return new OrderByPlan(sort_keys_, descend_flags_, output_column_ids_);
+  }
+
+  bool IfEqual(const OrderByPlan *plan) {
+    VectorComparator<oid_t> oid_comp;
+    VectorComparator<bool> bool_comp;
+
+    return oid_comp.Compare(plan->GetSortKeys(), sort_keys_) &&
+           oid_comp.Compare(plan->GetOutputColumnIds(), output_column_ids_) &&
+           bool_comp.Compare(plan->GetDescendFlags(), descend_flags_);
+  }
 
  private:
   /** @brief Column Ids to sort keys w.r.t input tiles.

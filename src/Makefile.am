@@ -39,8 +39,7 @@ include $(top_srcdir)/third_party/Makefile.am
 bin_PROGRAMS = \
 			   peloton \
 			   hyadapt \
-			   logger \
-			   ycsb
+			   logger
 
 lib_LTLIBRARIES += libpeloton.la
 lib_LTLIBRARIES += libpelotonpg.la

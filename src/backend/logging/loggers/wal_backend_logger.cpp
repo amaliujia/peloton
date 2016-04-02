@@ -20,6 +20,11 @@
 namespace peloton {
 namespace logging {
 
+WriteAheadBackendLogger *WriteAheadBackendLogger::GetInstance() {
+  thread_local static WriteAheadBackendLogger aries_backend_logger;
+  return &aries_backend_logger;
+}
+
 /**
  * @brief log LogRecord
  * @param log record
@@ -30,16 +35,14 @@ void WriteAheadBackendLogger::Log(LogRecord *record) {
 
   {
     std::lock_guard<std::mutex> lock(local_queue_mutex);
-    local_queue.push_back(std::unique_ptr<LogRecord>(record));
+    local_queue.push_back(record);
   }
 }
 
-LogRecord *WriteAheadBackendLogger::GetTupleRecord(LogRecordType log_record_type,
-                                                   txn_id_t txn_id,
-                                                   oid_t table_oid, oid_t db_oid,
-                                                   ItemPointer insert_location,
-                                                   ItemPointer delete_location,
-                                                   void *data) {
+LogRecord *WriteAheadBackendLogger::GetTupleRecord(
+    LogRecordType log_record_type, txn_id_t txn_id, oid_t table_oid,
+    ItemPointer insert_location, ItemPointer delete_location, void *data,
+    oid_t db_oid) {
   // Build the log record
   switch (log_record_type) {
     case LOGRECORD_TYPE_TUPLE_INSERT: {
