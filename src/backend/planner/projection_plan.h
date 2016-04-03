@@ -13,7 +13,7 @@
 #pragma once
 
 #include <memory>
-#include <postgres/include/nodes/primnodes.h>
+// #include <postgres/include/nodes/primnodes.h>
 
 #include "abstract_plan.h"
 #include "backend/common/types.h"

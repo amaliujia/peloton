@@ -10,14 +10,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "harness.h"
+
 #include "executor/executor_tests_util.h"
 #include "backend/common/value_factory.h"
-#include <gmock/gtest/gtest.h>
+#include "gmock/gtest/gtest.h"
 #include "backend/storage/data_table.h"
 #include "backend/expression/expression_util.h"
 #include "backend/planner/seq_scan_plan.h"
 
-#include "harness.h"
+#include "backend/catalog/schema.h"
+#include "backend/common/types.h"
+#include "backend/common/value.h"
+#include "backend/common/value_factory.h"
+#include "backend/concurrency/transaction.h"
+#include "backend/concurrency/transaction_manager_factory.h"
+#include "backend/executor/executor_context.h"
+#include "backend/executor/abstract_executor.h"
+#include "backend/executor/logical_tile.h"
+#include "backend/executor/logical_tile_factory.h"
+#include "backend/executor/seq_scan_executor.h"
+#include "backend/expression/abstract_expression.h"
+#include "backend/expression/expression_util.h"
+#include "backend/planner/seq_scan_plan.h"
+#include "backend/storage/data_table.h"
+#include "backend/storage/tile_group_factory.h"
+
+#include "executor/executor_tests_util.h"
+#include "executor/mock_executor.h"
 
 namespace peloton {
 namespace test {
@@ -30,8 +50,7 @@ class PlannerTests : public PelotonTest {};
 
 TEST_F(PlannerTests, BasicTest) {}
 
-
-expression::AbstractExpression *CreatePredicate(
+/*expression::AbstractExpression *CreatePredicate(
   const std::set<oid_t> &tuple_ids) {
   assert(tuple_ids.size() >= 1);
 
@@ -76,15 +95,18 @@ expression::AbstractExpression *CreatePredicate(
 
 TEST_F(PlannerTests, SeqScanPlanCopyTest) {
   // const int tuple_count = TESTS_TUPLES_PER_TILEGROUP;
-  std::unique_ptr<storage::DataTable> table(ExecutorTestsUtil::CreateTable());
+  std::unique_ptr<storage::DataTable> table(nullptr);
 
   const std::vector<oid_t> column_ids({0, 1, 3});
-  expression::AbstractExpression *ex = CreatePredicate(column_ids);
+  const std::set<oid_t> g_tuple_ids({0, 3}); 
+  expression::AbstractExpression *ex = CreatePredicate(g_tuple_ids);
 
-  SeqScanPlan *old_plan = new SeqScanPlan(table.get(), ex, column_ids);
-  SeqScanPlan *new_plan = static_cast<SeqScanPlan *>(old_plan->Copy());
+  planner::SeqScanPlan *old_plan = new planner::SeqScanPlan(table.get(), ex, column_ids);
+  const planner::SeqScanPlan *new_plan = dynamic_cast<const planner::SeqScanPlan *>(old_plan->Copy());
   EXPECT_EQ(old_plan->IfEqual(new_plan), true);
-}
+  delete new_plan;
+  delete old_plan;
+} */
 
 }  // End test namespace
 }  // End peloton namespace

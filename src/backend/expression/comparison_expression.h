@@ -267,8 +267,6 @@ class InlinedComparisonExpression : public ComparisonExpression<C> {
       : ComparisonExpression<C>(type, left, right) {}
 
   AbstractExpression *Copy() const {
-    return nullptr;
-    // return new ComparisonExpression<C>();
     AbstractExpression *copied_left = ((AbstractExpression::m_left == nullptr) ? nullptr : AbstractExpression::m_left->Copy());
     AbstractExpression *copied_right = ((AbstractExpression::m_right == nullptr) ? nullptr : AbstractExpression::m_right->Copy());
     return new InlinedComparisonExpression<C, L, R>(AbstractExpression::m_type, copied_left, copied_right);
