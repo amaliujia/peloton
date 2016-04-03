@@ -77,15 +77,14 @@ class VectorExpression : public AbstractExpression {
   std::vector<AbstractExpression *> GetArgs() const { return arguments; }
 
   AbstractExpression *Copy() const {
-//    std::vector<AbstractExpression *> copied_expression;
-//    for (AbstractExpression * expression : arguments) {
-//      if (expression == nullptr) {
-//        continue;
-//      }
-//      copied_expression.push_back(expression->Copy());
-//    }
-//    return new VectorExpression(copied_expression, in_list);
-    return nullptr;
+    std::vector<AbstractExpression *> copied_expression;
+    for (AbstractExpression * expression : arguments) {
+      if (expression == nullptr) {
+        continue;
+      }
+      copied_expression.push_back(expression->Copy());
+    }
+    return new VectorExpression(copied_expression, in_list);
   }
 
  private:

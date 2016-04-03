@@ -50,8 +50,7 @@ class ConstantValueExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-//    return new ConstantValueExpression(value);
-    return nullptr;
+    return new ConstantValueExpression(value);
   }
 
  protected:

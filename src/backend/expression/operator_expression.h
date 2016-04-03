@@ -229,7 +229,7 @@ class OperatorExpression : public AbstractExpression {
 
   AbstractExpression *Copy() const {
     // TODO: How about OPER oper?
-    return new OperatorExpression(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()));
+    return new OperatorExpression<OPER>(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()));
   }
 
  private:

@@ -118,8 +118,7 @@ class ExtractExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    // return new ExtractExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()));
-    return nullptr;
+    return new ExtractExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()));
   }
 
  private:

@@ -249,7 +249,9 @@ class ComparisonExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new ComparisonExpression<OP>(GetExpressionType(), m_left->Copy(), m_right->Copy());
+    AbstractExpression *copied_left = ((m_left == nullptr) ? nullptr : m_left->Copy());
+    AbstractExpression *copied_right = ((m_right == nullptr) ? nullptr : m_right->Copy()); 
+    return new ComparisonExpression<OP>(GetExpressionType(), copied_left, copied_right);
   }
 
 private:
@@ -267,7 +269,9 @@ class InlinedComparisonExpression : public ComparisonExpression<C> {
   AbstractExpression *Copy() const {
     return nullptr;
     // return new ComparisonExpression<C>();
-    // return new InlinedComparisonExpression<C, L, R>(AbstractExpression::GetExpressionType(), AbstractExpression::CopyUtil(GetLeft()), AbstractExpression::CopyUtil(GetRight()));
+    AbstractExpression *copied_left = ((AbstractExpression::m_left == nullptr) ? nullptr : AbstractExpression::m_left->Copy());
+    AbstractExpression *copied_right = ((AbstractExpression::m_right == nullptr) ? nullptr : AbstractExpression::m_right->Copy());
+    return new InlinedComparisonExpression<C, L, R>(AbstractExpression::m_type, copied_left, copied_right);
   }
 };
 

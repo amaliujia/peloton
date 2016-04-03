@@ -112,11 +112,10 @@ class HashRangeExpression : public AbstractExpression {
   int GetColumnId() const { return this->value_idx; }
 
   AbstractExpression *Copy() const {
-//    srange_type * copied_ranges = new srange_type;
-//    copied_ranges->first = ranges.get()->first;
-//    copied_ranges->second = ranges.get()->second;
-//    return new HashRangeExpression(value_idx, copied_ranges, num_ranges);
-    return nullptr;
+    srange_type *copied_ranges = new srange_type();
+    copied_ranges->first = ranges.get()->first;
+    copied_ranges->second = ranges.get()->second;
+    return new HashRangeExpression(value_idx, copied_ranges, num_ranges);
   }
 
  private:

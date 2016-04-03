@@ -146,9 +146,8 @@ class UnaryFunctionExpression : public expression::AbstractExpression {
   }
 
   expression::AbstractExpression *Copy() const {
-//    assert(m_child != nullptr);
-//    return new UnaryFunctionExpression<F>(m_child->Copy());
-    return nullptr;
+    assert(m_child != nullptr);
+    return new UnaryFunctionExpression<F>(m_child->Copy());
   }
 };
 
