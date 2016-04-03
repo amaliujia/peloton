@@ -58,15 +58,6 @@ class OrderByPlan : public AbstractPlan {
     return new OrderByPlan(sort_keys_, descend_flags_, output_column_ids_);
   }
 
-  bool IfEqual(const OrderByPlan *plan) {
-    VectorComparator<oid_t> oid_comp;
-    VectorComparator<bool> bool_comp;
-
-    return oid_comp.Compare(plan->GetSortKeys(), sort_keys_) &&
-           oid_comp.Compare(plan->GetOutputColumnIds(), output_column_ids_) &&
-           bool_comp.Compare(plan->GetDescendFlags(), descend_flags_);
-  }
-
  private:
   /** @brief Column Ids to sort keys w.r.t input tiles.
    *  Primary sort key comes first, secondary comes next, etc.

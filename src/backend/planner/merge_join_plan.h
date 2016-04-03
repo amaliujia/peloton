@@ -83,13 +83,6 @@ class MergeJoinPlan : public AbstractJoinPlan {
     return new_plan;
   }
 
-  bool IfEqual(const MergeJoinPlan *plan) {
-    // VectorComparator<JoinClause> comparator;
-    // return AbstractJoinPlan::IfEqual(plan) &&
-    //       comparator.Compare(*plan->GetJoinClauses(), join_clauses_);
-    return nullptr == plan;
-  }
-
  private:
   std::vector<JoinClause> join_clauses_;
 };

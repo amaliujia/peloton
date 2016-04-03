@@ -118,20 +118,6 @@ class IndexScanPlan : public AbstractScan {
     return new_plan;
   }
 
-  bool IfEqual(const IndexScanPlan *plan) {
-    VectorComparator<oid_t> oid_comparator;
-    VectorComparator<ExpressionType> expr_type_comparator;
-    // VectorComparator<Value> value_comparator;
-    VectorComparator<expression::AbstractExpression *> expr_ptr_comparator;
-
-    return expr_ptr_comparator.Compare(plan->GetRunTimeKeys(), runtime_keys_) &&
-           oid_comparator.Compare(plan->GetColumnIds(), column_ids_) &&
-           oid_comparator.Compare(key_column_ids_, plan->GetKeyColumnIds()) &&
-           expr_type_comparator.Compare(plan->GetExprTypes(), expr_types_) &&
-           //           value_comparator.Compare(plan->GetValues(), values_) &&
-           index_ == plan->GetIndex() && AbstractScan::IfEqual(plan);
-  }
-
  private:
   /** @brief index associated with index scan. */
   index::Index *index_;

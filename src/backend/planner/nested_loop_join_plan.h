@@ -65,10 +65,6 @@ class NestedLoopJoinPlan : public AbstractJoinPlan {
     return new_plan;
   }
 
-  bool IfEqual(const NestedLoopJoinPlan *plan) {
-    return AbstractJoinPlan::IfEqual(plan) && plan->GetNestLoop() == nl_;
-  }
-
  private:
   NestLoop *nl_;  // added to support IN+subquery
 };

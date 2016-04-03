@@ -64,14 +64,6 @@ class ProjectionPlan : public AbstractPlan {
     return new_plan;
   }
 
-  bool IfEqual(const ProjectionPlan *plan) {
-    VectorComparator<oid_t> oid_comp;
-
-    return plan->GetProjectInfo() == project_info_.get() &&
-           plan->GetSchema() == schema_.get() &&
-           oid_comp.Compare(plan->GetColumnIds(), column_ids_);
-  }
-
  private:
   /** @brief Projection Info.            */
   std::unique_ptr<const planner::ProjectInfo> project_info_;

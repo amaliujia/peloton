@@ -51,10 +51,6 @@ class ResultPlan : public AbstractPlan {
     return new ResultPlan(new storage::Tuple(*tuple_), backend_);
   }
 
-  bool IfEqual(const ResultPlan *plan) {
-    return plan->GetTuple() == tuple_.get() && plan->GetBackend() == backend_;
-  }
-
  private:
   /**
    * @brief A backend is needed to create physical tuple

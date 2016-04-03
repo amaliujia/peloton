@@ -54,11 +54,6 @@ class UpdatePlan : public AbstractPlan {
     return new UpdatePlan(target_table_, project_info_->Copy());
   }
 
-  bool IfEqual(const UpdatePlan *plan) {
-    return plan->GetTable() == target_table_ &&
-           plan->GetProjectInfo() == project_info_.get();
-  }
-
  private:
   /** @brief Target table. */
   storage::DataTable *target_table_;

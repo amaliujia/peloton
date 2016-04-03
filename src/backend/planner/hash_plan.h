@@ -52,20 +52,6 @@ class HashPlan : public AbstractPlan {
     return new HashPlan(copied_hash_keys);
   }
 
-  bool IfEqual(const HashPlan *plan) {
-    const auto &keys = plan->GetHashKeys();
-    if (keys.size() != hash_keys_.size()) {
-      return false;
-    }
-
-    for (size_t i = 0; i < keys.size(); i++) {
-      if (keys[i].get() != hash_keys_[i].get()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
  private:
   std::vector<HashKeyPtrType> hash_keys_;
 };

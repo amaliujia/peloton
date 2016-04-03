@@ -65,11 +65,6 @@ class MaterializationPlan : public AbstractPlan {
         old_to_new_cols_, catalog::Schema::CopySchema(schema_), physify_flag_);
   }
 
-  bool IfEqual(const MaterializationPlan *plan) {
-    return plan->GetSchema() == schema_ &&
-           plan->GetPhysifyFlag() == physify_flag_;
-  }
-
  private:
   /**
    * @brief Mapping of old column ids to new column ids after materialization.

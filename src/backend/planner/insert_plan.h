@@ -55,12 +55,6 @@ class InsertPlan : public AbstractPlan {
                           bulk_insert_count);
   }
 
-  bool IfEqual(const InsertPlan *plan) {
-    return target_table_ == plan->GetTable() &&
-           plan->GetProjectInfo() == project_info_.get() &&
-           plan->GetBulkInsertCount() == bulk_insert_count;
-  }
-
  private:
   /** @brief Target table. */
   storage::DataTable *target_table_ = nullptr;

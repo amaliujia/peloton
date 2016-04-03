@@ -42,8 +42,6 @@ class SetOpPlan : public AbstractPlan {
 
   const AbstractPlan *Copy() const { return new SetOpPlan(set_op_); }
 
-  bool IfEqual(const SetOpPlan *plan) { return plan->GetSetOp() == set_op_; }
-
  private:
   /** @brief Set Operation of this node */
   SetOpType set_op_;

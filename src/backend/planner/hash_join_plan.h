@@ -63,12 +63,6 @@ class HashJoinPlan : public AbstractJoinPlan {
     return new_plan;
   }
 
-  bool IfEqual(const HashJoinPlan *plan) {
-    VectorComparator<oid_t> comparator;
-    return comparator.Compare(plan->GetOuterHashIds(), outer_column_ids_) &&
-           AbstractJoinPlan::IfEqual(plan);
-  }
-
  private:
   std::vector<oid_t> outer_column_ids_;
 };

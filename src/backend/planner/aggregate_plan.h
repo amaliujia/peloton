@@ -136,19 +136,6 @@ class AggregatePlan : public AbstractPlan {
     return new_plan;
   }
 
-  bool IfEqual(const AggregatePlan *plan) {
-    VectorComparator<AggTerm> aggterm_comp;
-    VectorComparator<oid_t> oid_comp;
-
-    return plan->GetProjectInfo() == project_info_.get() &&
-           plan->GetPredicate() == predicate_.get() &&
-           aggterm_comp.Compare(plan->GetUniqueAggTerms(), unique_agg_terms_) &&
-           oid_comp.Compare(plan->GetGroupbyColIds(), groupby_col_ids_) &&
-           oid_comp.Compare(plan->GetColumnIds(), column_ids_) &&
-           output_schema_.get() == plan->GetOutputSchema() &&
-           plan->GetAggregateStrategy() == agg_strategy_;
-  }
-
  private:
   /* For projection */
   std::unique_ptr<const planner::ProjectInfo> project_info_;

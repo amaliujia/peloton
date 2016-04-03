@@ -47,10 +47,6 @@ class LimitPlan : public AbstractPlan {
 
   const AbstractPlan *Copy() const { return new LimitPlan(limit_, offset_); }
 
-  bool IfEqual(const LimitPlan *plan) {
-    return plan->GetLimit() == limit_ && plan->GetOffset() == offset_;
-  }
-
  private:
   const size_t limit_;   // as LIMIT in SQL standard
   const size_t offset_;  // as OFFSET in SQL standard
