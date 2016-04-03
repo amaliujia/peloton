@@ -110,7 +110,8 @@ class VectorComparisonExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new VectorComparisonExpression(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()), m_quantifier);
+    return new VectorComparisonExpression<OP, ValueExtractorLeft, ValueExtractorRight>(
+          GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()), m_quantifier);
   }
 
  private:
