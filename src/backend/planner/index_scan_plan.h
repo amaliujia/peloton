@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <backend/common/vector_comparator.h>
 
 #include "backend/planner/abstract_scan_plan.h"
 #include "backend/common/types.h"
@@ -103,6 +104,19 @@ class IndexScanPlan : public AbstractScan {
   }
 
   const std::string GetInfo() const { return "IndexScan"; }
+
+  const AbstractPlan *Copy() const {
+    std::vector<expression::AbstractExpression *> new_runtime_keys;
+    for (auto *key : runtime_keys_) {
+      new_runtime_keys.push_back(key->Copy());
+    }
+
+    IndexScanDesc desc(index_, key_column_ids_, expr_types_, values_,
+                       new_runtime_keys);
+    IndexScanPlan *new_plan = new IndexScanPlan(
+        GetTable(), GetPredicate()->Copy(), GetColumnIds(), desc);
+    return new_plan;
+  }
 
  private:
   /** @brief index associated with index scan. */

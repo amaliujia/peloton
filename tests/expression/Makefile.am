@@ -1,11 +1,13 @@
-## Makefile.am -- Process this file with automake to produce Makefile.in
+##Makefile.am-- Process this file with automake to produce Makefile.in
 
-######################################################################
-# EXECUTOR
-######################################################################
+    ######################################################################
+#EXECUTOR
+    ######################################################################
 
-check_PROGRAMS += expression_test container_tuple_test
+    check_PROGRAMS += expression_test container_tuple_test
 
-expression_test_SOURCES = expression/expression_test.cpp
-						
-container_tuple_test_SOURCES = expression/container_tuple_test.cpp
+    expression_test_SOURCES = expression /
+                              expression_test.cpp
+
+                                  container_tuple_test_SOURCES =
+                                  expression / container_tuple_test.cpp

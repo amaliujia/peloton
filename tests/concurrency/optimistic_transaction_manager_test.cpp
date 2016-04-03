@@ -2,9 +2,9 @@
 //
 //                         PelotonDB
 //
-// pessimistic_transaction_manager_test.cpp
+// optimistic_transaction_manager_test.cpp
 //
-// Identification: tests/concurrency/ssi_txn_manager_test.cpp
+// Identification: tests/concurrency/optimistic_transaction_manager_test.cpp
 //
 // Copyright (c) 2015, Carnegie Mellon University Database Group
 //
@@ -21,10 +21,10 @@ namespace test {
 // Transaction Tests
 //===--------------------------------------------------------------------===//
 
-class SsiTxnManagerTests : public PelotonTest {};
+class OptimisticTransactionManagerTests : public PelotonTest {};
 
-TEST_F(SsiTxnManagerTests, Test) {
-  concurrency::TransactionManagerFactory::Configure(CONCURRENCY_TYPE_SSI);
+TEST_F(OptimisticTransactionManagerTests, Test) {
+  concurrency::TransactionManagerFactory::Configure(CONCURRENCY_TYPE_OCC);
   EXPECT_TRUE(true);
 }
 

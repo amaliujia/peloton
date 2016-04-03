@@ -156,17 +156,17 @@ bool IndexScanExecutor::ExecIndexLookup() {
     auto tuple_id = tuple_location.offset;
 
     while (true) {
-      // txn_id_t tuple_txn_id = tile_group_header->GetTransactionId(tuple_id);
-      // cid_t tuple_begin_cid = tile_group_header->GetBeginCommitId(tuple_id);
-      // cid_t tuple_end_cid = tile_group_header->GetEndCommitId(tuple_id);
-
+      txn_id_t tuple_txn_id = tile_group_header->GetTransactionId(tuple_id);
+      cid_t tuple_begin_cid = tile_group_header->GetBeginCommitId(tuple_id);
+      cid_t tuple_end_cid = tile_group_header->GetEndCommitId(tuple_id);
       // if the tuple is visible.
-      if (transaction_manager.IsVisible(tile_group_header, tuple_id)) {
+      if (transaction_manager.IsVisible(tuple_txn_id, tuple_begin_cid,
+                                        tuple_end_cid)) {
         // perform predicate evaluation.
         if (predicate_ == nullptr) {
           visible_tuples[tile_group_id].push_back(tuple_id);
           auto res = transaction_manager.PerformRead(tile_group_id, tuple_id);
-          if(!res){
+          if (!res) {
             transaction_manager.SetTransactionResult(RESULT_FAILURE);
             return res;
           }
@@ -178,7 +178,7 @@ bool IndexScanExecutor::ExecIndexLookup() {
           if (eval == true) {
             visible_tuples[tile_group_id].push_back(tuple_id);
             auto res = transaction_manager.PerformRead(tile_group_id, tuple_id);
-            if(!res){
+            if (!res) {
               transaction_manager.SetTransactionResult(RESULT_FAILURE);
               return res;
             }

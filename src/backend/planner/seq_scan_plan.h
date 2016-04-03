@@ -18,6 +18,7 @@
 
 #include "abstract_scan_plan.h"
 #include "backend/common/types.h"
+#include "backend/common/vector_comparator.h"
 #include "backend/expression/abstract_expression.h"
 
 namespace peloton {
@@ -43,6 +44,12 @@ class SeqScanPlan : public AbstractScan {
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_SEQSCAN; }
 
   const std::string GetInfo() const { return "SeqScan"; }
+
+  const AbstractPlan *Copy() const {
+    AbstractPlan *new_plan = new SeqScanPlan(
+        this->GetTable(), this->GetPredicate()->Copy(), this->GetColumnIds());
+    return new_plan;
+  }
 };
 
 }  // namespace planner

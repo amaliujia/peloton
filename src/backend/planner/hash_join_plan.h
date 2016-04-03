@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "backend/common/types.h"
+#include "backend/common/vector_comparator.h"
 #include "backend/expression/abstract_expression.h"
 #include "backend/planner/abstract_join_plan.h"
 #include "backend/planner/project_info.h"
@@ -53,6 +54,13 @@ class HashJoinPlan : public AbstractJoinPlan {
 
   const std::vector<oid_t> &GetOuterHashIds() const {
     return outer_column_ids_;
+  }
+
+  const AbstractPlan *Copy() const {
+    HashJoinPlan *new_plan = new HashJoinPlan(
+        GetJoinType(), GetPredicate()->Copy(), GetProjInfo()->Copy(),
+        catalog::Schema::CopySchema(GetSchema()), outer_column_ids_);
+    return new_plan;
   }
 
  private:

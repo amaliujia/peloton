@@ -16,6 +16,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 #include <iostream>
 #include <ctime>
 #include <cassert>
@@ -34,7 +35,6 @@
 #include "backend/common/value.h"
 #include "backend/common/value_factory.h"
 #include "backend/common/logger.h"
-#include "backend/common/timer.h"
 #include "backend/concurrency/transaction.h"
 #include "backend/concurrency/transaction_manager_factory.h"
 
@@ -154,12 +154,12 @@ static int GetLowerBound() {
 
 static void ExecuteTest(std::vector<executor::AbstractExecutor *> &executors,
                         std::vector<double> columns_accessed, double cost) {
-  Timer<> timer;
+  std::chrono::time_point<std::chrono::system_clock> start, end;
 
   auto txn_count = state.transactions;
   bool status = false;
 
-  timer.Start();
+  start = std::chrono::system_clock::now();
 
   // Construct sample
   brain::Sample sample(columns_accessed, cost);
@@ -194,8 +194,9 @@ static void ExecuteTest(std::vector<executor::AbstractExecutor *> &executors,
 
     // Capture fine-grained stats in adapt experiment
     if (state.adapt == true) {
-      timer.Stop();
-      double time_per_transaction = timer.GetDuration();
+      end = std::chrono::system_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      double time_per_transaction = ((double)elapsed_seconds.count());
 
       if (state.distribution == false) WriteOutput(time_per_transaction);
 
@@ -204,13 +205,14 @@ static void ExecuteTest(std::vector<executor::AbstractExecutor *> &executors,
         hyadapt_table->RecordSample(sample);
       }
 
-      timer.Start();
+      start = std::chrono::system_clock::now();
     }
   }
 
   if (state.adapt == false) {
-    timer.Stop();
-    double time_per_transaction = timer.GetDuration() / txn_count;
+    end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    double time_per_transaction = ((double)elapsed_seconds.count()) / txn_count;
 
     WriteOutput(time_per_transaction);
   }
@@ -1801,7 +1803,8 @@ std::vector<oid_t> version_chain_lengths = {10, 100, 1000, 10000, 10000};
 
 void RunVersionExperiment() {
   oid_t tuple_count = version_chain_lengths.back();
-  Timer<> timer;
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  std::chrono::duration<double> elapsed_seconds;
   double version_chain_travesal_time = 0;
 
   std::unique_ptr<storage::TileGroupHeader> header(
@@ -1810,14 +1813,11 @@ void RunVersionExperiment() {
   // Create a version chain
   oid_t block_id = 0;
   header->SetNextItemPointer(0, INVALID_ITEMPOINTER);
-  header->SetPrevItemPointer(0, INVALID_ITEMPOINTER);
-
   for (oid_t tuple_itr = 1; tuple_itr < tuple_count; tuple_itr++) {
     header->SetNextItemPointer(tuple_itr, ItemPointer(block_id, tuple_itr - 1));
-    header->SetPrevItemPointer(tuple_itr - 1, ItemPointer(block_id, tuple_itr));
   }
 
-  timer.Start();
+  start = std::chrono::system_clock::now();
 
   // Traverse the version chain
   for (auto version_chain_length : version_chain_lengths) {
@@ -1831,8 +1831,9 @@ void RunVersionExperiment() {
       prev_item_pointer = header->GetNextItemPointer(prev_tuple_offset);
     }
 
-    timer.Stop();
-    version_chain_travesal_time = timer.GetDuration();
+    end = std::chrono::system_clock::now();
+    elapsed_seconds = end - start;
+    version_chain_travesal_time = ((double)elapsed_seconds.count());
 
     WriteOutput(version_chain_travesal_time);
   }
@@ -1930,18 +1931,18 @@ void RunHyriseExperiment() {
 oid_t scan_ctr = 0;
 oid_t insert_ctr = 0;
 
-static void ExecuteConcurrentTest(std::vector<executor::AbstractExecutor *> &executors,
-                                  oid_t thread_id, oid_t num_threads,
-                                  double scan_ratio) {
+static void ExecuteConcurrentTest(
+    std::vector<executor::AbstractExecutor *> &executors, oid_t thread_id,
+    oid_t num_threads, double scan_ratio) {
+  std::chrono::time_point<std::chrono::system_clock> start, end;
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> dis(0, 1);
-  Timer<> timer;
 
   auto txn_count = state.transactions;
   bool status = false;
 
-  timer.Start();
+  start = std::chrono::system_clock::now();
 
   // Run these many transactions
   for (oid_t txn_itr = 0; txn_itr < txn_count; txn_itr++) {
@@ -1977,8 +1978,9 @@ static void ExecuteConcurrentTest(std::vector<executor::AbstractExecutor *> &exe
     executor->Execute();
   }
 
-  timer.Stop();
-  double time_per_transaction = timer.GetDuration() / txn_count;
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  double time_per_transaction = ((double)elapsed_seconds.count()) / txn_count;
 
   if (thread_id == 0) {
     double throughput = (double)num_threads / time_per_transaction;

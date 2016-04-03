@@ -12,20 +12,23 @@
 
 #pragma once
 
+#include "backend/logging/logger.h"
 #include <mutex>
 #include <map>
 #include <vector>
+#include <condition_variable>
 
-#include "backend/logging/logger.h"
 #include "backend_logger.h"
 #include "frontend_logger.h"
-#include "backend/concurrency/transaction.h"
 
 //===--------------------------------------------------------------------===//
 // GUC Variables
 //===--------------------------------------------------------------------===//
 
 extern LoggingType peloton_logging_mode;
+
+// Directory for peloton logs
+extern char *peloton_log_directory;
 
 namespace peloton {
 namespace logging {
@@ -58,16 +61,13 @@ class LogManager {
   void StartRecoveryMode();
 
   // Check whether the frontend logger is in logging mode
-  inline bool IsInLoggingMode() {
-    // Check the logging status
-    return (logging_status == LOGGING_STATUS_TYPE_LOGGING);
-  }
+  bool IsInLoggingMode();
 
   // Used to terminate current logging and wait for sleep mode
   void TerminateLoggingMode();
 
   // Used to wait for a certain mode (or not certain mode if is_equal is false)
-  void WaitForModeTransition(LoggingStatus logging_status, bool is_equal);
+  void WaitForMode(LoggingStatus logging_status, bool is_equal);
 
   // End the actual logging
   bool EndLogging();
@@ -79,16 +79,20 @@ class LogManager {
   // Logging status associated with the front end logger of given type
   void SetLoggingStatus(LoggingStatus logging_status);
 
-  LoggingStatus GetLoggingStatus();
+  LoggingStatus GetStatus();
+
+  void ResetLoggingStatusMap();
 
   // Whether to enable or disable synchronous commit ?
   void SetSyncCommit(bool sync_commit) { syncronization_commit = sync_commit; }
 
   bool GetSyncCommit(void) const { return syncronization_commit; }
 
-  bool ContainsFrontendLogger(void);
+  size_t ActiveFrontendLoggerCount(void);
 
   BackendLogger *GetBackendLogger();
+
+  bool RemoveBackendLogger(BackendLogger *backend_logger);
 
   void SetLogFileName(std::string log_file);
 
@@ -104,35 +108,22 @@ class LogManager {
 
   FrontendLogger *GetFrontendLogger();
 
-  void ResetFrontendLogger();
-
-  void LogBeginTransaction(oid_t commit_id);
-
-  void LogUpdate(concurrency::Transaction *curr_txn, cid_t commit_id,
-                 ItemPointer &old_version, ItemPointer &new_version);
-
-  void LogInsert(concurrency::Transaction *curr_txn, cid_t commit_id,
-                 ItemPointer &new_location);
-
-  void LogDelete(oid_t commit_id, ItemPointer &delete_location);
-
-  void LogCommitTransaction(oid_t commit_id);
-
  private:
   LogManager();
   ~LogManager();
+
+  bool RemoveFrontendLogger();
 
   //===--------------------------------------------------------------------===//
   // Data members
   //===--------------------------------------------------------------------===//
 
-  // There is only one frontend_logger of some type
-  // either write ahead or write behind logging
-  std::unique_ptr<FrontendLogger> frontend_logger;
+  // There is only one frontend_logger of a given type -- stdout, aries, peloton
+  FrontendLogger *frontend_logger = nullptr;
 
   LoggingStatus logging_status = LOGGING_STATUS_TYPE_INVALID;
 
-  // To synch the status
+  // To synch the status map
   std::mutex logging_status_mutex;
   std::condition_variable logging_status_cv;
 

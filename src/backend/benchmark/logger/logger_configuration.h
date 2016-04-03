@@ -34,6 +34,8 @@ enum ExperimentType {
   EXPERIMENT_TYPE_WAIT = 4
 };
 
+extern int orig_scale_factor;
+
 class configuration {
  public:
   // experiment type
@@ -42,8 +44,17 @@ class configuration {
   // logging type
   LoggingType logging_type;
 
+  // # of tuples
+  int tuple_count;
+
   // # of backends (i.e. backend loggers)
   int backend_count;
+
+  // # of columns in each tuple
+  oid_t column_count;
+
+  // check if the count matches after recovery
+  bool check_tuple_count;
 
   // log file dir
   std::string log_file_dir;

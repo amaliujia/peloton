@@ -17,7 +17,6 @@
 #include "harness.h"
 
 #include "backend/brain/clusterer.h"
-#include "backend/common/generator.h"
 
 namespace peloton {
 namespace test {
@@ -37,10 +36,11 @@ TEST_F(ClustererTests, BasicTest) {
   double sample_weight;
 
   // initialize a uniform distribution between 0 and 1
-  UniformGenerator generator;
+  std::mt19937_64 rng;
+  std::uniform_real_distribution<double> uniform(0, 1);
 
   for (int sample_itr = 0; sample_itr < 100; sample_itr++) {
-    auto rng_val = generator.GetSample();
+    auto rng_val = uniform(rng);
 
     if (rng_val < 0.3) {
       columns_accessed = {1, 1, 0, 0, 0, 1, 1};

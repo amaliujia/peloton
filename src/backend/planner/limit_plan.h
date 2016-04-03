@@ -45,6 +45,8 @@ class LimitPlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "Limit"; }
 
+  const AbstractPlan *Copy() const { return new LimitPlan(limit_, offset_); }
+
  private:
   const size_t limit_;   // as LIMIT in SQL standard
   const size_t offset_;  // as OFFSET in SQL standard

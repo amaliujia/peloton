@@ -17,55 +17,65 @@ namespace logging {
 
 void LogRecordPool::Clear() {
   // Clean up
+  for (auto it = txn_log_table.begin(); it != txn_log_table.end(); it++) {
+    std::vector<TupleRecord *> list = it->second;
+
+    for (auto record : list) {
+      delete record;
+    }
+  }
+
   txn_log_table.clear();
 }
 
-int LogRecordPool::CreateTxnLogList(txn_id_t txn_id) {
+int LogRecordPool::CreateTransactionLogList(txn_id_t txn_id) {
   // Create a new transaction log list if not already found
-  auto existing_list = ExistsTxnLogRecordList(txn_id);
+  auto existing_list = SearchLogRecordList(txn_id);
 
-  if (existing_list == false) {
-    txn_log_table.insert(
-        std::pair<txn_id_t, std::vector<std::unique_ptr<TupleRecord>>>(
-        txn_id, std::vector<std::unique_ptr<TupleRecord>>()));
+  if (existing_list == nullptr) {
+    txn_log_table.insert(std::pair<txn_id_t, std::vector<TupleRecord *>>(
+        txn_id, std::vector<TupleRecord *>()));
   }
 
   return 0;
 }
 
-int LogRecordPool::AddLogRecord(std::unique_ptr<TupleRecord> record) {
-  // Get the record transaction id
-  auto record_transaction_id = record->GetTransactionId();
-
+int LogRecordPool::AddLogRecord(TupleRecord *record) {
   // Locate the transaction log list
-  auto existing_list = ExistsTxnLogRecordList(record_transaction_id);
+  auto existing_list = SearchLogRecordList(record->GetTransactionId());
 
   // Add to the transaction log list if found
-  if (existing_list != false) {
-    txn_log_table.at(record_transaction_id).push_back(std::move(record));
+  if (existing_list != nullptr) {
+    existing_list->push_back(record);
     return 0;
   }
 
   return -1;
 }
 
-void LogRecordPool::RemoveTxnLogRecordList(txn_id_t txn_id) {
+void LogRecordPool::RemoveTransactionLogList(txn_id_t txn_id) {
   // Locate the transaction log list
   if (txn_log_table.find(txn_id) != txn_log_table.end()) {
+    // Clean the log records in the transaction log list
+    std::vector<TupleRecord *> list = txn_log_table.at(txn_id);
 
-    // Erase transaction log record list and its contents
+    for (auto record : list) {
+      delete record;
+    }
+
+    // Remove the transaction log list
     txn_log_table.erase(txn_id);
   }
 }
 
-bool LogRecordPool::ExistsTxnLogRecordList(txn_id_t txn_id) {
+std::vector<TupleRecord *> *LogRecordPool::SearchLogRecordList(
+    txn_id_t txn_id) {
   // Locate the transaction log list
   if (txn_log_table.find(txn_id) != txn_log_table.end()) {
-    return true;
+    return &(txn_log_table.at(txn_id));
   } else {
-    return false;
+    return nullptr;
   }
 }
-
 }
 }

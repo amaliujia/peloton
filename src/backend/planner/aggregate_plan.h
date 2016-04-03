@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <backend/common/vector_comparator.h>
 #include "backend/planner/abstract_plan.h"
 #include "backend/planner/project_info.h"
 #include "backend/common/types.h"
@@ -36,6 +37,35 @@ class AggregatePlan : public AbstractPlan {
     ExpressionType aggtype;
     const expression::AbstractExpression *expression;
     bool distinct;
+
+    bool operator==(const AggTerm &other) const {
+      return (aggtype == other.aggtype) && (expression == other.expression) &&
+             (distinct == other.distinct);
+    }
+
+    bool operator<(const AggTerm &other) const {
+      if (aggtype < other.aggtype) {
+        return true;
+      } else if (aggtype > other.aggtype) {
+        return false;
+      }
+
+      if (expression < other.expression) {
+        return true;
+      } else if (expression > other.expression) {
+        return false;
+      }
+
+      if (distinct == true && other.distinct == false) {
+        return true;
+      }
+
+      return false;
+    }
+
+    AggTerm Copy() const {
+      return AggTerm(aggtype, expression->Copy(), distinct);
+    }
 
     AggTerm(ExpressionType et, expression::AbstractExpression *expr,
             bool distinct = false)
@@ -92,6 +122,19 @@ class AggregatePlan : public AbstractPlan {
   }
 
   const std::vector<oid_t> &GetColumnIds() const { return column_ids_; }
+
+  const AbstractPlan *Copy() const {
+    std::vector<AggTerm> copied_agg_terms;
+    for (const AggTerm &term : unique_agg_terms_) {
+      copied_agg_terms.push_back(term.Copy());
+    }
+    std::vector<oid_t> copied_groupby_col_ids(groupby_col_ids_);
+    AggregatePlan *new_plan = new AggregatePlan(
+        project_info_->Copy(), predicate_->Copy(), std::move(copied_agg_terms),
+        std::move(copied_groupby_col_ids),
+        catalog::Schema::CopySchema(output_schema_.get()), agg_strategy_);
+    return new_plan;
+  }
 
  private:
   /* For projection */

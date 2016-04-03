@@ -64,7 +64,7 @@ AbstractExpression *ExpressionUtil::HashRangeFactory(PlannerDomValue obj) {
 // Parse JSON parameters to create a subquery expression
 AbstractExpression *ExpressionUtil::SubqueryFactory(
     ExpressionType subqueryType, PlannerDomValue obj,
-    const std::vector<AbstractExpression *>& args) {
+    const std::vector<AbstractExpression *> &args) {
   int subqueryId = obj.valueForKey("SUBQUERY_ID").asInt();
   std::vector<int> paramIdxs;
   if (obj.hasNonNullKey("PARAM_IDX")) {
@@ -737,7 +737,7 @@ AbstractExpression *ExpressionUtil::ConstantValueFactory(
 }
 
 AbstractExpression *ExpressionUtil::VectorFactory(
-    ValueType elementType, const std::vector<AbstractExpression *>& arguments) {
+    ValueType elementType, const std::vector<AbstractExpression *> &arguments) {
   return new VectorExpression(elementType, arguments);
 }
 
@@ -884,7 +884,7 @@ AbstractExpression *ExpressionUtil::ConjunctionFactory(
 }
 
 void RaiseFunctionFactoryError(const std::string &nameString, int functionId,
-                               const std::vector<AbstractExpression *>& args) {
+                               const std::vector<AbstractExpression *> &args) {
   char fn_message[1024];
   snprintf(fn_message, sizeof(fn_message),
            "Internal Error: SQL function '%s' with ID (%d) with (%d) "
@@ -918,7 +918,7 @@ AbstractExpression *ExpressionUtil::NullIfFactory(
 AbstractExpression *ExpressionUtil::ExpressionFactory(
     PlannerDomValue obj, ExpressionType et, ValueType vt, int vs,
     AbstractExpression *lc, AbstractExpression *rc,
-    const std::vector<AbstractExpression *>& args) {
+    const std::vector<AbstractExpression *> &args) {
   AbstractExpression *ret = NULL;
 
   switch (et) {

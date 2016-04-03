@@ -34,7 +34,7 @@ namespace executor {
  */
 InsertExecutor::InsertExecutor(const planner::AbstractPlan *node,
                                ExecutorContext *executor_context)
-: AbstractExecutor(node, executor_context) {}
+    : AbstractExecutor(node, executor_context) {}
 
 /**
  * @brief Nothing to init at the moment.
@@ -99,8 +99,9 @@ bool InsertExecutor::DExecute() {
             peloton::Result::RESULT_FAILURE);
         return false;
       }
-      auto res = transaction_manager.PerformInsert(location.block, location.offset);
-      if(!res){
+      auto res =
+          transaction_manager.PerformInsert(location.block, location.offset);
+      if (!res) {
         transaction_manager.SetTransactionResult(RESULT_FAILURE);
         return res;
       }
@@ -142,9 +143,9 @@ bool InsertExecutor::DExecute() {
         transaction_manager.SetTransactionResult(Result::RESULT_FAILURE);
         return false;
       }
-
-      auto res = transaction_manager.PerformInsert(location.block, location.offset);
-      if(!res){
+      auto res =
+          transaction_manager.PerformInsert(location.block, location.offset);
+      if (!res) {
         transaction_manager.SetTransactionResult(RESULT_FAILURE);
         return res;
       }
