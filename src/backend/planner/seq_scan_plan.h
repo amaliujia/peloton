@@ -47,7 +47,7 @@ class SeqScanPlan : public AbstractScan {
 
   const AbstractPlan *Copy() const {
     AbstractPlan *new_plan = new SeqScanPlan(this->GetTable(),
-                                             const_cast<expression::AbstractExpression *>(this->GetPredicate()),
+                                             this->GetPredicate()->Copy(),
                                              this->GetColumnIds());
     return new_plan;
   }

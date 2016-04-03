@@ -51,7 +51,7 @@ class UpdatePlan : public AbstractPlan {
   const std::string GetInfo() const { return "UpdatePlan"; }
 
   const AbstractPlan *Copy() const {
-    return new UpdatePlan(target_table_, project_info_.get());
+    return new UpdatePlan(target_table_, project_info_->Copy());
   }
 
   bool IfEqual(const UpdatePlan *plan) {
