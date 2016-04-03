@@ -51,7 +51,7 @@ class NullIfExpression : public AbstractExpression {
 
   AbstractExpression *Copy() const {
     std::vector<AbstractExpression *> copied_expression;
-    for (AbstractExpression * expression : expressions) {
+    for (AbstractExpression *expression : expressions) {
       if (expression == nullptr) {
         continue;
       }

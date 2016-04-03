@@ -132,7 +132,6 @@ class OperatorUnaryMinusExpression : public AbstractExpression {
   AbstractExpression *Copy() const {
     return new OperatorUnaryMinusExpression(CopyUtil(m_left));
   }
-
 };
 
 class OperatorCaseWhenExpression : public AbstractExpression {
@@ -162,7 +161,8 @@ class OperatorCaseWhenExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new OperatorCaseWhenExpression(m_returnType, CopyUtil(GetLeft()), CopyUtil(GetRight()));
+    return new OperatorCaseWhenExpression(m_returnType, CopyUtil(GetLeft()),
+                                          CopyUtil(GetRight()));
   }
 
  private:
@@ -229,7 +229,8 @@ class OperatorExpression : public AbstractExpression {
 
   AbstractExpression *Copy() const {
     // TODO: How about OPER oper?
-    return new OperatorExpression<OPER>(GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()));
+    return new OperatorExpression<OPER>(
+        GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()));
   }
 
  private:

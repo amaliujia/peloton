@@ -82,7 +82,7 @@ class VectorComparisonExpression : public AbstractExpression {
  public:
   VectorComparisonExpression(ExpressionType et, AbstractExpression *left,
                              AbstractExpression *right)
-                             // executor::ExecutorContext *context)
+      // executor::ExecutorContext *context)
       : AbstractExpression(et, left, right) {
     assert(left != NULL);
     assert(right != NULL);
@@ -110,8 +110,10 @@ class VectorComparisonExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new VectorComparisonExpression<OP, ValueExtractorLeft, ValueExtractorRight>(
-          GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()), m_quantifier);
+    return new VectorComparisonExpression<OP, ValueExtractorLeft,
+                                          ValueExtractorRight>(
+        GetExpressionType(), CopyUtil(GetLeft()), CopyUtil(GetRight()),
+        m_quantifier);
   }
 
  private:

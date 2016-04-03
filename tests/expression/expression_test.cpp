@@ -279,14 +279,14 @@ TEST_F(ExpressionTest, SimpleAdditionCopyTest) {
                 (int64_t)4));
   std::unique_ptr<expression::AbstractExpression> testexp(
       ConvertToExpression(e));
-  std::unique_ptr<expression::AbstractExpression> copied_testexp(testexp->Copy());
+  std::unique_ptr<expression::AbstractExpression> copied_testexp(
+      testexp->Copy());
 
   Value result = copied_testexp->Evaluate(&junk, nullptr, nullptr);
   LOG_INFO("%s", result.GetInfo().c_str());
 
   EXPECT_EQ(ValuePeeker::PeekAsBigInt(result), 5LL);
 }
-
 
 /*
  * Show that the associative property is as expected
@@ -306,7 +306,7 @@ TEST_F(ExpressionTest, SimpleMultiplication) {
                 (int64_t)5));
 
   std::unique_ptr<expression::AbstractExpression> e1(ConvertToExpression(e));
-  
+
   Value r1 = e1->Evaluate(&junk, nullptr, nullptr);
   LOG_INFO("%s", r1.GetInfo().c_str());
   EXPECT_EQ(ValuePeeker::PeekAsBigInt(r1), 25LL);
@@ -322,7 +322,7 @@ TEST_F(ExpressionTest, SimpleMultiplication) {
                 (int64_t)3));
 
   std::unique_ptr<expression::AbstractExpression> e2(ConvertToExpression(e));
-  
+
   Value r2 = e2->Evaluate(&junk, nullptr, nullptr);
   LOG_INFO("%s", r2.GetInfo().c_str());
   EXPECT_EQ(ValuePeeker::PeekAsBigInt(r2), 13LL);
@@ -360,7 +360,7 @@ TEST_F(ExpressionTest, SimpleMultiplicationCopyTest) {
 
   std::unique_ptr<expression::AbstractExpression> e2(ConvertToExpression(e));
   std::unique_ptr<expression::AbstractExpression> c_e2(e2->Copy());
-  
+
   Value r2 = c_e2->Evaluate(&junk, nullptr, nullptr);
   LOG_INFO("%s", r2.GetInfo().c_str());
   EXPECT_EQ(ValuePeeker::PeekAsBigInt(r2), 13LL);
@@ -423,8 +423,10 @@ TEST_F(ExpressionTest, SimpleFilterCopyTest) {
   expression::ComparisonExpression<expression::CmpEq> *o_equal =
       new expression::ComparisonExpression<expression::CmpEq>(
           EXPRESSION_TYPE_COMPARE_EQUAL, tup_val_exp, const_val_exp);
-  
-  expression::ComparisonExpression<expression::CmpEq> *equal = dynamic_cast<expression::ComparisonExpression<expression::CmpEq> *>(o_equal->Copy());
+
+  expression::ComparisonExpression<expression::CmpEq> *equal =
+      dynamic_cast<expression::ComparisonExpression<expression::CmpEq> *>(
+          o_equal->Copy());
 
   // TUPLE
 
@@ -456,7 +458,6 @@ TEST_F(ExpressionTest, SimpleFilterCopyTest) {
   delete schema;
   delete tuple;
 }
-
 
 TEST_F(ExpressionTest, SimpleInFilter) {
   // WHERE id in (15, 20)
@@ -538,7 +539,9 @@ TEST_F(ExpressionTest, SimpleInFilterCopyTest) {
       new expression::ComparisonExpression<expression::CmpIn>(
           EXPRESSION_TYPE_COMPARE_IN, tup_val_exp, vec_exp);
 
-  expression::ComparisonExpression<expression::CmpIn> *equal = dynamic_cast<expression::ComparisonExpression<expression::CmpIn> *>(o_equal->Copy()); 
+  expression::ComparisonExpression<expression::CmpIn> *equal =
+      dynamic_cast<expression::ComparisonExpression<expression::CmpIn> *>(
+          o_equal->Copy());
 
   // TUPLE
 
@@ -570,8 +573,6 @@ TEST_F(ExpressionTest, SimpleInFilterCopyTest) {
   delete schema;
   delete tuple;
 }
-
-
 
 TEST_F(ExpressionTest, SimpleCase) {
   // CASE WHEN i=1 THEN 2 ELSE 3 END
@@ -660,11 +661,12 @@ TEST_F(ExpressionTest, SimpleCaseCopyTest) {
   std::vector<expression::AbstractExpression *> clauses;
   clauses.push_back(case_when_clause);
 
-  expression::CaseExpression *o_case_expression = new expression::CaseExpression(
-      VALUE_TYPE_INTEGER, clauses, const_val_exp_3);
+  expression::CaseExpression *o_case_expression =
+      new expression::CaseExpression(VALUE_TYPE_INTEGER, clauses,
+                                     const_val_exp_3);
 
-
-  expression::CaseExpression *case_expression = dynamic_cast< expression::CaseExpression *>(o_case_expression->Copy());
+  expression::CaseExpression *case_expression =
+      dynamic_cast<expression::CaseExpression *>(o_case_expression->Copy());
   // TUPLE
 
   std::vector<catalog::Column> columns;
@@ -759,9 +761,13 @@ TEST_F(ExpressionTest, UnaryMinusCopyTest) {
   expression::OperatorUnaryMinusExpression *o_unary_minus_double =
       new expression::OperatorUnaryMinusExpression(tup_val_exp_double);
 
-  expression::OperatorUnaryMinusExpression *unary_minus_int = dynamic_cast<expression::OperatorUnaryMinusExpression *>(o_unary_minus_int->Copy());
+  expression::OperatorUnaryMinusExpression *unary_minus_int =
+      dynamic_cast<expression::OperatorUnaryMinusExpression *>(
+          o_unary_minus_int->Copy());
 
-  expression::OperatorUnaryMinusExpression *unary_minus_double = dynamic_cast<expression::OperatorUnaryMinusExpression *>(o_unary_minus_double->Copy());
+  expression::OperatorUnaryMinusExpression *unary_minus_double =
+      dynamic_cast<expression::OperatorUnaryMinusExpression *>(
+          o_unary_minus_double->Copy());
 
   std::vector<catalog::Column> columns;
 

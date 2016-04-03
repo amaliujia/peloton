@@ -249,13 +249,16 @@ class ComparisonExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    AbstractExpression *copied_left = ((m_left == nullptr) ? nullptr : m_left->Copy());
-    AbstractExpression *copied_right = ((m_right == nullptr) ? nullptr : m_right->Copy()); 
-    
-    return new ComparisonExpression<OP>(AbstractExpression::m_type, copied_left, copied_right);
+    AbstractExpression *copied_left =
+        ((m_left == nullptr) ? nullptr : m_left->Copy());
+    AbstractExpression *copied_right =
+        ((m_right == nullptr) ? nullptr : m_right->Copy());
+
+    return new ComparisonExpression<OP>(AbstractExpression::m_type, copied_left,
+                                        copied_right);
   }
 
-private:
+ private:
   AbstractExpression *m_left;
   AbstractExpression *m_right;
 };
@@ -268,9 +271,16 @@ class InlinedComparisonExpression : public ComparisonExpression<C> {
       : ComparisonExpression<C>(type, left, right) {}
 
   AbstractExpression *Copy() const {
-    AbstractExpression *copied_left = ((AbstractExpression::m_left == nullptr) ? nullptr : AbstractExpression::m_left->Copy());
-    AbstractExpression *copied_right = ((AbstractExpression::m_right == nullptr) ? nullptr : AbstractExpression::m_right->Copy());
-    return new InlinedComparisonExpression<C, L, R>(AbstractExpression::m_type, copied_left, copied_right);
+    AbstractExpression *copied_left =
+        ((AbstractExpression::m_left == nullptr)
+             ? nullptr
+             : AbstractExpression::m_left->Copy());
+    AbstractExpression *copied_right =
+        ((AbstractExpression::m_right == nullptr)
+             ? nullptr
+             : AbstractExpression::m_right->Copy());
+    return new InlinedComparisonExpression<C, L, R>(AbstractExpression::m_type,
+                                                    copied_left, copied_right);
   }
 };
 

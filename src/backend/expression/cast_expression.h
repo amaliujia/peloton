@@ -80,7 +80,7 @@ class CastExpression : public AbstractExpression {
     return new CastExpression(type_, CopyUtil(child_));
   }
 
-private:
+ private:
   PostgresValueType type_;
   AbstractExpression *child_;
 };

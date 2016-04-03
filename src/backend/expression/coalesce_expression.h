@@ -47,7 +47,7 @@ class CoalesceExpression : public AbstractExpression {
 
   AbstractExpression *Copy() const {
     std::vector<AbstractExpression *> copied_expression;
-    for (AbstractExpression * expression : expressions) {
+    for (AbstractExpression *expression : expressions) {
       if (expression == nullptr) {
         continue;
       }
@@ -57,7 +57,7 @@ class CoalesceExpression : public AbstractExpression {
     return new CoalesceExpression(value_type, copied_expression);
   }
 
-private:
+ private:
   // Expression arguments
   std::vector<AbstractExpression *> expressions;
 

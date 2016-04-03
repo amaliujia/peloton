@@ -67,7 +67,8 @@ class SubstringExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new SubstringExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()), CopyUtil(len));
+    return new SubstringExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()),
+                                   CopyUtil(len));
   }
 };
 
@@ -153,7 +154,6 @@ class OctetLengthExpression : public AbstractExpression {
   AbstractExpression *Copy() const {
     return new OctetLengthExpression(CopyUtil(GetLeft()));
   }
-
 };
 
 /*
@@ -269,7 +269,6 @@ class LeftExpression : public AbstractExpression {
   AbstractExpression *Copy() const {
     return new LeftExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()));
   }
-
 };
 
 /*
@@ -466,7 +465,8 @@ class OverlayExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new OverlayExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()), CopyUtil(from), CopyUtil(len));
+    return new OverlayExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()),
+                                 CopyUtil(from), CopyUtil(len));
   }
 };
 
@@ -502,7 +502,8 @@ class ReplaceExpression : public AbstractExpression {
   }
 
   AbstractExpression *Copy() const {
-    return new ReplaceExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()), CopyUtil(to));
+    return new ReplaceExpression(CopyUtil(GetLeft()), CopyUtil(GetRight()),
+                                 CopyUtil(to));
   }
 };
 

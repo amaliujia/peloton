@@ -45,13 +45,10 @@ class LimitPlan : public AbstractPlan {
 
   const std::string GetInfo() const { return "Limit"; }
 
-  const AbstractPlan *Copy() const {
-    return new LimitPlan(limit_, offset_);
-  }
+  const AbstractPlan *Copy() const { return new LimitPlan(limit_, offset_); }
 
   bool IfEqual(const LimitPlan *plan) {
-    return plan->GetLimit() == limit_ &&
-           plan->GetOffset() == offset_;
+    return plan->GetLimit() == limit_ && plan->GetOffset() == offset_;
   }
 
  private:

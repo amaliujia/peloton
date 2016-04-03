@@ -107,12 +107,14 @@ class IndexScanPlan : public AbstractScan {
 
   const AbstractPlan *Copy() const {
     std::vector<expression::AbstractExpression *> new_runtime_keys;
-    for (auto* key : runtime_keys_) {
+    for (auto *key : runtime_keys_) {
       new_runtime_keys.push_back(key->Copy());
     }
 
-    IndexScanDesc desc(index_, key_column_ids_, expr_types_, values_, new_runtime_keys);
-    IndexScanPlan *new_plan = new IndexScanPlan(GetTable(), GetPredicate()->Copy(), GetColumnIds(), desc);
+    IndexScanDesc desc(index_, key_column_ids_, expr_types_, values_,
+                       new_runtime_keys);
+    IndexScanPlan *new_plan = new IndexScanPlan(
+        GetTable(), GetPredicate()->Copy(), GetColumnIds(), desc);
     return new_plan;
   }
 
@@ -126,9 +128,8 @@ class IndexScanPlan : public AbstractScan {
            oid_comparator.Compare(plan->GetColumnIds(), column_ids_) &&
            oid_comparator.Compare(key_column_ids_, plan->GetKeyColumnIds()) &&
            expr_type_comparator.Compare(plan->GetExprTypes(), expr_types_) &&
-//           value_comparator.Compare(plan->GetValues(), values_) &&
-           index_ == plan->GetIndex() &&
-            AbstractScan::IfEqual(plan);
+           //           value_comparator.Compare(plan->GetValues(), values_) &&
+           index_ == plan->GetIndex() && AbstractScan::IfEqual(plan);
   }
 
  private:

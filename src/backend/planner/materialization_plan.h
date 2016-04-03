@@ -61,7 +61,8 @@ class MaterializationPlan : public AbstractPlan {
   const std::string GetInfo() const { return "Materialize"; }
 
   const AbstractPlan *Copy() const {
-    return new MaterializationPlan(old_to_new_cols_, catalog::Schema::CopySchema(schema_), physify_flag_);
+    return new MaterializationPlan(
+        old_to_new_cols_, catalog::Schema::CopySchema(schema_), physify_flag_);
   }
 
   bool IfEqual(const MaterializationPlan *plan) {

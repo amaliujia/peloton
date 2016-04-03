@@ -57,11 +57,9 @@ class HashJoinPlan : public AbstractJoinPlan {
   }
 
   const AbstractPlan *Copy() const {
-    HashJoinPlan *new_plan = new HashJoinPlan(GetJoinType(),
-                                              GetPredicate()->Copy(),
-                                              GetProjInfo()->Copy(),
-                                              catalog::Schema::CopySchema(GetSchema()),
-                                              outer_column_ids_);
+    HashJoinPlan *new_plan = new HashJoinPlan(
+        GetJoinType(), GetPredicate()->Copy(), GetProjInfo()->Copy(),
+        catalog::Schema::CopySchema(GetSchema()), outer_column_ids_);
     return new_plan;
   }
 

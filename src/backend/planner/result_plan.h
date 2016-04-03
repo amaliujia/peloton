@@ -52,8 +52,7 @@ class ResultPlan : public AbstractPlan {
   }
 
   bool IfEqual(const ResultPlan *plan) {
-    return plan->GetTuple() == tuple_.get() &&
-           plan->GetBackend() == backend_;
+    return plan->GetTuple() == tuple_.get() && plan->GetBackend() == backend_;
   }
 
  private:

@@ -109,7 +109,8 @@ class AbstractExpression : public Printable {
 
   virtual AbstractExpression *Copy() const = 0;
 
-  inline AbstractExpression *CopyUtil(const AbstractExpression *expression) const {
+  inline AbstractExpression *CopyUtil(
+      const AbstractExpression *expression) const {
     return (expression == nullptr) ? nullptr : expression->Copy();
   }
 

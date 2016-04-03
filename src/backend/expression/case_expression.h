@@ -55,14 +55,15 @@ class CaseExpression : public AbstractExpression {
 
   AbstractExpression *Copy() const {
     std::vector<AbstractExpression *> copied_clauses;
-    for (AbstractExpression * clause : clauses) {
+    for (AbstractExpression *clause : clauses) {
       if (clause == nullptr) {
         continue;
       }
       copied_clauses.push_back(clause->Copy());
     }
 
-    return new CaseExpression(case_type, copied_clauses, default_result->Copy());
+    return new CaseExpression(case_type, copied_clauses,
+                              default_result->Copy());
   }
 
  private:

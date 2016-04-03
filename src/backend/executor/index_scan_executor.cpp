@@ -166,7 +166,7 @@ bool IndexScanExecutor::ExecIndexLookup() {
         if (predicate_ == nullptr) {
           visible_tuples[tile_group_id].push_back(tuple_id);
           auto res = transaction_manager.PerformRead(tile_group_id, tuple_id);
-          if(!res){
+          if (!res) {
             transaction_manager.SetTransactionResult(RESULT_FAILURE);
             return res;
           }
@@ -178,7 +178,7 @@ bool IndexScanExecutor::ExecIndexLookup() {
           if (eval == true) {
             visible_tuples[tile_group_id].push_back(tuple_id);
             auto res = transaction_manager.PerformRead(tile_group_id, tuple_id);
-            if(!res){
+            if (!res) {
               transaction_manager.SetTransactionResult(RESULT_FAILURE);
               return res;
             }

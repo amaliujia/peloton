@@ -47,8 +47,7 @@ class DeletePlan : public AbstractPlan {
   }
 
   bool IfEqual(const DeletePlan *plan) {
-    return plan->GetTable() == target_table_ &&
-           plan->GetTruncate() == truncate;
+    return plan->GetTable() == target_table_ && plan->GetTruncate() == truncate;
   }
 
  private:

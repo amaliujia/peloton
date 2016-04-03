@@ -51,7 +51,8 @@ class InsertPlan : public AbstractPlan {
   const std::string GetInfo() const { return "InsertPlan"; }
 
   const AbstractPlan *Copy() const {
-    return new InsertPlan(target_table_, project_info_->Copy(), bulk_insert_count);
+    return new InsertPlan(target_table_, project_info_->Copy(),
+                          bulk_insert_count);
   }
 
   bool IfEqual(const InsertPlan *plan) {

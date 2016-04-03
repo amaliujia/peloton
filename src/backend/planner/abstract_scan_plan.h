@@ -58,11 +58,10 @@ class AbstractScan : public AbstractPlan {
   const AbstractPlan *Copy() const = 0;
 
   bool IfEqual(const AbstractScan *plan) {
-
     VectorComparator<oid_t> comparator;
     return comparator.Compare(plan->GetColumnIds(), this->GetColumnIds()) &&
-          plan->GetPredicate() == this->GetPredicate() &&
-          plan->GetTable() == this->GetTable();
+           plan->GetPredicate() == this->GetPredicate() &&
+           plan->GetTable() == this->GetTable();
   }
 
  private:

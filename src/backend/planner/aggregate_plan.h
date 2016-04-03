@@ -37,31 +37,30 @@ class AggregatePlan : public AbstractPlan {
     ExpressionType aggtype;
     const expression::AbstractExpression *expression;
     bool distinct;
-    
-    bool operator==( const AggTerm& other ) const {
-        return (aggtype == other.aggtype) &&
-                (expression == other.expression) &&
-                (distinct == other.distinct);
+
+    bool operator==(const AggTerm &other) const {
+      return (aggtype == other.aggtype) && (expression == other.expression) &&
+             (distinct == other.distinct);
     }
 
-    bool operator<( const AggTerm& other ) const {
-       if(aggtype < other.aggtype) {
-         return true;
-       } else if (aggtype > other.aggtype){
-         return false;
-       }
+    bool operator<(const AggTerm &other) const {
+      if (aggtype < other.aggtype) {
+        return true;
+      } else if (aggtype > other.aggtype) {
+        return false;
+      }
 
-       if (expression < other.expression) {
-         return true;
-       } else if (expression > other.expression) {
-         return false;
-       }
+      if (expression < other.expression) {
+        return true;
+      } else if (expression > other.expression) {
+        return false;
+      }
 
-       if (distinct == true && other.distinct == false) {
-         return true;
-       }
+      if (distinct == true && other.distinct == false) {
+        return true;
+      }
 
-       return false;
+      return false;
     }
 
     AggTerm Copy() const {
@@ -126,14 +125,14 @@ class AggregatePlan : public AbstractPlan {
 
   const AbstractPlan *Copy() const {
     std::vector<AggTerm> copied_agg_terms;
-    for (const AggTerm& term : unique_agg_terms_) {
+    for (const AggTerm &term : unique_agg_terms_) {
       copied_agg_terms.push_back(term.Copy());
     }
     std::vector<oid_t> copied_groupby_col_ids(groupby_col_ids_);
-    AggregatePlan *new_plan = new AggregatePlan(project_info_->Copy(), predicate_->Copy(),
-                                                std::move(copied_agg_terms),
-                                                std::move(copied_groupby_col_ids),
-                                catalog::Schema::CopySchema(output_schema_.get()), agg_strategy_);
+    AggregatePlan *new_plan = new AggregatePlan(
+        project_info_->Copy(), predicate_->Copy(), std::move(copied_agg_terms),
+        std::move(copied_groupby_col_ids),
+        catalog::Schema::CopySchema(output_schema_.get()), agg_strategy_);
     return new_plan;
   }
 

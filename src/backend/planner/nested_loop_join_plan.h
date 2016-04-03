@@ -59,14 +59,14 @@ class NestedLoopJoinPlan : public AbstractJoinPlan {
   }  // added to support IN+subquery
 
   const AbstractPlan *Copy() const {
-    NestedLoopJoinPlan *new_plan = new NestedLoopJoinPlan(GetJoinType(), GetPredicate()->Copy(), GetProjInfo()->Copy(), catalog::Schema::CopySchema(GetSchema()), nl_);
+    NestedLoopJoinPlan *new_plan = new NestedLoopJoinPlan(
+        GetJoinType(), GetPredicate()->Copy(), GetProjInfo()->Copy(),
+        catalog::Schema::CopySchema(GetSchema()), nl_);
     return new_plan;
   }
 
   bool IfEqual(const NestedLoopJoinPlan *plan) {
-    return AbstractJoinPlan::IfEqual(plan) &&
-            plan->GetNestLoop() == nl_;
-
+    return AbstractJoinPlan::IfEqual(plan) && plan->GetNestLoop() == nl_;
   }
 
  private:
