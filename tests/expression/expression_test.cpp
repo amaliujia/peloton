@@ -423,7 +423,7 @@ TEST_F(ExpressionTest, SimpleFilterCopyTest) {
   expression::ComparisonExpression<expression::CmpEq> *o_equal =
       new expression::ComparisonExpression<expression::CmpEq>(
           EXPRESSION_TYPE_COMPARE_EQUAL, tup_val_exp, const_val_exp);
-
+  
   expression::ComparisonExpression<expression::CmpEq> *equal = dynamic_cast<expression::ComparisonExpression<expression::CmpEq> *>(o_equal->Copy());
 
   // TUPLE
@@ -538,7 +538,7 @@ TEST_F(ExpressionTest, SimpleInFilterCopyTest) {
       new expression::ComparisonExpression<expression::CmpIn>(
           EXPRESSION_TYPE_COMPARE_IN, tup_val_exp, vec_exp);
 
-  expression::ComparisonExpression<expression::CmpEq> *equal = dynamic_cast<expression::ComparisonExpression<expression::CmpEq> *>(o_equal->Copy()); 
+  expression::ComparisonExpression<expression::CmpIn> *equal = dynamic_cast<expression::ComparisonExpression<expression::CmpIn> *>(o_equal->Copy()); 
 
   // TUPLE
 
@@ -635,6 +635,72 @@ TEST_F(ExpressionTest, SimpleCase) {
   delete tuple;
 }
 
+TEST_F(ExpressionTest, SimpleCaseCopyTest) {
+  // CASE WHEN i=1 THEN 2 ELSE 3 END
+
+  // EXPRESSION
+
+  expression::TupleValueExpression *tup_val_exp =
+      new expression::TupleValueExpression(0, 0);
+  expression::ConstantValueExpression *const_val_exp_1 =
+      new expression::ConstantValueExpression(ValueFactory::GetIntegerValue(1));
+  expression::ConstantValueExpression *const_val_exp_2 =
+      new expression::ConstantValueExpression(ValueFactory::GetIntegerValue(2));
+  expression::ConstantValueExpression *const_val_exp_3 =
+      new expression::ConstantValueExpression(ValueFactory::GetIntegerValue(3));
+
+  expression::ComparisonExpression<expression::CmpEq> *case_when_cond =
+      new expression::ComparisonExpression<expression::CmpEq>(
+          EXPRESSION_TYPE_COMPARE_EQUAL, tup_val_exp, const_val_exp_1);
+
+  expression::OperatorCaseWhenExpression *case_when_clause =
+      new expression::OperatorCaseWhenExpression(
+          VALUE_TYPE_INTEGER, case_when_cond, const_val_exp_2);
+
+  std::vector<expression::AbstractExpression *> clauses;
+  clauses.push_back(case_when_clause);
+
+  expression::CaseExpression *o_case_expression = new expression::CaseExpression(
+      VALUE_TYPE_INTEGER, clauses, const_val_exp_3);
+
+
+  expression::CaseExpression *case_expression = dynamic_cast< expression::CaseExpression *>(o_case_expression->Copy());
+  // TUPLE
+
+  std::vector<catalog::Column> columns;
+
+  catalog::Column column1(VALUE_TYPE_INTEGER, GetTypeSize(VALUE_TYPE_INTEGER),
+                          "i", true);
+  catalog::Column column2(VALUE_TYPE_DOUBLE, GetTypeSize(VALUE_TYPE_DOUBLE),
+                          "f", true);
+  columns.push_back(column1);
+  columns.push_back(column2);
+  catalog::Schema *schema(new catalog::Schema(columns));
+
+  storage::Tuple *tuple(new storage::Tuple(schema, true));
+
+  tuple->SetValue(0, ValueFactory::GetIntegerValue(1), nullptr);
+  tuple->SetValue(1, ValueFactory::GetDoubleValue(1.5), nullptr);
+
+  Value result = case_expression->Evaluate(tuple, nullptr, nullptr);
+
+  // Test with A = 1, should get 2
+  EXPECT_EQ(ValuePeeker::PeekAsInteger(result), 2);
+
+  tuple->SetValue(0, ValueFactory::GetIntegerValue(2), nullptr);
+  tuple->SetValue(1, ValueFactory::GetDoubleValue(-1.5), nullptr);
+
+  result = case_expression->Evaluate(tuple, nullptr, nullptr);
+
+  // Test with A = 2, should get 3
+  EXPECT_EQ(ValuePeeker::PeekAsInteger(result), 3);
+
+  delete case_expression;
+  delete o_case_expression;
+  delete schema;
+  delete tuple;
+}
+
 TEST_F(ExpressionTest, UnaryMinus) {
   // EXPRESSION
 
@@ -674,6 +740,55 @@ TEST_F(ExpressionTest, UnaryMinus) {
 
   delete unary_minus_double;
   delete unary_minus_int;
+  delete schema;
+  delete tuple;
+}
+
+TEST_F(ExpressionTest, UnaryMinusCopyTest) {
+  // EXPRESSION
+
+  expression::TupleValueExpression *tup_val_exp_int =
+      new expression::TupleValueExpression(0, 0);
+  expression::TupleValueExpression *tup_val_exp_double =
+      new expression::TupleValueExpression(0, 1);
+
+  // TUPLE
+  expression::OperatorUnaryMinusExpression *o_unary_minus_int =
+      new expression::OperatorUnaryMinusExpression(tup_val_exp_int);
+
+  expression::OperatorUnaryMinusExpression *o_unary_minus_double =
+      new expression::OperatorUnaryMinusExpression(tup_val_exp_double);
+
+  expression::OperatorUnaryMinusExpression *unary_minus_int = dynamic_cast<expression::OperatorUnaryMinusExpression *>(o_unary_minus_int->Copy());
+
+  expression::OperatorUnaryMinusExpression *unary_minus_double = dynamic_cast<expression::OperatorUnaryMinusExpression *>(o_unary_minus_double->Copy());
+
+  std::vector<catalog::Column> columns;
+
+  catalog::Column column1(VALUE_TYPE_INTEGER, GetTypeSize(VALUE_TYPE_INTEGER),
+                          "i", true);
+  catalog::Column column2(VALUE_TYPE_DOUBLE, GetTypeSize(VALUE_TYPE_DOUBLE),
+                          "f", true);
+  columns.push_back(column1);
+  columns.push_back(column2);
+  catalog::Schema *schema(new catalog::Schema(columns));
+
+  storage::Tuple *tuple(new storage::Tuple(schema, true));
+
+  // Test with A = 1, should get -1
+  tuple->SetValue(0, ValueFactory::GetIntegerValue(1), nullptr);
+  Value result = unary_minus_int->Evaluate(tuple, nullptr, nullptr);
+  EXPECT_EQ(ValuePeeker::PeekAsInteger(result), -1);
+
+  // Test with A = 1.5, should get -1.5
+  tuple->SetValue(1, ValueFactory::GetDoubleValue(1.5), nullptr);
+  result = unary_minus_double->Evaluate(tuple, nullptr, nullptr);
+  EXPECT_EQ(ValuePeeker::PeekDouble(result), -1.5);
+
+  delete unary_minus_double;
+  delete unary_minus_int;
+  delete o_unary_minus_double;
+  delete o_unary_minus_int;
   delete schema;
   delete tuple;
 }

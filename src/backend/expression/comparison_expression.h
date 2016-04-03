@@ -251,7 +251,8 @@ class ComparisonExpression : public AbstractExpression {
   AbstractExpression *Copy() const {
     AbstractExpression *copied_left = ((m_left == nullptr) ? nullptr : m_left->Copy());
     AbstractExpression *copied_right = ((m_right == nullptr) ? nullptr : m_right->Copy()); 
-    return new ComparisonExpression<OP>(GetExpressionType(), copied_left, copied_right);
+    
+    return new ComparisonExpression<OP>(AbstractExpression::m_type, copied_left, copied_right);
   }
 
 private:

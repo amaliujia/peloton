@@ -32,15 +32,10 @@ class VectorExpression : public AbstractExpression {
  public:
   VectorExpression(ValueType elementType,
                    const std::vector<AbstractExpression *> &arguments)
-      : AbstractExpression(EXPRESSION_TYPE_VALUE_VECTOR), arguments(arguments) {
+      : AbstractExpression(EXPRESSION_TYPE_VALUE_VECTOR), arguments(arguments),
+        elementType_(elementType) {
     in_list = ValueFactory::GetArrayValueFromSizeAndType(arguments.size(),
                                                          elementType);
-  }
-
-  VectorExpression(const std::vector<AbstractExpression *> &arguments,
-                   const Value& value)
-    : AbstractExpression(EXPRESSION_TYPE_VALUE_VECTOR), arguments(arguments) {
-    in_list = ValueFactory::Clone(value, nullptr);
   }
 
   virtual ~VectorExpression() {
@@ -84,12 +79,15 @@ class VectorExpression : public AbstractExpression {
       }
       copied_expression.push_back(expression->Copy());
     }
-    return new VectorExpression(copied_expression, in_list);
+    return new VectorExpression(elementType_, copied_expression);
   }
 
  private:
   // Arguments
   std::vector<AbstractExpression *> arguments;
+  
+  // In list value type
+  ValueType elementType_;
 
   // In list
   Value in_list;
