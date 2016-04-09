@@ -35,7 +35,7 @@ ThreadManager &ThreadManager::GetClientThreadPool(void) {
 }
 
 ThreadManager &ThreadManager::GetQueryExecutionPool(void) {
-    static ThreadManager query_execution_thread_pool(NUM_THREAD);
+    static ThreadManager query_execution_thread_pool(1);
     return query_execution_thread_pool;
 }
 

@@ -158,21 +158,19 @@ bool ExchangeSeqScanExecutor::DExecute() {
   // else {
 }
 
-void ExchangeSeqScanExecutor::SeqScanThreadMain(
-                            ExchangeSeqScanExecutor *executor,
-                            oid_t current_tile_group_offset_,
-                            BlockingQueue<AbstractParallelTaskResponse *> *queue) {
-  LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", executor->GetRawNode()->GetInfo().c_str());
-  bool ret = executor->ThreadExecute(current_tile_group_offset_);
+void ExchangeSeqScanExecutor::SeqScanThreadMain(oid_t current_tile_group_offset_) {
+  LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", GetRawNode()->GetInfo().c_str());
+  bool ret = ThreadExecute(current_tile_group_offset_);
+  // bool ret = executor->ThreadExecute(current_tile_group_offset_);
   AbstractParallelTaskResponse *response = nullptr;
 
   if (ret) {
-    LogicalTile *logical_tile = executor->GetOutput();
+    LogicalTile *logical_tile = GetOutput();
     response = new ParallelSeqScanTaskResponse(HasRetValue, logical_tile) ;
   } else {
     response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
   }
-  queue->PutTask(response);
+  queue_.PutTask(response);
 }
 
 }  // executor
