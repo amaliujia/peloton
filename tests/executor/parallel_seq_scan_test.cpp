@@ -29,7 +29,7 @@
 #include "backend/executor/exchange_seq_scan_executor.h"
 #include "backend/expression/abstract_expression.h"
 #include "backend/expression/expression_util.h"
-#include "backend/planner/seq_scan_plan.h"
+#include "backend/planner/exchange_seq_scan_plan.h"
 #include "backend/storage/data_table.h"
 #include "backend/storage/tile_group_factory.h"
 

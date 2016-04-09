@@ -34,6 +34,11 @@ TEST_F(CUCKOOTest, BasicTest) {
     cuckoo_map.find("a")->insert(std::make_pair(12,12));
   }
   EXPECT_EQ(cuckoo_map.size(), 1);
+
+  auto lt = cuckoo_map.lock_table();
+  for (const auto& it : lt) {
+      delete it.second;
+  }
 }
 
 void Insert(HashMapType *cuckoo_map) {

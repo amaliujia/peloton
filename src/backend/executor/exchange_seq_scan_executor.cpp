@@ -1,6 +1,6 @@
 #include <backend/storage/tile_group_header.h>
 #include <backend/expression/container_tuple.h>
-#include <backend/planner/seq_scan_plan.h>
+#include "backend/planner/exchange_seq_scan_plan.h"
 #include "backend/common/thread_manager.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
 #include "backend/executor/parallel_seq_scan_task_response.h"
@@ -22,7 +22,7 @@ bool ExchangeSeqScanExecutor::DInit() {
   if (!status) return false;
 
   // Grab data from plan node.
-  const planner::SeqScanPlan &node = GetPlanNode<planner::SeqScanPlan>();
+  const planner::ExchangeSeqScanPlan &node = GetPlanNode<planner::ExchangeSeqScanPlan>();
 
   target_table_ = node.GetTable();
 
@@ -101,14 +101,15 @@ bool ExchangeSeqScanExecutor::DExecute() {
       while (current_tile_group_offset_ <  table_tile_group_count_) {
         LOG_TRACE("ExchangeSeqScanExecutor :: submit task to thread pool, dealing with %lu tile.",
                   current_tile_group_offset_);
-        std::function<void()> f_seq_scan = std::bind(&ExchangeSeqScanExecutor::SeqScanThreadMain, this,
-                                                     this, current_tile_group_offset_, &queue_);
+        std::function<void()> f_seq_scan = std::bind(&ExchangeSeqScanExecutor::SeqScanThreadMain,
+                                                     this, current_tile_group_offset_);
         ThreadManager::GetQueryExecutionPool().AddTask(f_seq_scan);
 
         current_tile_group_offset_++;
       }
 
       parallelize_done_ = true;
+      current_tile_group_offset_ = START_OID;
     } else {
        // When exchange_seq_scan_executor, should use a single thread to create parallel tasks.
        // TODO: Use one single thead here to keep fetching logical tiles from child_, ignore it now.
@@ -143,7 +144,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
   }
 
   // if (children_.size() == 0
-  current_tile_group_offset_ = START_OID;
+  // current_tile_group_offset_ = START_OID;
 
   while (current_tile_group_offset_ < table_tile_group_count_) {
     std::unique_ptr<AbstractParallelTaskResponse> response_ptr(queue_.GetTask());

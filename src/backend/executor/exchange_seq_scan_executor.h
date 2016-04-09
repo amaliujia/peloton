@@ -20,9 +20,7 @@ public:
   explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
                            ExecutorContext *executor_context);
 
-  void SeqScanThreadMain(ExchangeSeqScanExecutor *executor,
-                         oid_t current_tile_group_offset_,
-                         BlockingQueue<AbstractParallelTaskResponse *> *queue);
+  void SeqScanThreadMain(oid_t current_tile_group_offset_);
 
   bool ThreadExecute(oid_t current_tile_group_offset_);
 
