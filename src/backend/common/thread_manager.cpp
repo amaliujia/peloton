@@ -12,8 +12,8 @@
 
 #include "backend/common/thread_manager.h"
 
-#define NUM_THREAD 10
-
+#define NUM_THREAD 1
+#define QUERY_THREAD 2
 namespace peloton {
 
 // global singleton
@@ -35,7 +35,7 @@ ThreadManager &ThreadManager::GetClientThreadPool(void) {
 }
 
 ThreadManager &ThreadManager::GetQueryExecutionPool(void) {
-    static ThreadManager query_execution_thread_pool(1);
+    static ThreadManager query_execution_thread_pool(QUERY_THREAD);
     return query_execution_thread_pool;
 }
 

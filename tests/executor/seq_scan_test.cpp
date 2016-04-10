@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <ctime>
 
 #include "harness.h"
 
@@ -262,6 +263,11 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
 //                            column_ids);
   planner::SeqScanPlan node(table.get(), nullptr,
                             column_ids);
+ 
+  std::clock_t start;
+  double duration;
+  start = std::clock(); 
+  
   auto &txn_manager = concurrency::TransactionManager::GetInstance();
   auto txn = txn_manager.BeginTransaction();
   std::unique_ptr<executor::ExecutorContext> context(
@@ -271,6 +277,8 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   RunTest(executor, table->GetTileGroupCount(), column_ids.size());
 
   txn_manager.CommitTransaction();
+  duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+  LOG_INFO("Duration: %f", duration);
 }
 
 // Sequential scan of logical tile with predicate.
