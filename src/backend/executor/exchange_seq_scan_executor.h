@@ -6,6 +6,7 @@
 #include "backend/executor/abstract_scan_executor.h"
 #include "backend/executor/abstract_parallel_task_response.h"
 #include "backend/common/blocking_queue.h"
+#include "backend/executor/logical_tile.h"
 
 namespace peloton {
 namespace executor {
@@ -22,7 +23,7 @@ public:
 
   void SeqScanThreadMain(oid_t current_tile_group_offset_);
 
-  bool ThreadExecute(oid_t current_tile_group_offset_);
+  LogicalTile *ThreadExecute(oid_t current_tile_group_offset_);
 
 protected:
   bool DInit();

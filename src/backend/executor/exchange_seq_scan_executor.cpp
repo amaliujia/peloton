@@ -1,5 +1,5 @@
-#include <backend/storage/tile_group_header.h>
-#include <backend/expression/container_tuple.h>
+#include "backend/storage/tile_group_header.h"
+#include "backend/expression/container_tuple.h"
 #include "backend/planner/exchange_seq_scan_plan.h"
 #include "backend/common/thread_manager.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
@@ -141,7 +141,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
       return false;
     }
   }
-  
+
 
   while (current_tile_group_offset_ < table_tile_group_count_) {
     std::unique_ptr<AbstractParallelTaskResponse> response_ptr(queue_.GetTask());
