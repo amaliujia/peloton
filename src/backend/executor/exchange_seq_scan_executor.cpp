@@ -40,7 +40,7 @@ bool ExchangeSeqScanExecutor::DInit() {
   return true;
 }
 
-bool ExchangeSeqScanExecutor::ThreadExecute(oid_t current_tile_group_offset_) {
+LogicalTile *ExchangeSeqScanExecutor::ThreadExecute(oid_t current_tile_group_offset_) {
   auto tile_group =
     target_table_->GetTileGroup(current_tile_group_offset_);
 
@@ -82,11 +82,10 @@ bool ExchangeSeqScanExecutor::ThreadExecute(oid_t current_tile_group_offset_) {
 
   // Don't return empty tiles
   if (0 == logical_tile->GetTupleCount()) {
-    return false;
+    return nullptr;
   }
 
-  SetOutput(logical_tile.release());
-  return true;
+  return logical_tile.release();
 }
 
 bool ExchangeSeqScanExecutor::DExecute() {
@@ -142,9 +141,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
       return false;
     }
   }
-
-  // if (children_.size() == 0
-  // current_tile_group_offset_ = START_OID;
+  
 
   while (current_tile_group_offset_ < table_tile_group_count_) {
     std::unique_ptr<AbstractParallelTaskResponse> response_ptr(queue_.GetTask());
@@ -161,12 +158,11 @@ bool ExchangeSeqScanExecutor::DExecute() {
 
 void ExchangeSeqScanExecutor::SeqScanThreadMain(oid_t current_tile_group_offset_) {
   LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", GetRawNode()->GetInfo().c_str());
-  bool ret = ThreadExecute(current_tile_group_offset_);
+  LogicalTile *logical_tile = ThreadExecute(current_tile_group_offset_);
   // bool ret = executor->ThreadExecute(current_tile_group_offset_);
   AbstractParallelTaskResponse *response = nullptr;
 
-  if (ret) {
-    LogicalTile *logical_tile = GetOutput();
+  if (logical_tile != nullptr) {
     response = new ParallelSeqScanTaskResponse(HasRetValue, logical_tile) ;
   } else {
     response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
