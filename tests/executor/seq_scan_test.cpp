@@ -14,7 +14,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <chrono>
+#include <cstdio>
 
 #include "harness.h"
 
@@ -110,9 +110,6 @@ storage::DataTable *CreateTable() {
     }
   }
 
-
-
-
   ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(0), tuple_count);
   for (auto i = 1; i <= tile_group_count; i++) {
     ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(i), tuple_count);
@@ -202,7 +199,7 @@ executor::LogicalTile *GetNextTile(executor::AbstractExecutor &executor) {
  * if you're making changes.
  */
 void RunTest(executor::SeqScanExecutor &executor, int expected_num_tiles,
-             __attribute__ ((unused))int expected_num_cols) {
+             __attribute__((unused)) int expected_num_cols) {
   EXPECT_TRUE(executor.Init());
   std::vector<std::unique_ptr<executor::LogicalTile>> result_tiles;
   for (int i = 0; i < expected_num_tiles; i++) {
@@ -251,7 +248,7 @@ void RunTest(executor::SeqScanExecutor &executor, int expected_num_tiles,
 // Sequential scan of table with predicate.
 // The table being scanned has more than one tile group. i.e. the vertical
 // partitioning changes midway.
-TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
+/*TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   // Create table.
   std::unique_ptr<storage::DataTable> table(CreateTable());
 
@@ -259,12 +256,12 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   std::vector<oid_t> column_ids({0, 1, 3});
 
   // Create plan node.
-// planner::SeqScanPlan node(table.get(), CreatePredicate(g_tuple_ids),
-//                           column_ids);
-  planner::SeqScanPlan node(table.get(), nullptr,
-                            column_ids);
-  typedef std::chrono::high_resolution_clock Clock;
-   auto t1 = Clock::now();
+  planner::SeqScanPlan node(table.get(), CreatePredicate(g_tuple_ids),
+                           column_ids);
+  std::clock_t start;
+  double duration;
+  start = std::clock();
+  
   auto &txn_manager = concurrency::TransactionManager::GetInstance();
   auto txn = txn_manager.BeginTransaction();
   std::unique_ptr<executor::ExecutorContext> context(
@@ -274,12 +271,12 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   RunTest(executor, table->GetTileGroupCount(), column_ids.size());
 
   txn_manager.CommitTransaction();
-  auto t2 = Clock::now();
-  auto t = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count();
-  LOG_INFO("Duration %ld", t);
+  
+  duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+  LOG_INFO("Duration %f", duration);
 }
 
-// Sequential scan of logical tile with predicate.
+*/// Sequential scan of logical tile with predicate.
 //TEST_F(SeqScanTests, NonLeafNodePredicateTest) {
 //  // No table for this case as seq scan is not a leaf node.
 //  storage::DataTable *table = nullptr;

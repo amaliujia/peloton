@@ -20,6 +20,7 @@
 
 #include "backend/executor/hash_join_executor.h"
 #include "backend/executor/hash_executor.h"
+#include "backend/executor/exchange_hash_executor.h"
 #include "backend/executor/merge_join_executor.h"
 #include "backend/executor/nested_loop_join_executor.h"
 
@@ -29,6 +30,7 @@
 
 #include "backend/planner/hash_join_plan.h"
 #include "backend/planner/hash_plan.h"
+#include "backend/planner/exchange_hash_plan.h"
 #include "backend/planner/merge_join_plan.h"
 #include "backend/planner/nested_loop_join_plan.h"
 
@@ -64,8 +66,9 @@ peloton::catalog::Schema *CreateJoinSchema() {
                               ExecutorTestsUtil::GetColumnInfo(0)});
 }
 
-std::vector<PlanNodeType> join_algorithms = {
-    PLAN_NODE_TYPE_NESTLOOP, PLAN_NODE_TYPE_MERGEJOIN, PLAN_NODE_TYPE_HASHJOIN};
+//std::vector<PlanNodeType> join_algorithms = {
+//    PLAN_NODE_TYPE_NESTLOOP, PLAN_NODE_TYPE_MERGEJOIN, PLAN_NODE_TYPE_HASHJOIN};
+std::vector<PlanNodeType> join_algorithms = {PLAN_NODE_TYPE_HASHJOIN};
 
 std::vector<PelotonJoinType> join_types = {JOIN_TYPE_INNER, JOIN_TYPE_LEFT,
                                            JOIN_TYPE_RIGHT, JOIN_TYPE_OUTER};
@@ -108,6 +111,7 @@ TEST_F(JoinTests, BasicTest) {
   }
 }
 
+/*
 TEST_F(JoinTests, EmptyTablesTest) {
   // Go over all join algorithms
   for (auto join_algorithm : join_algorithms) {
@@ -205,7 +209,7 @@ TEST_F(JoinTests, JoinPredicateTest) {
     }
   }
 }
-
+*/
 void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
                      oid_t join_test_type) {
   //===--------------------------------------------------------------------===//
@@ -455,10 +459,11 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
       hash_keys.emplace_back(right_table_attr_1);
 
       // Create hash plan node
-      planner::HashPlan hash_plan_node(hash_keys);
+      planner::HashPlan j_hash_plan_node(hash_keys);
+      planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
 
       // Construct the hash executor
-      executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
+      executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
       // Create hash join plan node.
       planner::HashJoinPlan hash_join_plan_node(join_type, predicate,

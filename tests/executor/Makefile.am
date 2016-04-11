@@ -18,7 +18,7 @@ check_PROGRAMS += \
 				  append_test \
 				  projection_test \
 				  tile_group_layout_test \
-                  parallel_seq_scan_test
+          parallel_seq_scan_test
 
 executor_tests_common= 	executor/executor_tests_util.cpp \
 						harness.cpp
