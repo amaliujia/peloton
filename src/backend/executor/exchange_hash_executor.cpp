@@ -36,7 +36,7 @@ bool ExchangeHashExecutor::DInit() {
   return true;
 }
 
-void ExchangeHashExecutor::BuildHashTableThreadMain( HashMapType *table, LogicalTile *tile,
+void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile,
                                                      size_t child_tile_itr,
                                                     BlockingQueue<AbstractParallelTaskResponse *> *queue) {
 
@@ -104,7 +104,7 @@ bool ExchangeHashExecutor::DExecute() {
       auto tile = children_[0]->GetOutput();
       child_tiles_.emplace_back(tile);
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                   &hash_table_, tile, child_tile_iter, &queue_);
+                                                           tile, child_tile_iter, &queue_);
       child_tile_iter++;
       ThreadManager::GetQueryExecutionPool().AddTask(f_build_hash_table);
     }
