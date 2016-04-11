@@ -27,7 +27,7 @@ public:
     }
   }
   
-  inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
+  inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_EXCHANGE_HASH; }
 
   const std::string GetInfo() const { return "ExchangeHash"; }
 
