@@ -157,7 +157,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
 }
 
 void ExchangeSeqScanExecutor::SeqScanThreadMain(oid_t current_tile_group_offset_) {
-  LOG_INFO("Parallel worker :: ExchangeSeqScanExecutor :: SeqScanThreadMain, executor: %s", GetRawNode()->GetInfo().c_str());
+  LOG_INFO("Parallel worker :: executor: %s", GetRawNode()->GetInfo().c_str());
   LogicalTile *logical_tile = ThreadExecute(current_tile_group_offset_);
   // bool ret = executor->ThreadExecute(current_tile_group_offset_);
   AbstractParallelTaskResponse *response = nullptr;

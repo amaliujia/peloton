@@ -37,12 +37,13 @@ bool ExchangeHashExecutor::DInit() {
 }
 
 void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
-
+  LOG_INFO("Parallel worker :: executor: %s", GetRawNode()->GetInfo().c_str());
   std::unique_lock<std::mutex> locker(lock_);
   // Construct the hash table by going over given logical tile and
   // hashing
   // Go over all tuples in the logical tile
   auto tile = child_tiles_[child_tile_itr].get();
+  LOG_INFO("Assigned child_tile_itr %lu, logical tile: %s ", child_tile_itr, tile->GetInfo());
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
@@ -129,12 +130,12 @@ bool ExchangeHashExecutor::DExecute() {
       continue;
     } else {
       SetOutput(child_tiles_[result_itr++].release());
-      LOG_TRACE("Hash Executor : true -- return tile one at a time ");
+      LOG_TRACE("Exchange Hash Executor : true -- return tile one at a time ");
       return true;
     }
   }
 
-  LOG_TRACE("Hash Executor : false -- done ");
+  LOG_TRACE("Exchange Hash Executor : false -- done ");
   return false;
 
 }
