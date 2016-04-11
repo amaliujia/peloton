@@ -438,7 +438,8 @@ enum PlanNodeType {
 
   // Exchange Nodes
   PLAN_NODE_TYPE_EXCHANGE_SEQSCAN = 100,
-  PLAN_NODE_TYPE_EXCHANGE_HASH = 101
+  PLAN_NODE_TYPE_EXCHANGE_HASH = 101,
+  PLAN_NODE_TYPE_EXCHANGE_HASHJOIN = 102
 };
 
 //===--------------------------------------------------------------------===//

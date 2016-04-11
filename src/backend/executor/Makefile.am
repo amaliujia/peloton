@@ -32,7 +32,8 @@ executor_FILES = \
 		 backend/executor/abstract_parallel_task_response.cpp	\
 		 backend/executor/parallel_seq_scan_task_response.cpp   \
 		 backend/executor/abstract_exchange_executor.cpp    \
-		 backend/executor/exchange_hash_executor.cpp
+		 backend/executor/exchange_hash_executor.cpp    \
+		 backend/executor/exchange_hash_join_executor.cpp
 
 
 executor_INCLUDES = \
