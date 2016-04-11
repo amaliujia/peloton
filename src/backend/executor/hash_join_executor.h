@@ -18,6 +18,7 @@
 #include "backend/executor/abstract_join_executor.h"
 #include "backend/planner/hash_join_plan.h"
 #include "backend/executor/hash_executor.h"
+#include "backend/executor/exchange_hash_executor.h"
 
 namespace peloton {
 namespace executor {
@@ -36,7 +37,7 @@ class HashJoinExecutor : public AbstractJoinExecutor {
   bool DExecute();
 
  private:
-  HashExecutor *hash_executor_ = nullptr;
+  ExchangeHashExecutor *hash_executor_ = nullptr;
 
   bool hashed_ = false;
 

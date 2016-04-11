@@ -38,7 +38,7 @@ bool HashJoinExecutor::DInit() {
 
   assert(children_[1]->GetRawNode()->GetPlanNodeType() == PLAN_NODE_TYPE_HASH);
 
-  hash_executor_ = reinterpret_cast<HashExecutor *>(children_[1]);
+  hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
 
   return true;
 }
@@ -102,7 +102,8 @@ bool HashJoinExecutor::DExecute() {
     // Get the hash table from the hash executor
     auto &hash_table = hash_executor_->GetHashTable();
     auto &hashed_col_ids = hash_executor_->GetHashKeyIds();
-
+    LOG_INFO("HashTable size %lu", hash_table.size());
+    
     oid_t prev_tile = INVALID_OID;
     std::unique_ptr<LogicalTile> output_tile;
     LogicalTile::PositionListsBuilder pos_lists_builder;
