@@ -89,6 +89,7 @@ bool ExchangeHashExecutor::DExecute() {
     * The hash table is built on top of these hash key attributes
     * */
     auto &hashkeys = node.GetHashKeys();
+    LOG_INFO("Got hash keys %lu", hashkeys.size());
 
     for (auto &hashkey : hashkeys) {
       assert(hashkey->GetExpressionType() == EXPRESSION_TYPE_VALUE_TUPLE);
