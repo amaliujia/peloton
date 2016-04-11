@@ -24,10 +24,9 @@ public:
                    seq_scan_plan->GetColumnIds()),
       AbstractExchangePlan(seq_scan_plan) {}
 
-  ExchangeSeqScanPlan(storage::DataTable *table,
-          expression::AbstractExpression *predicate,
-          const std::vector<oid_t> &column_ids)
-          : AbstractScan(table, predicate, column_ids) {}
+  ExchangeSeqScanPlan(storage::DataTable *table, expression::AbstractExpression *predicate,
+                      const std::vector<oid_t> &column_ids)
+          : AbstractScan(table, predicate, column_ids), AbstractExchangePlan(nullptr) {}
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_EXCHANGE_SEQSCAN; }
 
