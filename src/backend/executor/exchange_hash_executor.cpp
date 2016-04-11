@@ -63,6 +63,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
 //        inner.insert(std::make_pair(child_tile_itr, tuple_id));
 //      });
 //    }
+    LOG_INFO("Assigned child_tile_itr %lu, tuple_id: %lu ", child_tile_itr, tuple_id);
     hash_table_[HashMapType::key_type(tile, tuple_id, &column_ids_)].insert(
       std::make_pair(child_tile_itr, tuple_id));
   }
@@ -89,7 +90,6 @@ bool ExchangeHashExecutor::DExecute() {
     * The hash table is built on top of these hash key attributes
     * */
     auto &hashkeys = node.GetHashKeys();
-    LOG_INFO("Got hash keys %lu", hashkeys.size());
 
     for (auto &hashkey : hashkeys) {
       assert(hashkey->GetExpressionType() == EXPRESSION_TYPE_VALUE_TUPLE);
@@ -98,6 +98,10 @@ bool ExchangeHashExecutor::DExecute() {
           hashkey);
       column_ids_.push_back(tuple_value->GetColumnId());
     }
+   
+    for (auto id : column_ids_) { 
+      LOG_INFO("Got hash key column %lu", id);
+   }
 
     // First, get all the input logical tiles
     size_t child_tile_iter = 0;

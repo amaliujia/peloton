@@ -115,8 +115,9 @@ bool HashJoinExecutor::DExecute() {
 
       // Find matching tuples in the hash table built on top of the right table
       auto right_tuples = hash_table.find(left_tuple);
-      LOG_INFO("HashJoinExecutor :: Do have matching row");
+      
       if (right_tuples != hash_table.end()) {
+      LOG_INFO("HashJoinExecutor :: Do have matching row");
         RecordMatchedLeftRow(left_result_tiles_.size() - 1, left_tile_itr);
 
         // Go over the matching right tuples
