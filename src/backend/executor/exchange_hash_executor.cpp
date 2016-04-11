@@ -36,14 +36,13 @@ bool ExchangeHashExecutor::DInit() {
   return true;
 }
 
-void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile,
-                                                     size_t child_tile_itr,
-                                                    BlockingQueue<AbstractParallelTaskResponse *> *queue) {
+void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
 
   std::unique_lock<std::mutex> locker(lock_);
   // Construct the hash table by going over given logical tile and
   // hashing
   // Go over all tuples in the logical tile
+  auto tile = child_tiles_[child_tile_itr].get();
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
@@ -69,7 +68,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile,
 
   locker.unlock();
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
-  queue->PutTask(response);
+  queue_.PutTask(response);
 }
 
 /*
@@ -104,7 +103,7 @@ bool ExchangeHashExecutor::DExecute() {
       auto tile = children_[0]->GetOutput();
       child_tiles_.emplace_back(tile);
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                           tile, child_tile_iter, &queue_);
+                                                           child_tile_iter);
       child_tile_iter++;
       ThreadManager::GetQueryExecutionPool().AddTask(f_build_hash_table);
     }
