@@ -47,25 +47,25 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
-//    bool ok = table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-//      inner.insert(std::make_pair(child_tile_itr, tuple_id));
-//    });
-//
-//    if (!ok) {
-//      table->upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
-//        // It is possbile this insert would succeed.
-//        // I won't check since I am using unordered_set, even insert succeed,
-//        // another won't hurt.
-//        inner.insert(std::make_pair(child_tile_itr, tuple_id));
-//      }, MapValueType());
-//
-//      table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-//        inner.insert(std::make_pair(child_tile_itr, tuple_id));
-//      });
-//    }
+    bool ok = hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+      inner.insert(std::make_pair(child_tile_itr, tuple_id));
+    });
+
+    if (!ok) {
+      hash_table_.upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
+        // It is possbile this insert would succeed.
+        // I won't check since I am using unordered_set, even insert succeed,
+        // another won't hurt.
+        inner.insert(std::make_pair(child_tile_itr, tuple_id));
+      }, MapValueType());
+
+      hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+        inner.insert(std::make_pair(child_tile_itr, tuple_id));
+      });
+    }
     LOG_INFO("Assigned child_tile_itr %lu, tuple_id: %lu ", child_tile_itr, tuple_id);
-    hash_table_[HashMapType::key_type(tile, tuple_id, &column_ids_)].insert(
-      std::make_pair(child_tile_itr, tuple_id));
+//    hash_table_[HashMapType::key_type(tile, tuple_id, &column_ids_)].insert(
+//      std::make_pair(child_tile_itr, tuple_id));
   }
 
   locker.unlock();

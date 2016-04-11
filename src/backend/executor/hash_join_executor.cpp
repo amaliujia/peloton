@@ -108,7 +108,7 @@ bool HashJoinExecutor::DExecute() {
     std::unique_ptr<LogicalTile> output_tile;
     LogicalTile::PositionListsBuilder pos_lists_builder;
 
-    LOG_INFO("HashJoinExecutor :: left_tile  %s", left_tile->GetInfo().c_str());
+    // LOG_INFO("HashJoinExecutor :: left_tile  %s", left_tile->GetInfo().c_str());
     // Go over the left tile
     for (auto left_tile_itr : *left_tile) {
       const expression::ContainerTuple<executor::LogicalTile> left_tuple(
@@ -118,7 +118,7 @@ bool HashJoinExecutor::DExecute() {
       auto right_tuples = hash_table.find(left_tuple);
       
       if (right_tuples != hash_table.end()) {
-      LOG_INFO("HashJoinExecutor :: Do have matching row");
+      //LOG_INFO("HashJoinExecutor :: Do have matching row");
         RecordMatchedLeftRow(left_result_tiles_.size() - 1, left_tile_itr);
 
         // Go over the matching right tuples
