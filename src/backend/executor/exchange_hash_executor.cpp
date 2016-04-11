@@ -43,7 +43,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
   // hashing
   // Go over all tuples in the logical tile
   auto tile = child_tiles_[child_tile_itr].get();
-  LOG_INFO("Assigned child_tile_itr %lu, logical tile: %s ", child_tile_itr, tile->GetInfo());
+  LOG_INFO("Assigned child_tile_itr %lu, logical tile: %s ", child_tile_itr, tile->GetInfo().c_str());
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
