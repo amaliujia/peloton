@@ -40,30 +40,34 @@ void ExchangeHashExecutor::BuildHashTableThreadMain( HashMapType *table, Logical
                                                      size_t child_tile_itr,
                                                     BlockingQueue<AbstractParallelTaskResponse *> *queue) {
 
+  std::unique_lock<std::mutex> locker(lock_);
   // Construct the hash table by going over given logical tile and
   // hashing
   // Go over all tuples in the logical tile
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
-    bool ok = table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-      inner.insert(std::make_pair(child_tile_itr, tuple_id));
-    });
-
-    if (!ok) {
-      table->upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
-        // It is possbile this insert would succeed.
-        // I won't check since I am using unordered_set, even insert succeed,
-        // another won't hurt.
-        inner.insert(std::make_pair(child_tile_itr, tuple_id));
-      }, MapValueType());
-
-      table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-        inner.insert(std::make_pair(child_tile_itr, tuple_id));
-      });
-    }
+//    bool ok = table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+//      inner.insert(std::make_pair(child_tile_itr, tuple_id));
+//    });
+//
+//    if (!ok) {
+//      table->upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
+//        // It is possbile this insert would succeed.
+//        // I won't check since I am using unordered_set, even insert succeed,
+//        // another won't hurt.
+//        inner.insert(std::make_pair(child_tile_itr, tuple_id));
+//      }, MapValueType());
+//
+//      table->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+//        inner.insert(std::make_pair(child_tile_itr, tuple_id));
+//      });
+//    }
+    hash_table_[HashMapType::key_type(tile, tuple_id, &column_ids_)].insert(
+      std::make_pair(child_tile_itr, tuple_id));
   }
 
+  locker.unlock();
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
   queue->PutTask(response);
 }

@@ -26,22 +26,22 @@ public:
   explicit ExchangeHashExecutor(const planner::AbstractPlan *node,
                                    ExecutorContext *executor_context);
 
-// typedef std::unordered_map<
-//    expression::ContainerTuple<LogicalTile>,
-//    std::unordered_set<std::pair<size_t, oid_t>,
-//    boost::hash<std::pair<size_t, oid_t>>>,
-//    expression::ContainerTupleHasher<LogicalTile>,
-//    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
-
-  typedef std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>> MapValueType;
-
-  typedef cuckoohash_map<
+ typedef std::unordered_map<
     expression::ContainerTuple<LogicalTile>,
     std::unordered_set<std::pair<size_t, oid_t>,
     boost::hash<std::pair<size_t, oid_t>>>,
     expression::ContainerTupleHasher<LogicalTile>,
-    expression::ContainerTupleComparator<LogicalTile> 
-    > HashMapType;
+    expression::ContainerTupleComparator<LogicalTile>> HashMapType;
+
+  typedef std::unordered_set<std::pair<size_t, oid_t>, boost::hash<std::pair<size_t, oid_t>>> MapValueType;
+
+//  typedef cuckoohash_map<
+//    expression::ContainerTuple<LogicalTile>,
+//    std::unordered_set<std::pair<size_t, oid_t>,
+//    boost::hash<std::pair<size_t, oid_t>>>,
+//    expression::ContainerTupleHasher<LogicalTile>,
+//    expression::ContainerTupleComparator<LogicalTile>
+//    > HashMapType;
 
   inline HashMapType &GetHashTable() { return this->hash_table_; }
 
@@ -69,6 +69,8 @@ private:
   bool done_ = false;
 
   size_t result_itr = 0;
+
+  std::mutex lock_;
 };
 
 
