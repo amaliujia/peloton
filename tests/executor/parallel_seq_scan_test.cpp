@@ -28,7 +28,9 @@
 #include "backend/executor/logical_tile.h"
 #include "backend/executor/logical_tile_factory.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
+#include "backend/executor/exchange_hash_executor.h"
 #include "backend/executor/seq_scan_executor.h"
+#include "backend/planner/exchange_hash_plan.h"
 #include "backend/expression/abstract_expression.h"
 #include "backend/expression/expression_util.h"
 #include "backend/planner/exchange_seq_scan_plan.h"
@@ -57,54 +59,54 @@ namespace {
  * @brief Set of tuple_ids that will satisfy the predicate in our test cases.
  */
 const std::set<oid_t> g_tuple_ids({0, 3});
-const int tuple_count = 100000;
-const int tile_group_count = 1000;
-const size_t tuples = tuple_count * tile_group_count;
+const int global_tuple_count = 100000;
+const int global_tile_group_count = 1000;
+const size_t tuples = global_tuple_count * global_tile_group_count;
 
 
-void SelectPopulateTiles(
-  std::shared_ptr<storage::TileGroup> tile_group, int num_rows) {
-  // Create tuple schema from tile schemas.
-  std::vector<catalog::Schema> &tile_schemas = tile_group->GetTileSchemas();
-  std::unique_ptr<catalog::Schema> schema(
-    catalog::Schema::AppendSchemaList(tile_schemas));
-
-  // Ensure that the tile group is as expected.
-  assert(schema->GetColumnCount() == 4);
-
-  // Insert tuples into tile_group.
-  auto &txn_manager = concurrency::TransactionManager::GetInstance();
-  const bool allocate = true;
-  auto txn = txn_manager.BeginTransaction();
-  const txn_id_t txn_id = txn->GetTransactionId();
-  const cid_t commit_id = txn->GetCommitId();
-  auto testing_pool = TestingHarness::GetInstance().GetTestingPool();
-
-  for (int col_itr = 0; col_itr < num_rows; col_itr++) {
-    storage::Tuple tuple(schema.get(), allocate);
-    tuple.SetValue(0, ValueFactory::GetIntegerValue(col_itr % 10),
-                   testing_pool);
-    tuple.SetValue(1, ValueFactory::GetIntegerValue(ExecutorTestsUtil::PopulatedValue(col_itr, 1)),
-                   testing_pool);
-    tuple.SetValue(2, ValueFactory::GetDoubleValue(ExecutorTestsUtil::PopulatedValue(col_itr, 2)),
-                   testing_pool);
-    Value string_value = ValueFactory::GetStringValue(
-      std::to_string(ExecutorTestsUtil::PopulatedValue(col_itr, 3)));
-    tuple.SetValue(3, string_value, testing_pool);
-
-    oid_t tuple_slot_id = tile_group->InsertTuple(txn_id, &tuple);
-    tile_group->CommitInsertedTuple(tuple_slot_id, txn_id, commit_id);
-  }
-
-  txn_manager.CommitTransaction();
-}
+//void SelectPopulateTiles(
+//  std::shared_ptr<storage::TileGroup> tile_group, int num_rows) {
+//  // Create tuple schema from tile schemas.
+//  std::vector<catalog::Schema> &tile_schemas = tile_group->GetTileSchemas();
+//  std::unique_ptr<catalog::Schema> schema(
+//    catalog::Schema::AppendSchemaList(tile_schemas));
+//
+//  // Ensure that the tile group is as expected.
+//  assert(schema->GetColumnCount() == 4);
+//
+//  // Insert tuples into tile_group.
+//  auto &txn_manager = concurrency::TransactionManager::GetInstance();
+//  const bool allocate = true;
+//  auto txn = txn_manager.BeginTransaction();
+//  const txn_id_t txn_id = txn->GetTransactionId();
+//  const cid_t commit_id = txn->GetCommitId();
+//  auto testing_pool = TestingHarness::GetInstance().GetTestingPool();
+//
+//  for (int col_itr = 0; col_itr < num_rows; col_itr++) {
+//    storage::Tuple tuple(schema.get(), allocate);
+//    tuple.SetValue(0, ValueFactory::GetIntegerValue(col_itr % 10),
+//                   testing_pool);
+//    tuple.SetValue(1, ValueFactory::GetIntegerValue(ExecutorTestsUtil::PopulatedValue(col_itr, 1)),
+//                   testing_pool);
+//    tuple.SetValue(2, ValueFactory::GetDoubleValue(ExecutorTestsUtil::PopulatedValue(col_itr, 2)),
+//                   testing_pool);
+//    Value string_value = ValueFactory::GetStringValue(
+//      std::to_string(ExecutorTestsUtil::PopulatedValue(col_itr, 3)));
+//    tuple.SetValue(3, string_value, testing_pool);
+//
+//    oid_t tuple_slot_id = tile_group->InsertTuple(txn_id, &tuple);
+//    tile_group->CommitInsertedTuple(tuple_slot_id, txn_id, commit_id);
+//  }
+//
+//  txn_manager.CommitTransaction();
+//}
 
 /**
  * @brief Convenience method to create table for test.
  *
  * @return Table generated for test.
  */
-storage::DataTable *CreateTable() {
+storage::DataTable *CreateTable(int tuple_count, int tile_group_count) {
   // const int tuple_count = TESTS_TUPLES_PER_TILEGROUP;
 
   std::unique_ptr<storage::DataTable> table(ExecutorTestsUtil::CreateTable(tuple_count, false));
@@ -179,7 +181,7 @@ storage::DataTable *CreateTable() {
  */
 expression::AbstractExpression *CreatePredicate(
   oid_t select) {
-  assert(tuple_ids.size() >= 1);
+ // assert(tuple_ids.size() >= 1);
 
   expression::AbstractExpression *predicate =
     expression::ExpressionUtil::ConstantValueFactory(Value::GetFalse());
@@ -255,9 +257,10 @@ void RunTest(executor::SeqScanExecutor &executor, int expected_num_tiles,  __att
 // Sequential scan of table with predicate.
 // The table being scanned has more than one tile group. i.e. the vertical
 // partitioning changes midway.
-TEST_F(ExchangeSeqScanTests, TwoTileGroupsWithPredicateTest) {
+TEST_F(ExchangeSeqScanTests, SeqScanWithPredicateTest) {
   // Create table.
-  std::unique_ptr<storage::DataTable> table(CreateTable());
+  std::unique_ptr<storage::DataTable> table(CreateTable(global_tuple_count,
+                                                        global_tile_group_count));
 
   // Column ids to be added to logical tile after scan.
   std::vector<oid_t> column_ids({0, 1, 2, 3});
@@ -287,7 +290,72 @@ TEST_F(ExchangeSeqScanTests, TwoTileGroupsWithPredicateTest) {
   //LOG_INFO("Duration: %f", *duration);
   double dt = CycleTimer::currentSeconds() - startTime;
   std::cout << "Duration: " << dt << std::endl;
-  //delete duration;
+}
+
+TEST_F(ExchangeSeqScanTests, HashTablewith SeqScanTest) {
+
+size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
+size_t left_table_tile_group_count = 1000;
+size_t right_table_tile_group_count = 500;
+
+std::vector<oid_t> column_ids({0, 1, 2, 3});
+
+
+std::unique_ptr<storage::DataTable> left_table(CreateTable(tile_group_size, left_table_tile_group_count));
+//std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_group_size, right_table_tile_group_count));
+
+
+//planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
+//                                            column_ids);
+planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
+                          column_ids);
+//planner::SeqScanPlan right_scan_node(right_table.get(), nullptr,
+//                                    column_ids);
+
+// executor::SeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+executor::ExchangeSeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+
+expression::AbstractExpression *right_table_attr_1 =
+  new expression::TupleValueExpression(1, 1);
+
+std::vector<std::unique_ptr<const expression::AbstractExpression>>
+  hash_keys;
+hash_keys.emplace_back(right_table_attr_1);
+
+// Create hash plan node
+planner::HashPlan j_hash_plan_node(hash_keys);
+planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
+
+// Construct the hash executor
+// executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
+executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
+
+hash_executor.AddChild(&left_scan_executor);
+
+auto &txn_manager = concurrency::TransactionManager::GetInstance();
+auto txn = txn_manager.BeginTransaction();
+std::unique_ptr<executor::ExecutorContext> context(
+  new executor::ExecutorContext(txn));
+
+EXPECT_TRUE(hash_join_executor.Init());
+
+double startTime = CycleTimer::currentSeconds();
+
+while (hash_join_executor.Execute() == true) {
+  std::unique_ptr<executor::LogicalTile> result_logical_tile(
+    hash_join_executor.GetOutput());
+//  if (result_logical_tile != nullptr) {
+//  result_tuple_count += result_logical_tile->GetTupleCount();
+//tuples_with_null +=
+//CountTuplesWithNullFields(result_logical_tile.get());
+//ValidateJoinLogicalTile(result_logical_tile.get());
+//// std::cout << (*result_logical_tile);
+//}
+}
+
+txn_manager.CommitTransaction();
+double dt = CycleTimer::currentSeconds() - startTime;
+std::cout << "Duration: " << dt << std::endl;
 }
 
 }

@@ -24,6 +24,8 @@
 #include "backend/executor/exchange_hash_join_executor.h"
 #include "backend/executor/merge_join_executor.h"
 #include "backend/executor/nested_loop_join_executor.h"
+#include "backend/executor/exchange_seq_scan_executor.h"
+
 
 #include "backend/expression/abstract_expression.h"
 #include "backend/expression/tuple_value_expression.h"
@@ -223,7 +225,7 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
   //===--------------------------------------------------------------------===//
 
   MockExecutor left_table_scan_executor, right_table_scan_executor;
-
+  // ExchangeSeqScanExecutor left_table_scan_executor, right_table_scan_executor;
   // Create a table and wrap it in logical tile
   size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
   size_t left_table_tile_group_count = 1000;
