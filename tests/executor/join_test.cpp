@@ -43,6 +43,9 @@
 #include "executor/executor_tests_util.h"
 #include "executor/join_tests_util.h"
 
+#include "backend/common/cycle_timer.h"
+
+
 using ::testing::NotNull;
 using ::testing::Return;
 using ::testing::InSequence;
@@ -466,6 +469,8 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
       planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
 
       // Construct the hash executor
+      // executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
+
       executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
       // Create hash join plan node.
@@ -487,6 +492,7 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
 
       // Run the hash_join_executor
       EXPECT_TRUE(hash_join_executor.Init());
+      double startTime = CycleTimer::currentSeconds();
       while (hash_join_executor.Execute() == true) {
         std::unique_ptr<executor::LogicalTile> result_logical_tile(
             hash_join_executor.GetOutput());
@@ -499,6 +505,8 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
           // std::cout << (*result_logical_tile);
         }
       }
+      double dt = CycleTimer::currentSeconds() - startTime;
+      std::cout << "Duration: " << dt << std::endl;
 
     } break;
 
