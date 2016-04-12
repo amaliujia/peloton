@@ -55,8 +55,8 @@ namespace {
  * @brief Set of tuple_ids that will satisfy the predicate in our test cases.
  */
 const std::set<oid_t> g_tuple_ids({0, 3});
-const int tuple_count = 100;
-const int tile_group_count = 20000;
+const int tuple_count = 10000;
+const int tile_group_count = 1000;
 const size_t tuples = tuple_count * tile_group_count;
 
 
@@ -235,7 +235,8 @@ executor::LogicalTile *GetNextTile(executor::AbstractExecutor &executor) {
  * if you're making changes.
  */
 void RunTest(executor::ExchangeSeqScanExecutor &executor, int expected_num_tiles,
-             __attribute__((unused))   int expected_num_cols) {
+             __attribute__((unused))  int expected_num_cols,
+             __attribute__((unused)) oid_t select) {
   EXPECT_TRUE(executor.Init());
   std::vector<std::unique_ptr<executor::LogicalTile>> result_tiles;
   for (int i = 0; i < expected_num_tiles; i++) {
@@ -248,7 +249,7 @@ void RunTest(executor::ExchangeSeqScanExecutor &executor, int expected_num_tiles
     EXPECT_EQ(expected_num_cols, result_tiles[i]->GetColumnCount());
 
     // Only two tuples per tile satisfy our predicate.
-    EXPECT_EQ(g_tuple_ids.size(), result_tiles[i]->GetTupleCount());
+    EXPECT_EQ(((size_t)(tuple_count / 10 * select))) , result_tiles[i]->GetTupleCount());
 
     // Verify values.
     std::set<oid_t> expected_tuples_left(g_tuple_ids);
@@ -289,9 +290,10 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   std::unique_ptr<storage::DataTable> table(CreateTable());
 
   // Column ids to be added to logical tile after scan.
-  std::vector<oid_t> column_ids({0, 1, 3});
+  std::vector<oid_t> column_ids({0, 1, 2, 3});
 
   // Create plan node.
+  // oid_t select = 10;
   // planner::SeqScanPlan tnode(table.get(), CreatePredicate(g_tuple_ids),
   //                          column_ids);
   planner::ExchangeSeqScanPlan node(table.get(), nullptr,
@@ -308,7 +310,7 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   new executor::ExecutorContext(txn));
 
   executor::ExchangeSeqScanExecutor executor(&node, context.get());
-  RunTest(executor, table->GetTileGroupCount(), column_ids.size());
+  RunTest(executor, table->GetTileGroupCount(), column_ids.size(), 10);
 
   txn_manager.CommitTransaction();
   // *duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
