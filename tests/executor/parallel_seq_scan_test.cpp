@@ -33,6 +33,7 @@
 #include "backend/planner/exchange_seq_scan_plan.h"
 #include "backend/storage/data_table.h"
 #include "backend/storage/tile_group_factory.h"
+#include "backend/storage/tuple.h"
 
 #include "executor/executor_tests_util.h"
 #include "executor/mock_executor.h"
@@ -54,9 +55,48 @@ namespace {
  * @brief Set of tuple_ids that will satisfy the predicate in our test cases.
  */
 const std::set<oid_t> g_tuple_ids({0, 3});
-const int tuple_count = 100;
-const int tile_group_count = 20000;
+const int tuple_count = 10000;
+const int tile_group_count = 1000;
 const size_t tuples = tuple_count * tile_group_count;
+
+
+void SelectPopulateTiles(
+  std::shared_ptr<storage::TileGroup> tile_group, int num_rows) {
+  // Create tuple schema from tile schemas.
+  std::vector<catalog::Schema> &tile_schemas = tile_group->GetTileSchemas();
+  std::unique_ptr<catalog::Schema> schema(
+    catalog::Schema::AppendSchemaList(tile_schemas));
+
+  // Ensure that the tile group is as expected.
+  assert(schema->GetColumnCount() == 4);
+
+  // Insert tuples into tile_group.
+  auto &txn_manager = concurrency::TransactionManager::GetInstance();
+  const bool allocate = true;
+  auto txn = txn_manager.BeginTransaction();
+  const txn_id_t txn_id = txn->GetTransactionId();
+  const cid_t commit_id = txn->GetCommitId();
+  auto testing_pool = TestingHarness::GetInstance().GetTestingPool();
+
+  for (int col_itr = 0; col_itr < num_rows; col_itr++) {
+    storage::Tuple tuple(schema.get(), allocate);
+    tuple.SetValue(0, ValueFactory::GetIntegerValue(col_itr % 10),
+                   testing_pool);
+    tuple.SetValue(1, ValueFactory::GetIntegerValue(ExecutorTestsUtil::PopulatedValue(col_itr, 1)),
+                   testing_pool);
+    tuple.SetValue(2, ValueFactory::GetDoubleValue(ExecutorTestsUtil::PopulatedValue(col_itr, 2)),
+                   testing_pool);
+    Value string_value = ValueFactory::GetStringValue(
+      std::to_string(ExecutorTestsUtil::PopulatedValue(col_itr, 3)));
+    tuple.SetValue(3, string_value, testing_pool);
+
+    oid_t tuple_slot_id = tile_group->InsertTuple(txn_id, &tuple);
+    tile_group->CommitInsertedTuple(tuple_slot_id, txn_id, commit_id);
+  }
+
+  txn_manager.CommitTransaction();
+}
+
 /**
  * @brief Convenience method to create table for test.
  *
@@ -112,26 +152,8 @@ storage::DataTable *CreateTable() {
     }
   }
 
-
-  for (auto i = 0; i < tile_group_count; i++) {
-    if (i % 2 == 0) {
-      // Create tile groups.
-      table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-          INVALID_OID, INVALID_OID,
-          TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-          schemas1, column_map1, tuple_count)));
-    } else {
-      table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-          INVALID_OID, INVALID_OID,
-          TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-          schemas2, column_map2, tuple_count)));
-    }
-  }
-
-  ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(0), tuple_count);
-  for (auto i = 1; i <= tile_group_count; i++) {
+  // ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(0), tuple_count);
+  for (auto i = 0; i <= tile_group_count; i++) {
     ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(i), tuple_count);
   }
   // ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(2), tuple_count);
@@ -154,29 +176,22 @@ storage::DataTable *CreateTable() {
  * parity of the loop iteration) the first field or last field of the tuple.
  */
 expression::AbstractExpression *CreatePredicate(
-  const std::set<oid_t> &tuple_ids) {
+  oid_t select) {
   assert(tuple_ids.size() >= 1);
 
   expression::AbstractExpression *predicate =
     expression::ExpressionUtil::ConstantValueFactory(Value::GetFalse());
 
-  bool even = false;
-  for (oid_t tuple_id = 0; tuple_id < tuple_ids.size(); tuple_id++) {
-    even = !even;
-
+  for (oid_t i = 0; i < select; i++) {
     // Create equality expression comparison tuple value and constant value.
     // First, create tuple value expression.
     expression::AbstractExpression *tuple_value_expr = nullptr;
-
-    tuple_value_expr = even ? expression::ExpressionUtil::TupleValueFactory(0, 0)
-                            : expression::ExpressionUtil::TupleValueFactory(0, 3);
+    // I think basically this means take a look at column 0.
+    tuple_value_expr = expression::ExpressionUtil::TupleValueFactory(0, 0);
 
     // Second, create constant value expression.
-    Value constant_value =
-      even ? ValueFactory::GetIntegerValue(
-        ExecutorTestsUtil::PopulatedValue(tuple_id, 0))
-           : ValueFactory::GetStringValue(std::to_string(
-        ExecutorTestsUtil::PopulatedValue(tuple_id, 3)));
+    Value constant_value = ValueFactory::GetIntegerValue(i);
+
 
     expression::AbstractExpression *constant_value_expr =
       expression::ExpressionUtil::ConstantValueFactory(constant_value);
@@ -219,13 +234,22 @@ executor::LogicalTile *GetNextTile(executor::AbstractExecutor &executor) {
  * if you're making changes.
  */
 void RunTest(executor::ExchangeSeqScanExecutor &executor, int expected_num_tiles,
-             __attribute__((unused))   int expected_num_cols) {
+             __attribute__((unused))  int expected_num_cols,
+             __attribute__((unused)) oid_t select) {
   EXPECT_TRUE(executor.Init());
   std::vector<std::unique_ptr<executor::LogicalTile>> result_tiles;
   for (int i = 0; i < expected_num_tiles; i++) {
     result_tiles.emplace_back(GetNextTile(executor));
   }
   EXPECT_FALSE(executor.Execute());
+
+  // Check correctness of result tiles.
+  for (int i = 0; i < expected_num_tiles; i++) {
+    EXPECT_EQ(expected_num_cols, result_tiles[i]->GetColumnCount());
+
+    // Only two tuples per tile satisfy our predicate.
+    EXPECT_EQ(((size_t)(tuple_count / 10 * select)) , result_tiles[i]->GetTupleCount());
+  }
 }
 
 // Sequential scan of table with predicate.
@@ -236,13 +260,14 @@ TEST_F(ExchangeSeqScanTests, TwoTileGroupsWithPredicateTest) {
   std::unique_ptr<storage::DataTable> table(CreateTable());
 
   // Column ids to be added to logical tile after scan.
-  std::vector<oid_t> column_ids({0, 1, 3});
+  std::vector<oid_t> column_ids({0, 1, 2, 3});
 
   // Create plan node.
-  // planner::SeqScanPlan tnode(table.get(), CreatePredicate(g_tuple_ids),
-  //                          column_ids);
-  planner::ExchangeSeqScanPlan node(table.get(), nullptr,
-                           column_ids);
+  oid_t select = 1;
+   planner::ExchangeSeqScanPlan node(table.get(), CreatePredicate(select),
+                            column_ids);
+  // planner::ExchangeSeqScanPlan node(table.get(), nullptr,
+  //                         column_ids);
 
   //std::clock_t start;
   //double* duration = new double(0);
@@ -255,7 +280,7 @@ TEST_F(ExchangeSeqScanTests, TwoTileGroupsWithPredicateTest) {
   new executor::ExecutorContext(txn));
 
   executor::ExchangeSeqScanExecutor executor(&node, context.get());
-  RunTest(executor, table->GetTileGroupCount(), column_ids.size());
+  RunTest(executor, table->GetTileGroupCount(), column_ids.size(), select);
 
   txn_manager.CommitTransaction();
   // *duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
