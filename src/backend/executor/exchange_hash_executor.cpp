@@ -38,7 +38,7 @@ bool ExchangeHashExecutor::DInit() {
 
 void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
   LOG_INFO("Parallel worker :: executor: %s", GetRawNode()->GetInfo().c_str());
-  std::unique_lock<std::mutex> locker(lock_);
+  // std::unique_lock<std::mutex> locker(lock_);
   // Construct the hash table by going over given logical tile and
   // hashing
   // Go over all tuples in the logical tile
@@ -68,7 +68,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
 //      std::make_pair(child_tile_itr, tuple_id));
   }
 
-  locker.unlock();
+  // locker.unlock();
   auto response = new ParallelSeqScanTaskResponse(NoRetValue, nullptr);
   queue_.PutTask(response);
 }
@@ -99,10 +99,6 @@ bool ExchangeHashExecutor::DExecute() {
       column_ids_.push_back(tuple_value->GetColumnId());
     }
    
-    for (auto id : column_ids_) { 
-      LOG_INFO("Got hash key column %lu", id);
-   }
-
     // First, get all the input logical tiles
     size_t child_tile_iter = 0;
     while (children_[0]->Execute()) {

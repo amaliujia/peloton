@@ -231,7 +231,7 @@ void RunTest(executor::ExchangeSeqScanExecutor &executor, int expected_num_tiles
 // Sequential scan of table with predicate.
 // The table being scanned has more than one tile group. i.e. the vertical
 // partitioning changes midway.
-TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
+TEST_F(ExchangeSeqScanTests, TwoTileGroupsWithPredicateTest) {
   // Create table.
   std::unique_ptr<storage::DataTable> table(CreateTable());
 
@@ -263,7 +263,6 @@ TEST_F(SeqScanTests, TwoTileGroupsWithPredicateTest) {
   double dt = CycleTimer::currentSeconds() - startTime;
   std::cout << "Duration: " << dt << std::endl;
   //delete duration;
-}
 }
 
 }

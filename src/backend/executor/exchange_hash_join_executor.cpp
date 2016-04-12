@@ -25,7 +25,7 @@ bool ExchangeHashJoinExecutor::DInit() {
   auto status = AbstractJoinExecutor::DInit();
   if (status == false) return status;
 
-  assert(children_[1]->GetRawNode()->GetPlanNodeType() == PLAN_NODE_TYPE_HASH);
+  assert(children_[1]->GetRawNode()->GetPlanNodeType() == PLAN_NODE_TYPE_EXCHANGE_HASH);
 
   hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
 

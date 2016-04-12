@@ -13,7 +13,7 @@
 #include "backend/common/thread_manager.h"
 
 #define NUM_THREAD 1
-#define QUERY_THREAD 1
+#define QUERY_THREAD 6 
 namespace peloton {
 
 // global singleton
