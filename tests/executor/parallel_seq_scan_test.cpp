@@ -18,6 +18,7 @@
 
 #include "harness.h"
 
+#include "backend/expression/tuple_value_expression.h"
 #include "backend/catalog/schema.h"
 #include "backend/common/types.h"
 #include "backend/common/value.h"
@@ -29,8 +30,10 @@
 #include "backend/executor/logical_tile_factory.h"
 #include "backend/executor/exchange_seq_scan_executor.h"
 #include "backend/executor/exchange_hash_executor.h"
+#include "backend/executor/hash_executor.h"
 #include "backend/executor/seq_scan_executor.h"
 #include "backend/planner/exchange_hash_plan.h"
+#include "backend/planner/hash_plan.h"
 #include "backend/expression/abstract_expression.h"
 #include "backend/expression/expression_util.h"
 #include "backend/planner/exchange_seq_scan_plan.h"
@@ -257,7 +260,7 @@ void RunTest(executor::SeqScanExecutor &executor, int expected_num_tiles,  __att
 // Sequential scan of table with predicate.
 // The table being scanned has more than one tile group. i.e. the vertical
 // partitioning changes midway.
-TEST_F(ExchangeSeqScanTests, SeqScanWithPredicateTest) {
+/*TEST_F(ExchangeSeqScanTests, SeqScanWithPredicateTest) {
   // Create table.
   std::unique_ptr<storage::DataTable> table(CreateTable(global_tuple_count,
                                                         global_tile_group_count));
@@ -290,30 +293,25 @@ TEST_F(ExchangeSeqScanTests, SeqScanWithPredicateTest) {
   //LOG_INFO("Duration: %f", *duration);
   double dt = CycleTimer::currentSeconds() - startTime;
   std::cout << "Duration: " << dt << std::endl;
-}
+}*/
 
-TEST_F(ExchangeSeqScanTests, HashTablewith SeqScanTest) {
+TEST_F(ExchangeSeqScanTests, HashTablewithSeqScanTest) {
 
 size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
-size_t left_table_tile_group_count = 1000;
-size_t right_table_tile_group_count = 500;
+size_t left_table_tile_group_count = 3000;
+// size_t right_table_tile_group_count = 500;
 
 std::vector<oid_t> column_ids({0, 1, 2, 3});
-
 
 std::unique_ptr<storage::DataTable> left_table(CreateTable(tile_group_size, left_table_tile_group_count));
 //std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_group_size, right_table_tile_group_count));
 
-
-//planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
-//                                            column_ids);
-planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
-                          column_ids);
+ planner::SeqScanPlan left_scan_node(left_table.get(), CreatePredicate(1),
+                                            column_ids);
+//  planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
+//                          column_ids);
 //planner::SeqScanPlan right_scan_node(right_table.get(), nullptr,
 //                                    column_ids);
-
-// executor::SeqScanExecutor left_scan_executor(&left_scan_node, context.get());
-executor::ExchangeSeqScanExecutor left_scan_executor(&left_scan_node, context.get());
 
 expression::AbstractExpression *right_table_attr_1 =
   new expression::TupleValueExpression(1, 1);
@@ -324,26 +322,28 @@ hash_keys.emplace_back(right_table_attr_1);
 
 // Create hash plan node
 planner::HashPlan j_hash_plan_node(hash_keys);
-planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
+// planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
 
 // Construct the hash executor
-// executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
-executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
-
-hash_executor.AddChild(&left_scan_executor);
+ executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
+// executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
 auto &txn_manager = concurrency::TransactionManager::GetInstance();
 auto txn = txn_manager.BeginTransaction();
 std::unique_ptr<executor::ExecutorContext> context(
   new executor::ExecutorContext(txn));
 
-EXPECT_TRUE(hash_join_executor.Init());
+ executor::SeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+// executor::ExchangeSeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+hash_executor.AddChild(&left_scan_executor);
+
+EXPECT_TRUE(hash_executor.Init());
 
 double startTime = CycleTimer::currentSeconds();
 
-while (hash_join_executor.Execute() == true) {
+while (hash_executor.Execute() == true) {
   std::unique_ptr<executor::LogicalTile> result_logical_tile(
-    hash_join_executor.GetOutput());
+    hash_executor.GetOutput());
 //  if (result_logical_tile != nullptr) {
 //  result_tuple_count += result_logical_tile->GetTupleCount();
 //tuples_with_null +=
