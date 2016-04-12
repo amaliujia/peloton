@@ -226,8 +226,8 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
 
   // Create a table and wrap it in logical tile
   size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
-  size_t left_table_tile_group_count = 100;
-  size_t right_table_tile_group_count = 50;
+  size_t left_table_tile_group_count = 1000;
+  size_t right_table_tile_group_count = 500;
 
   auto &txn_manager = concurrency::TransactionManager::GetInstance();
   auto txn = txn_manager.BeginTransaction();
@@ -469,13 +469,13 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
       planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
 
       // Construct the hash executor
-      // executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
+      // executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
 
-      executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
+       executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
       // Create hash join plan node.
-//      planner::HashJoinPlan hash_join_plan_node(join_type, predicate,
-//                                                projection, schema);
+      // planner::HashJoinPlan hash_join_plan_node(join_type, predicate,
+      //                                          projection, schema);
       planner::ExchangeHashJoinPlan hash_join_plan_node(join_type, predicate,
                                                 projection, schema);
       // Construct the hash join executor
