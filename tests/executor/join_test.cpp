@@ -466,12 +466,14 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
       executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
       // Create hash join plan node.
-      planner::HashJoinPlan hash_join_plan_node(join_type, predicate,
+//      planner::HashJoinPlan hash_join_plan_node(join_type, predicate,
+//                                                projection, schema);
+      planner::ExchangeHashJoinPlan hash_join_plan_node(join_type, predicate,
                                                 projection, schema);
-
       // Construct the hash join executor
-      executor::HashJoinExecutor hash_join_executor(&hash_join_plan_node,
-                                                    nullptr);
+//      executor::HashJoinExecutor hash_join_executor(&hash_join_plan_node,
+//                                                    nullptr);
+      executor::ExchangeHashJoinExecutor hash_join_executor(&hash_join_plan_node);
 
       // Construct the executor tree
       hash_join_executor.AddChild(&left_table_scan_executor);
