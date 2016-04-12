@@ -295,6 +295,47 @@ void RunTest(executor::SeqScanExecutor &executor, int expected_num_tiles,  __att
   std::cout << "Duration: " << dt << std::endl;
 }*/
 
+expression::AbstractExpression *CreateSimplePredicate(
+  const std::set<oid_t> &tuple_ids) {
+  assert(tuple_ids.size() >= 1);
+
+  expression::AbstractExpression *predicate =
+    expression::ExpressionUtil::ConstantValueFactory(Value::GetFalse());
+
+  bool even = false;
+  for (oid_t tuple_id : tuple_ids) {
+    even = !even;
+
+    // Create equality expression comparison tuple value and constant value.
+    // First, create tuple value expression.
+    expression::AbstractExpression *tuple_value_expr = nullptr;
+
+    tuple_value_expr = even ? expression::ExpressionUtil::TupleValueFactory(0, 0)
+                            : expression::ExpressionUtil::TupleValueFactory(0, 3);
+
+    // Second, create constant value expression.
+    Value constant_value =
+      even ? ValueFactory::GetIntegerValue(
+        ExecutorTestsUtil::PopulatedValue(tuple_id, 0))
+           : ValueFactory::GetStringValue(std::to_string(
+        ExecutorTestsUtil::PopulatedValue(tuple_id, 3)));
+
+    expression::AbstractExpression *constant_value_expr =
+      expression::ExpressionUtil::ConstantValueFactory(constant_value);
+
+    // Finally, link them together using an equality expression.
+    expression::AbstractExpression *equality_expr =
+      expression::ExpressionUtil::ComparisonFactory(EXPRESSION_TYPE_COMPARE_EQUAL,
+                                                    tuple_value_expr, constant_value_expr);
+
+    // Join equality expression to other equality expression using ORs.
+    predicate = expression::ExpressionUtil::ConjunctionFactory(EXPRESSION_TYPE_CONJUNCTION_OR,
+                                                               predicate, equality_expr);
+  }
+
+  return predicate;
+}
+
 TEST_F(ExchangeSeqScanTests, HashTablewithSeqScanTest) {
 
 size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
@@ -306,7 +347,7 @@ std::vector<oid_t> column_ids({0, 1, 2, 3});
 std::unique_ptr<storage::DataTable> left_table(CreateTable(tile_group_size, left_table_tile_group_count));
 //std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_group_size, right_table_tile_group_count));
 
- planner::SeqScanPlan left_scan_node(left_table.get(), CreatePredicate(1),
+ planner::SeqScanPlan left_scan_node(left_table.get(), CreateSimplePredicate(g_tuple_ids),
                                             column_ids);
 //  planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
 //                          column_ids);
