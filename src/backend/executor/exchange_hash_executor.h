@@ -44,7 +44,7 @@ public:
     > HashMapType;
 
   inline HashMapType &GetHashTable() {
-      return this->hash_table_;
+      return *(this->hash_table_);
   }
 
   inline const std::vector<oid_t> &GetHashKeyIds() const {
@@ -60,7 +60,7 @@ protected:
 
 private:
   /** @brief Hash table */
-  HashMapType hash_table_;
+  HashMapType *hash_table_;
 
   /** @brief Input tiles from child node */
   std::vector<std::unique_ptr<LogicalTile>> child_tiles_;

@@ -33,6 +33,7 @@ bool ExchangeHashExecutor::DInit() {
   done_ = false;
   result_itr = 0;
 
+  hash_table_ = new HashMapType(5000000, 0.75, 0);
   return true;
 }
 
@@ -47,19 +48,19 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(size_t child_tile_itr) {
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
-    bool ok = hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+    bool ok = hash_table_->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
       inner.insert(std::make_pair(child_tile_itr, tuple_id));
     });
 
     if (!ok) {
-      hash_table_.upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
+      hash_table_->upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
         // It is possbile this insert would succeed.
         // I won't check since I am using unordered_set, even insert succeed,
         // another won't hurt.
         inner.insert(std::make_pair(child_tile_itr, tuple_id));
       }, MapValueType());
 
-      hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
+      hash_table_->update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
         inner.insert(std::make_pair(child_tile_itr, tuple_id));
       });
     }
