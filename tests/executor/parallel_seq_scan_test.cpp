@@ -338,8 +338,8 @@ expression::AbstractExpression *CreateSimplePredicate(
 
 TEST_F(ExchangeSeqScanTests, HashTablewithSeqScanTest) {
 
-size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
-size_t left_table_tile_group_count = 3000;
+size_t tile_group_size = 100000; //TESTS_TUPLES_PER_TILEGROUP;
+size_t left_table_tile_group_count = 100;
 // size_t right_table_tile_group_count = 500;
 
 std::vector<oid_t> column_ids({0, 1, 2, 3});
@@ -347,10 +347,10 @@ std::vector<oid_t> column_ids({0, 1, 2, 3});
 std::unique_ptr<storage::DataTable> left_table(CreateTable(tile_group_size, left_table_tile_group_count));
 //std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_group_size, right_table_tile_group_count));
 
- planner::SeqScanPlan left_scan_node(left_table.get(), CreateSimplePredicate(g_tuple_ids),
-                                            column_ids);
-//  planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
-//                          column_ids);
+// planner::SeqScanPlan left_scan_node(left_table.get(), CreateSimplePredicate(g_tuple_ids),
+//                                            column_ids);
+ planner::ExchangeSeqScanPlan left_scan_node(left_table.get(), nullptr,
+                          column_ids);
 //planner::SeqScanPlan right_scan_node(right_table.get(), nullptr,
 //                                    column_ids);
 
@@ -363,19 +363,19 @@ hash_keys.emplace_back(right_table_attr_1);
 
 // Create hash plan node
 planner::HashPlan j_hash_plan_node(hash_keys);
-// planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
+planner::ExchangeHashPlan hash_plan_node(&j_hash_plan_node);
 
 // Construct the hash executor
- executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
-// executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
+// executor::HashExecutor hash_executor(&j_hash_plan_node, nullptr);
+executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
 
 auto &txn_manager = concurrency::TransactionManager::GetInstance();
 auto txn = txn_manager.BeginTransaction();
 std::unique_ptr<executor::ExecutorContext> context(
   new executor::ExecutorContext(txn));
 
- executor::SeqScanExecutor left_scan_executor(&left_scan_node, context.get());
-// executor::ExchangeSeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+// executor::SeqScanExecutor left_scan_executor(&left_scan_node, context.get());
+executor::ExchangeSeqScanExecutor left_scan_executor(&left_scan_node, context.get());
 hash_executor.AddChild(&left_scan_executor);
 
 EXPECT_TRUE(hash_executor.Init());

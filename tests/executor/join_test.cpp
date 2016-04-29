@@ -227,9 +227,9 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
   MockExecutor left_table_scan_executor, right_table_scan_executor;
   // ExchangeSeqScanExecutor left_table_scan_executor, right_table_scan_executor;
   // Create a table and wrap it in logical tile
-  size_t tile_group_size = 10000; //TESTS_TUPLES_PER_TILEGROUP;
-  size_t left_table_tile_group_count = 1000;
-  size_t right_table_tile_group_count = 500;
+  size_t tile_group_size = TESTS_TUPLES_PER_TILEGROUP;
+  size_t left_table_tile_group_count = 3;
+  size_t right_table_tile_group_count = 2;
 
   auto &txn_manager = concurrency::TransactionManager::GetInstance();
   auto txn = txn_manager.BeginTransaction();

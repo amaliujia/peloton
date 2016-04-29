@@ -33,7 +33,7 @@ bool ExchangeHashExecutor::DInit() {
   done_ = false;
   result_itr = 0;
 
-  hash_table_ = new HashMapType(5000000, 0.75, 0);
+  hash_table_ = new HashMapType(20000000, 0.75, 0);
   return true;
 }
 
